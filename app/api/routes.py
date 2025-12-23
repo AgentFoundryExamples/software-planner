@@ -34,6 +34,7 @@ def _format_job_response(job: Job) -> dict:
     """Format a job instance into a response dictionary.
     
     Helper function to ensure consistent job response structure across endpoints.
+    Per acceptance criteria: pending jobs return result=null and omit error field.
     
     Args:
         job: Job instance to format.
@@ -46,15 +47,14 @@ def _format_job_response(job: Job) -> dict:
         "status": job.status,
         "created_at": job.created_at.isoformat(),
         "updated_at": job.updated_at.isoformat(),
+        "result": None
     }
     
     # Include result for succeeded jobs
     if job.status == "succeeded" and job.result is not None:
         response["result"] = job.result
-    else:
-        response["result"] = None
     
-    # Include error for failed jobs
+    # Include error for failed jobs (omit for non-failed jobs)
     if job.status == "failed" and job.error is not None:
         response["error"] = job.error
     
@@ -400,6 +400,8 @@ def list_jobs(
     effective_limit = limit if limit is not None else settings.default_jobs_list_limit
     effective_limit = min(effective_limit, settings.max_jobs_list_limit)
     
+    # Get total count before applying limit
+    total_count = job_store.count_jobs()
     jobs = job_store.list_jobs(limit=effective_limit)
     
     # Format jobs with same structure as single job endpoint
@@ -407,7 +409,7 @@ def list_jobs(
     
     return {
         "jobs": formatted_jobs,
-        "total": len(formatted_jobs),
+        "total": total_count,
         "limit": effective_limit
     }
 

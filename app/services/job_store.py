@@ -139,11 +139,22 @@ class JobStore:
             List of Job instances, ordered by update time (most recently updated first).
         """
         with self._lock:
+            # Create a shallow copy to avoid holding lock during sort/slice
             jobs = list(self._jobs.values())
-            # Sort by updated_at descending (most recently updated first)
-            jobs.sort(key=lambda j: j.updated_at, reverse=True)
-            
-            if limit is not None and limit > 0:
-                jobs = jobs[:limit]
-            
-            return jobs
+        
+        # Sort and slice outside the lock to minimize contention
+        jobs.sort(key=lambda j: j.updated_at, reverse=True)
+        
+        if limit is not None and limit > 0:
+            jobs = jobs[:limit]
+        
+        return jobs
+    
+    def count_jobs(self) -> int:
+        """Count total number of jobs in the store.
+        
+        Returns:
+            Total count of jobs.
+        """
+        with self._lock:
+            return len(self._jobs)

@@ -261,16 +261,23 @@ class TestListJobsEndpoint:
     
     def test_list_jobs_sorted_by_updated_at_descending(self, client, override_job_store):
         """Test that jobs are sorted by updated_at (most recent first)."""
-        # Create jobs
+        # Create jobs with explicit ordering
         job1 = override_job_store.create_job()
-        time.sleep(0.01)
         job2 = override_job_store.create_job()
-        time.sleep(0.01)
         job3 = override_job_store.create_job()
         
         # Update job1 to make it most recently updated
-        time.sleep(0.01)
+        # The update will change updated_at, making job1 the most recent
         override_job_store.update_job(job1.job_id, status="running")
+        
+        # Get all jobs to verify final state
+        final_job1 = override_job_store.get_job(job1.job_id)
+        final_job3 = override_job_store.get_job(job3.job_id)
+        final_job2 = override_job_store.get_job(job2.job_id)
+        
+        # Verify that job1's updated_at is indeed more recent
+        assert final_job1.updated_at > final_job3.updated_at
+        assert final_job1.updated_at > final_job2.updated_at
         
         response = client.get("/api/v1/plans")
         
@@ -295,7 +302,8 @@ class TestListJobsEndpoint:
         assert response.status_code == 200
         data = response.json()
         
-        assert data["total"] == 3
+        # Total should reflect all jobs (5), not just returned (3)
+        assert data["total"] == 5
         assert len(data["jobs"]) == 3
         assert data["limit"] == 3
     
@@ -583,5 +591,7 @@ class TestPollingEndpointsEdgeCases:
         assert response.status_code == 200
         data = response.json()
         
-        assert data["total"] == 5
+        # Total should be all jobs (10), returned jobs should be 5
+        assert data["total"] == 10
+        assert len(data["jobs"]) == 5
         assert data["limit"] == 5
