@@ -97,13 +97,14 @@ class PlanRequest(BaseModel):
             The validated model name, or None if not provided.
             
         Raises:
-            ValueError: If model name is whitespace-only.
+            ValueError: If model name is empty or whitespace-only.
         """
         if v is not None:
-            # Check if whitespace-only
-            if not v.strip():
-                raise ValueError("Model name cannot be whitespace-only")
-            v = v.strip()
+            # Check if empty or whitespace-only
+            stripped_v = v.strip()
+            if not stripped_v:
+                raise ValueError("Model name cannot be empty or whitespace-only")
+            return stripped_v
         
         return v
     

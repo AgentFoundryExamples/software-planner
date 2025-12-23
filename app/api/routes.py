@@ -30,6 +30,32 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _validate_model_or_raise(model_name: str) -> None:
+    """Validate model exists and is enabled, or raise HTTPException.
+    
+    Args:
+        model_name: The logical model name to validate.
+        
+    Raises:
+        HTTPException: 400 if model is unknown or disabled.
+    """
+    from app.services.model_registry import get_model_registry
+    registry = get_model_registry()
+    
+    model_config = registry.get_model_config(model_name)
+    if model_config is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown model '{model_name}'. Available models: {', '.join(registry.get_enabled_models().keys())}"
+        )
+    
+    if not model_config.enabled:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Model '{model_name}' is disabled"
+        )
+
+
 def _format_job_response(job: Job) -> dict:
     """Format a job instance into a response dictionary.
     
@@ -148,23 +174,7 @@ def create_plan(request: PlanRequest) -> PlanResponse:
     """
     # Validate model if provided
     if request.model is not None:
-        from app.services.model_registry import get_model_registry
-        registry = get_model_registry()
-        
-        # Check if model exists in registry
-        model_config = registry.get_model_config(request.model)
-        if model_config is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unknown model '{request.model}'. Available models: {', '.join(registry.get_enabled_models().keys())}"
-            )
-        
-        # Check if model is enabled
-        if not model_config.enabled:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Model '{request.model}' is disabled"
-            )
+        _validate_model_or_raise(request.model)
     
     # Generate plan with optional overrides
     return generate_plan(
@@ -333,23 +343,7 @@ def create_plan_async(
     """
     # Validate model if provided
     if request.model is not None:
-        from app.services.model_registry import get_model_registry
-        registry = get_model_registry()
-        
-        # Check if model exists in registry
-        model_config = registry.get_model_config(request.model)
-        if model_config is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unknown model '{request.model}'. Available models: {', '.join(registry.get_enabled_models().keys())}"
-            )
-        
-        # Check if model is enabled
-        if not model_config.enabled:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Model '{request.model}' is disabled"
-            )
+        _validate_model_or_raise(request.model)
     
     # Calculate system prompt hash if provided
     system_prompt_hash = None
