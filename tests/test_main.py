@@ -68,10 +68,13 @@ def test_openapi_schema(client):
 
 def test_cors_headers(client):
     """Test that CORS headers are properly configured."""
-    response = client.options("/health", headers={"Origin": "http://localhost:3000"})
+    origin = "http://localhost:3000"
+    # Use GET request instead of OPTIONS since the endpoint doesn't define OPTIONS
+    response = client.get("/health", headers={"Origin": origin})
     
-    # Check that CORS headers are present
-    assert "access-control-allow-origin" in response.headers or response.status_code == 200
+    assert response.status_code == 200
+    # With default settings (allow_origins=["*"]), the header should be "*"
+    assert response.headers.get("access-control-allow-origin") == "*"
 
 
 def test_nonexistent_endpoint(client):
@@ -92,3 +95,72 @@ def test_app_starts_without_routes():
     test_client = TestClient(test_app)
     response = test_client.get("/health")
     assert response.status_code == 200
+
+
+def test_get_app_function():
+    """Test that get_app function works correctly."""
+    from app.main import get_app
+    
+    test_app = get_app()
+    assert test_app is not None
+    assert hasattr(test_app, "router")
+
+
+def test_http_exception_handler(client):
+    """Test that HTTP exceptions return consistent JSON responses."""
+    response = client.get("/nonexistent")
+    
+    assert response.status_code == 404
+    data = response.json()
+    assert "error" in data
+    assert "status_code" in data
+    assert data["status_code"] == 404
+
+
+def test_validation_error_handler():
+    """Test that validation errors return detailed error information."""
+    from fastapi import FastAPI, Query
+    from fastapi.testclient import TestClient
+    
+    test_app = create_app()
+    
+    # Add a test endpoint that requires validation
+    @test_app.get("/test-validation")
+    async def test_validation_endpoint(required_param: int = Query(...)):
+        return {"value": required_param}
+    
+    test_client = TestClient(test_app)
+    
+    # Call without required parameter
+    response = test_client.get("/test-validation")
+    
+    assert response.status_code == 422
+    data = response.json()
+    assert "error" in data
+    assert "status_code" in data
+    assert "details" in data
+    assert data["status_code"] == 422
+
+
+def test_general_exception_handler():
+    """Test that unexpected exceptions return generic error response."""
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    
+    test_app = create_app()
+    
+    # Add a test endpoint that raises an exception
+    @test_app.get("/test-error")
+    async def test_error_endpoint():
+        raise RuntimeError("Test error")
+    
+    # Use raise_server_exceptions=False to catch the exception in the handler
+    test_client = TestClient(test_app, raise_server_exceptions=False)
+    
+    response = test_client.get("/test-error")
+    
+    assert response.status_code == 500
+    data = response.json()
+    assert "error" in data
+    assert data["error"] == "Internal server error"
+    assert data["status_code"] == 500

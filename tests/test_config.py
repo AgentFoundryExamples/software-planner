@@ -2,6 +2,7 @@
 
 import os
 import pytest
+from pydantic import ValidationError
 from app.core.config import Settings, settings
 
 
@@ -67,3 +68,27 @@ def test_settings_no_env_file_required():
     # Should use all defaults
     assert test_settings.app_name == "Software Planner API"
     assert test_settings.port == 8000
+
+
+def test_cors_validator_rejects_credentials_with_wildcard():
+    """Test that CORS validator rejects credentials=True with wildcard origins."""
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(
+            allowed_credentials=True,
+            allowed_origins=["*"]
+        )
+    
+    assert "allowed_credentials" in str(exc_info.value).lower() or "allowed_origins" in str(exc_info.value).lower()
+
+
+def test_cors_validator_allows_credentials_with_specific_origins():
+    """Test that CORS validator allows credentials=True with specific origins."""
+    # This should not raise an error
+    test_settings = Settings(
+        allowed_credentials=True,
+        allowed_origins=["http://localhost:3000", "https://example.com"]
+    )
+    
+    assert test_settings.allowed_credentials is True
+    assert "http://localhost:3000" in test_settings.allowed_origins
+    assert "https://example.com" in test_settings.allowed_origins

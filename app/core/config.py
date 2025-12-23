@@ -1,5 +1,6 @@
 """Application configuration using Pydantic settings."""
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,10 +31,21 @@ class Settings(BaseSettings):
     
     # CORS settings
     # For security, allow_credentials should only be True when allowed_origins is not ["*"]
+    # WARNING: Default configuration is for development only. In production, set
+    # allowed_origins to specific domains and adjust allowed_credentials accordingly.
     allowed_origins: list[str] = ["*"]
     allowed_credentials: bool = False
     allowed_methods: list[str] = ["*"]
     allowed_headers: list[str] = ["*"]
+
+    @model_validator(mode="after")
+    def _validate_cors_settings(self) -> "Settings":
+        """Validate that CORS credentials are not enabled with wildcard origins."""
+        if self.allowed_credentials and self.allowed_origins == ["*"]:
+            raise ValueError(
+                "If `allowed_credentials` is True, `allowed_origins` must be a specific list of origins, not ['*']."
+            )
+        return self
 
 
 # Global settings instance
