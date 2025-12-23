@@ -25,6 +25,7 @@ from app.core.config import settings
 from app.services.job_store import JobStore
 from app.services.llm_client import BaseLLMClient, LLMConfigurationError
 from app.services.llm_openai import OpenAIClient
+from app.services.model_registry import get_model_registry
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,10 @@ _job_store = JobStore()
 # Global LLM client instance (lazily initialized)
 _llm_client: Optional[BaseLLMClient] = None
 _llm_client_lock = threading.Lock()
+
+# Flag to track if registry status has been logged
+_registry_logged = False
+_registry_log_lock = threading.Lock()
 
 
 def get_job_store() -> JobStore:
@@ -79,7 +84,14 @@ def get_llm_client() -> BaseLLMClient:
         >>> client = get_llm_client()
         >>> result = client.generate_specs("Build a REST API")
     """
-    global _llm_client
+    global _llm_client, _registry_logged
+    
+    # Log model registry status once at startup
+    with _registry_log_lock:
+        if not _registry_logged:
+            registry = get_model_registry()
+            registry.log_registry_status()
+            _registry_logged = True
     
     # Fast path: return existing client without acquiring lock
     if _llm_client is not None:
