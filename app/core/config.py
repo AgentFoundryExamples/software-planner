@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     # Planning settings
     max_description_bytes: int = 8192
     
+    # Job listing settings
+    default_jobs_list_limit: int = 100
+    max_jobs_list_limit: int = 1000
+    
     # CORS settings
     # For security, allow_credentials should only be True when allowed_origins is not ["*"]
     # WARNING: Default configuration is for development only. In production, set

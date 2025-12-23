@@ -14,7 +14,8 @@
 """API route handlers for the planning service."""
 
 import logging
-from fastapi import APIRouter, BackgroundTasks, Depends, status
+from typing import Optional
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 
 from app.models.request import PlanRequest
 from app.models.response import PlanResponse
@@ -235,4 +236,184 @@ def create_plan_async(
         "job_id": job.job_id,
         "status": job.status
     }
+
+
+@router.get(
+    "/plans/{job_id}",
+    status_code=status.HTTP_200_OK,
+    responses={
+        200: {
+            "description": "Job metadata retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                        "status": "succeeded",
+                        "created_at": "2025-01-01T12:00:00Z",
+                        "updated_at": "2025-01-01T12:00:05Z",
+                        "result": {
+                            "specs": [
+                                {
+                                    "purpose": "Core API Development",
+                                    "vision": "Build a robust REST API",
+                                    "must": ["Implement endpoints"],
+                                    "dont": ["Skip validation"],
+                                    "nice": ["Add rate limiting"]
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        404: {
+            "description": "Job not found or expired",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Job not found"
+                    }
+                }
+            }
+        }
+    },
+    summary="Get job status and result",
+    description="Retrieve metadata for a specific job including status, timestamps, and result/error when applicable"
+)
+def get_job_status(
+    job_id: str,
+    job_store: JobStore = Depends(get_job_store)
+) -> dict:
+    """Get the status and metadata for a specific job.
+    
+    Returns job metadata including job_id, status, created_at, updated_at.
+    When status is 'succeeded', includes result with specs.
+    When status is 'failed', includes error details.
+    Pending/running jobs have result=None and no error field.
+    
+    Args:
+        job_id: The job identifier to retrieve.
+        job_store: JobStore instance (injected via dependency).
+        
+    Returns:
+        Dict with job metadata.
+        
+    Raises:
+        HTTPException: 404 if job not found or expired.
+    """
+    job = job_store.get_job(job_id)
+    
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found"
+        )
+    
+    # Build response based on job status
+    response = {
+        "job_id": job.job_id,
+        "status": job.status,
+        "created_at": job.created_at.isoformat(),
+        "updated_at": job.updated_at.isoformat(),
+    }
+    
+    # Include result for succeeded jobs
+    if job.status == "succeeded" and job.result is not None:
+        response["result"] = job.result
+    else:
+        response["result"] = None
+    
+    # Include error for failed jobs
+    if job.status == "failed" and job.error is not None:
+        response["error"] = job.error
+    
+    return response
+
+
+@router.get(
+    "/plans",
+    status_code=status.HTTP_200_OK,
+    responses={
+        200: {
+            "description": "List of recent jobs",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "jobs": [
+                            {
+                                "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                                "status": "succeeded",
+                                "created_at": "2025-01-01T12:00:00Z",
+                                "updated_at": "2025-01-01T12:00:05Z",
+                                "result": {
+                                    "specs": [{"purpose": "Example"}]
+                                }
+                            }
+                        ],
+                        "total": 1,
+                        "limit": 100
+                    }
+                }
+            }
+        }
+    },
+    summary="List recent jobs",
+    description="List recent jobs sorted by most recently updated. Use limit parameter to control number of results."
+)
+def list_jobs(
+    limit: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Maximum number of jobs to return. Defaults to configured limit if not specified."
+    ),
+    job_store: JobStore = Depends(get_job_store)
+) -> dict:
+    """List recent jobs sorted by most recently updated.
+    
+    Returns a list of jobs with the same metadata shape as the single job endpoint.
+    Jobs are sorted by updated_at in descending order (most recent first).
+    
+    Args:
+        limit: Maximum number of jobs to return (optional).
+        job_store: JobStore instance (injected via dependency).
+        
+    Returns:
+        Dict with jobs list, total count, and applied limit.
+    """
+    from app.core.config import settings
+    
+    # Apply limit constraints
+    effective_limit = limit if limit is not None else settings.default_jobs_list_limit
+    effective_limit = min(effective_limit, settings.max_jobs_list_limit)
+    
+    jobs = job_store.list_jobs(limit=effective_limit)
+    
+    # Format jobs with same structure as single job endpoint
+    formatted_jobs = []
+    for job in jobs:
+        job_data = {
+            "job_id": job.job_id,
+            "status": job.status,
+            "created_at": job.created_at.isoformat(),
+            "updated_at": job.updated_at.isoformat(),
+        }
+        
+        # Include result for succeeded jobs
+        if job.status == "succeeded" and job.result is not None:
+            job_data["result"] = job.result
+        else:
+            job_data["result"] = None
+        
+        # Include error for failed jobs
+        if job.status == "failed" and job.error is not None:
+            job_data["error"] = job.error
+        
+        formatted_jobs.append(job_data)
+    
+    return {
+        "jobs": formatted_jobs,
+        "total": len(formatted_jobs),
+        "limit": effective_limit
+    }
+
 
