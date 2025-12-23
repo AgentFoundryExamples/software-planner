@@ -52,6 +52,17 @@ class OpenAIClient(BaseLLMClient):
     This client uses the OpenAI Chat Completions API to generate specifications.
     It implements retry logic for transient failures and provides structured logging.
     
+    **Important**: This client uses synchronous calls with blocking sleep for retry backoff.
+    If using in async contexts (e.g., FastAPI async endpoints), consider running the
+    client calls in a thread pool executor to avoid blocking the event loop:
+    
+        >>> import asyncio
+        >>> from concurrent.futures import ThreadPoolExecutor
+        >>> executor = ThreadPoolExecutor()
+        >>> result = await asyncio.get_event_loop().run_in_executor(
+        ...     executor, client.generate_specs, "Build a REST API"
+        ... )
+    
     Attributes:
         client: OpenAI SDK client instance.
         max_retries: Maximum number of retry attempts for transient errors.
@@ -160,31 +171,16 @@ class OpenAIClient(BaseLLMClient):
         Returns:
             True if the error should be retried, False otherwise.
         """
-        # Check for OpenAI-specific error types
-        if isinstance(error, openai.APITimeoutError):
-            return True
-        
-        if isinstance(error, openai.RateLimitError):
-            return True
-        
-        if isinstance(error, openai.APIConnectionError):
-            return True
-        
-        if isinstance(error, openai.InternalServerError):
-            return True
-        
-        if isinstance(error, openai.APIStatusError):
-            # 5xx errors are retryable
-            if hasattr(error, "status_code") and 500 <= error.status_code < 600:
-                return True
-            # 429 rate limit is retryable
-            if hasattr(error, "status_code") and error.status_code == 429:
-                return True
-            # 4xx client errors (except 429) are not retryable
-            return False
-        
-        # By default, don't retry unknown errors
-        return False
+        # Check for OpenAI-specific error types that are documented as retryable
+        return isinstance(
+            error,
+            (
+                openai.APITimeoutError,
+                openai.RateLimitError,
+                openai.APIConnectionError,
+                openai.InternalServerError,
+            ),
+        )
     
     def _call_llm_api(self, description: str, system_prompt: str) -> str:
         """Call OpenAI API with retry logic.
