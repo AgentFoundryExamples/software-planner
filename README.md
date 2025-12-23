@@ -426,7 +426,7 @@ All tests should pass. If you encounter any failures, ensure:
 │   │   └── response.py      # Response models
 │   └── services/            # Business logic services
 │       ├── __init__.py
-│       └── planner.py       # Planning service with hard-coded logic
+│       └── planner.py       # Planning service with LLM integration
 ├── tests/                   # Test suite
 │   ├── __init__.py
 │   ├── test_config.py       # Configuration tests
