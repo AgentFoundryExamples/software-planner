@@ -58,6 +58,8 @@ The API will be available at:
 
 ### API Endpoints
 
+The API provides both synchronous and asynchronous planning endpoints. The asynchronous endpoints (POST /api/v1/plans) are recommended for production use as they allow long-running planning operations without blocking the client.
+
 #### GET /health
 
 Returns the health status of the API.
@@ -77,6 +79,8 @@ curl http://localhost:8000/health
 #### POST /api/v1/plan
 
 Generate a software plan based on a project description (synchronous).
+
+> **Note:** This is the synchronous endpoint that blocks until planning completes. For production use or long-running operations, consider using the asynchronous POST /api/v1/plans endpoint instead.
 
 **Example using curl:**
 ```bash
@@ -136,25 +140,25 @@ curl -X POST http://localhost:8000/api/v1/plan \
 - `400 Bad Request`: Empty, whitespace-only, or oversized description
 - `422 Unprocessable Entity`: Malformed JSON or missing required fields
 
-#### POST /api/v1/plans
+### Asynchronous Planning Workflow
 
-Create an asynchronous planning job that executes in the background.
+The asynchronous planning endpoints allow you to submit long-running planning jobs and poll for results without blocking your client. This is the recommended approach over the synchronous endpoint.
 
-**Example using curl:**
+> **Note:** Jobs are stored in-memory only and will be lost on server restart. See the "Known Limitations" section below for details.
+
+#### Step-by-Step Usage
+
+**1. Create a Planning Job**
+
+Submit a planning request using POST /api/v1/plans:
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/plans \
   -H "Content-Type: application/json" \
   -d '{"description": "Build a REST API for managing tasks"}'
 ```
 
-**Request Body:**
-```json
-{
-  "description": "Build a REST API for managing tasks"
-}
-```
-
-**Success Response (202 Accepted):**
+Response (HTTP 202 Accepted):
 ```json
 {
   "job_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -162,22 +166,21 @@ curl -X POST http://localhost:8000/api/v1/plans \
 }
 ```
 
-Use the returned `job_id` to poll for results using the GET endpoints below.
+The server returns immediately with a unique `job_id`. Save this ID for polling.
 
-**Error Responses:**
-- `400 Bad Request`: Empty, whitespace-only, or oversized description
-- `422 Unprocessable Entity`: Malformed JSON or missing required fields
+**2. Poll for Job Status**
 
-#### GET /api/v1/plans/{job_id}
+Use GET /api/v1/plans/{job_id} to check the job status:
 
-Get the status and result of a specific planning job.
-
-**Example using curl:**
 ```bash
 curl http://localhost:8000/api/v1/plans/550e8400-e29b-41d4-a716-446655440000
 ```
 
-**Success Response (200 OK) - Pending Job:**
+**3. Interpret Job Status**
+
+The job progresses through these states:
+
+**Pending Job** (just created, not yet started):
 ```json
 {
   "job_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -188,7 +191,18 @@ curl http://localhost:8000/api/v1/plans/550e8400-e29b-41d4-a716-446655440000
 }
 ```
 
-**Success Response (200 OK) - Succeeded Job:**
+**Running Job** (currently executing):
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "running",
+  "created_at": "2025-01-01T12:00:00Z",
+  "updated_at": "2025-01-01T12:00:02Z",
+  "result": null
+}
+```
+
+**Succeeded Job** (planning completed successfully):
 ```json
 {
   "job_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -209,7 +223,7 @@ curl http://localhost:8000/api/v1/plans/550e8400-e29b-41d4-a716-446655440000
 }
 ```
 
-**Success Response (200 OK) - Failed Job:**
+**Failed Job** (planning encountered an error):
 ```json
 {
   "job_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -224,26 +238,57 @@ curl http://localhost:8000/api/v1/plans/550e8400-e29b-41d4-a716-446655440000
 }
 ```
 
-**Error Responses:**
-- `404 Not Found`: Job not found or expired
+**Job Not Found** (invalid job_id or job expired):
+```json
+{
+  "error": "Job not found",
+  "status_code": 404
+}
+```
 
-#### GET /api/v1/plans
+#### HTTP Status Codes
 
-List recent planning jobs sorted by most recently updated.
+- **202 Accepted**: Job created successfully (POST /plans)
+- **200 OK**: Job metadata retrieved (GET /plans/{job_id}, regardless of job status)
+- **404 Not Found**: Job does not exist or has expired
+- **400 Bad Request**: Invalid request (empty/oversized description)
+- **422 Unprocessable Entity**: Malformed JSON or missing required fields
 
-**Example using curl:**
+#### Known Limitations
+
+**⚠️ Important Constraints:**
+
+1. **In-Memory Storage Only**: Jobs are stored in memory and will be **lost on server restart**. Do not rely on job persistence across deployments.
+
+2. **Process Lifetime**: Jobs exist only for the lifetime of the current server process. There is no database or persistent storage.
+
+3. **No Cancellation**: Once a job is created, it cannot be cancelled. It will run to completion (succeeded or failed state).
+
+4. **No Durability Guarantees**: The system does not provide durability guarantees beyond the current process.
+
+#### Polling Strategy
+
+For best results when polling:
+- Start polling immediately after job creation
+- Use an exponential backoff strategy (e.g., 1s, 2s, 4s, 8s intervals)
+- Stop polling when status is `succeeded` or `failed`
+- Handle 404 errors gracefully (job may have expired)
+
+#### Debug Endpoints
+
+**GET /api/v1/plans** (List All Jobs)
+
+This debug endpoint lists all jobs currently in memory:
+
 ```bash
-# List with default limit
+# List all jobs
 curl http://localhost:8000/api/v1/plans
 
 # List with custom limit
 curl "http://localhost:8000/api/v1/plans?limit=10"
 ```
 
-**Query Parameters:**
-- `limit` (optional): Maximum number of jobs to return (default: 100, max: 1000)
-
-**Success Response (200 OK):**
+Response:
 ```json
 {
   "jobs": [
@@ -253,24 +298,24 @@ curl "http://localhost:8000/api/v1/plans?limit=10"
       "created_at": "2025-01-01T12:00:00Z",
       "updated_at": "2025-01-01T12:00:05Z",
       "result": {
-        "specs": [{"purpose": "Example"}]
+        "specs": [
+          {
+            "purpose": "Core API Development",
+            "vision": "Build a robust REST API",
+            "must": ["Implement endpoints"],
+            "dont": ["Skip validation"],
+            "nice": ["Add rate limiting"]
+          }
+        ]
       }
-    },
-    {
-      "job_id": "660e8400-e29b-41d4-a716-446655440001",
-      "status": "pending",
-      "created_at": "2025-01-01T11:55:00Z",
-      "updated_at": "2025-01-01T11:55:00Z",
-      "result": null
     }
   ],
-  "total": 2,
+  "total": 1,
   "limit": 100
 }
 ```
 
-**Error Responses:**
-- `422 Unprocessable Entity`: Invalid limit parameter (must be >= 1)
+**Note:** This endpoint is intended for debugging and monitoring only. Jobs are returned in most-recently-updated order.
 
 ### Configuration
 
