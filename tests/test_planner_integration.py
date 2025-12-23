@@ -173,3 +173,18 @@ class TestPlannerWithJobStore:
         assert updated_job2.status == "succeeded"
         assert updated_job1.result is not None
         assert updated_job2.result is not None
+    
+    def test_generate_plan_with_nonexistent_job_id_still_returns_plan(self):
+        """Test that providing non-existent job_id still returns a plan."""
+        store = JobStore()
+        
+        # Should not raise exception and should return a plan
+        response = generate_plan("Build a REST API", job_store=store, job_id="non-existent-id")
+        
+        assert response is not None
+        assert hasattr(response, 'specs')
+        assert len(response.specs) > 0
+        
+        # Job should not exist in store
+        job = store.get_job("non-existent-id")
+        assert job is None

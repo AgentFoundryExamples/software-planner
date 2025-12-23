@@ -45,9 +45,15 @@ def generate_plan(description: str, job_store: Optional[JobStore] = None, job_id
         Current implementation returns static data regardless of input.
         Future versions will implement actual planning logic.
     """
-    # Update job status to running if job tracking is enabled
+    # If job tracking is enabled, validate job exists before updating
     if job_store and job_id:
-        job_store.update_job(job_id, status="running")
+        job = job_store.get_job(job_id)
+        if not job:
+            # Job not found - cannot track status for non-existent job
+            # Clear job_id to prevent further update attempts
+            job_id = None
+        else:
+            job_store.update_job(job_id, status="running")
     
     try:
         # Hard-coded static response for deterministic behavior
@@ -90,9 +96,15 @@ def generate_plan(description: str, job_store: Optional[JobStore] = None, job_id
     except Exception as e:
         # Update job with error if job tracking is enabled
         if job_store and job_id:
-            error_dict = {
-                "error": str(e),
-                "type": type(e).__name__
-            }
-            job_store.update_job(job_id, status="failed", error=error_dict)
+            try:
+                error_dict = {
+                    "error": str(e),
+                    "type": type(e).__name__
+                }
+                job_store.update_job(job_id, status="failed", error=error_dict)
+            except Exception:
+                # Suppress any exception from updating job status to avoid
+                # masking the original exception. The original exception
+                # is more important for the caller to handle.
+                pass
         raise
