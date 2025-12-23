@@ -9,21 +9,22 @@ Includes classification of external dependencies as stdlib vs third-party.
 ## Statistics
 
 - **Total files**: 35
-- **Intra-repo dependencies**: 68
-- **External stdlib dependencies**: 22
+- **Intra-repo dependencies**: 69
+- **External stdlib dependencies**: 23
 - **External third-party dependencies**: 28
 
 ## External Dependencies
 
 ### Standard Library / Core Modules
 
-Total: 22 unique modules
+Total: 23 unique modules
 
 - `abc.ABC`
 - `abc.abstractmethod`
 - `concurrent.futures.ThreadPoolExecutor`
 - `datetime.datetime`
 - `datetime.timezone`
+- `hashlib`
 - `json`
 - `logging`
 - `os`
@@ -38,8 +39,7 @@ Total: 22 unique modules
 - `typing.Literal`
 - `typing.Optional`
 - `unittest.mock.MagicMock`
-- `unittest.mock.Mock`
-- ... and 2 more (see JSON for full list)
+- ... and 3 more (see JSON for full list)
 
 ### Third-Party Packages
 
@@ -73,16 +73,16 @@ Total: 28 unique packages
 - `app/services/llm_client.py` (12 dependents)
 - `app/services/job_store.py` (8 dependents)
 - `app/services/store_singleton.py` (6 dependents)
+- `app/services/model_registry.py` (5 dependents)
 - `app/services/llm_openai.py` (5 dependents)
 - `app/main.py` (5 dependents)
 - `app/services/planner.py` (4 dependents)
-- `app/services/model_registry.py` (4 dependents)
 - `app/models/job.py` (3 dependents)
 - `app/models/response.py` (3 dependents)
 
 ## Files with Most Dependencies (Intra-Repo)
 
-- `app/api/routes.py` (7 dependencies)
+- `app/api/routes.py` (8 dependencies)
 - `app/services/llm_client.py` (5 dependencies)
 - `app/services/planner.py` (5 dependencies)
 - `app/services/store_singleton.py` (5 dependencies)

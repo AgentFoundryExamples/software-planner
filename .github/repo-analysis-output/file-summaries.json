@@ -39,8 +39,8 @@
       "summary": "Python routing configuration (role: router)",
       "summary_text": "Python routing configuration (role: router)",
       "metrics": {
-        "size_bytes": 19364,
-        "loc": 444,
+        "size_bytes": 21802,
+        "loc": 501,
         "todo_count": 0
       }
     },
@@ -67,8 +67,8 @@
       "summary": "Python configuration file (role: configuration)",
       "summary_text": "Python configuration file (role: configuration)",
       "metrics": {
-        "size_bytes": 9876,
-        "loc": 166,
+        "size_bytes": 9961,
+        "loc": 167,
         "todo_count": 0
       }
     },
@@ -109,8 +109,8 @@
       "summary": "Python module for job",
       "summary_text": "Python module for job",
       "metrics": {
-        "size_bytes": 1871,
-        "loc": 23,
+        "size_bytes": 2200,
+        "loc": 27,
         "todo_count": 0
       }
     },
@@ -123,8 +123,8 @@
       "summary": "Python module for request",
       "summary_text": "Python module for request",
       "metrics": {
-        "size_bytes": 2134,
-        "loc": 35,
+        "size_bytes": 5012,
+        "loc": 95,
         "todo_count": 0
       }
     },
@@ -165,8 +165,8 @@
       "summary": "Python module for job store",
       "summary_text": "Python module for job store",
       "metrics": {
-        "size_bytes": 5487,
-        "loc": 112,
+        "size_bytes": 5792,
+        "loc": 116,
         "todo_count": 0
       }
     },
@@ -249,8 +249,8 @@
       "summary": "Python module for planner",
       "summary_text": "Python module for planner",
       "metrics": {
-        "size_bytes": 12092,
-        "loc": 215,
+        "size_bytes": 13572,
+        "loc": 244,
         "todo_count": 0
       }
     },
@@ -333,8 +333,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 12609,
-        "loc": 251,
+        "size_bytes": 17764,
+        "loc": 359,
         "todo_count": 0
       }
     },
@@ -431,8 +431,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 13855,
-        "loc": 278,
+        "size_bytes": 20972,
+        "loc": 434,
         "todo_count": 0
       }
     },
@@ -459,8 +459,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 17508,
-        "loc": 330,
+        "size_bytes": 24224,
+        "loc": 472,
         "todo_count": 0
       }
     },
@@ -473,8 +473,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 23468,
-        "loc": 417,
+        "size_bytes": 28730,
+        "loc": 509,
         "todo_count": 0
       }
     },

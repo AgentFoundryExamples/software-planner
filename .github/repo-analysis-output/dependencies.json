@@ -24,6 +24,7 @@
       "type": "file",
       "external_dependencies": {
         "stdlib": [
+          "hashlib",
           "logging",
           "typing.Optional"
         ],
@@ -533,6 +534,10 @@
       "target": "app/services/store_singleton.py"
     },
     {
+      "source": "app/api/routes.py",
+      "target": "app/services/model_registry.py"
+    },
+    {
       "source": "app/core/__init__.py",
       "target": "app/core/config.py"
     },
@@ -784,6 +789,7 @@
       "concurrent.futures.ThreadPoolExecutor",
       "datetime.datetime",
       "datetime.timezone",
+      "hashlib",
       "json",
       "logging",
       "os",
@@ -832,7 +838,7 @@
       "starlette.exceptions.HTTPException",
       "uvicorn"
     ],
-    "stdlib_count": 22,
+    "stdlib_count": 23,
     "third-party_count": 28
   }
 }

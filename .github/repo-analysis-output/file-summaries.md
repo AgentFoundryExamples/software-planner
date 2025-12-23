@@ -29,8 +29,8 @@ Total files: 35
 **Role:** router  
 **Role Justification:** filename contains routing term  
 **Summary:** Python routing configuration (role: router)  
-**Size:** 18.91 KB  
-**LOC:** 444  
+**Size:** 21.29 KB  
+**LOC:** 501  
 **TODOs/FIXMEs:** 0  
 
 ## app/core/__init__.py
@@ -47,8 +47,8 @@ Total files: 35
 **Role:** configuration  
 **Role Justification:** configuration file name 'config'  
 **Summary:** Python configuration file (role: configuration)  
-**Size:** 9.64 KB  
-**LOC:** 166  
+**Size:** 9.73 KB  
+**LOC:** 167  
 **TODOs/FIXMEs:** 0  
 
 ## app/main.py
@@ -74,8 +74,8 @@ Total files: 35
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for job  
-**Size:** 1.83 KB  
-**LOC:** 23  
+**Size:** 2.15 KB  
+**LOC:** 27  
 **TODOs/FIXMEs:** 0  
 
 ## app/models/request.py
@@ -83,8 +83,8 @@ Total files: 35
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for request  
-**Size:** 2.08 KB  
-**LOC:** 35  
+**Size:** 4.89 KB  
+**LOC:** 95  
 **TODOs/FIXMEs:** 0  
 
 ## app/models/response.py
@@ -110,8 +110,8 @@ Total files: 35
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for job store  
-**Size:** 5.36 KB  
-**LOC:** 112  
+**Size:** 5.66 KB  
+**LOC:** 116  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/llm_claude.py
@@ -164,8 +164,8 @@ Total files: 35
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for planner  
-**Size:** 11.81 KB  
-**LOC:** 215  
+**Size:** 13.25 KB  
+**LOC:** 244  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/store_singleton.py
@@ -218,8 +218,8 @@ Total files: 35
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 12.31 KB  
-**LOC:** 251  
+**Size:** 17.35 KB  
+**LOC:** 359  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_llm_claude.py
@@ -281,8 +281,8 @@ Total files: 35
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 13.53 KB  
-**LOC:** 278  
+**Size:** 20.48 KB  
+**LOC:** 434  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_planner_integration.py
@@ -299,8 +299,8 @@ Total files: 35
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 17.10 KB  
-**LOC:** 330  
+**Size:** 23.66 KB  
+**LOC:** 472  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_plans_polling_endpoints.py
@@ -308,8 +308,8 @@ Total files: 35
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 22.92 KB  
-**LOC:** 417  
+**Size:** 28.06 KB  
+**LOC:** 509  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_store_singleton.py
