@@ -210,11 +210,33 @@ def generate_plan(
             job_store.update_job(job_id, status="running")
     
     try:
-        # Get LLM client (use provided client or get singleton)
-        # Note: Import here to avoid circular dependency with store_singleton
+        # Get LLM client - if model is specified, get a client for that model
+        # Otherwise use provided client or get singleton
         if llm_client is None:
-            from app.services.store_singleton import get_llm_client
-            llm_client = get_llm_client()
+            if model is not None:
+                # Model override requested - get client for that specific model
+                from app.services.llm_client import get_llm_client_for_model
+                try:
+                    llm_client = get_llm_client_for_model(
+                        logical_model_id=model,
+                        cache_clients=True
+                    )
+                    logger.info(
+                        "Using model-specific LLM client",
+                        extra={"model": model, "job_id": job_id or "none"}
+                    )
+                except LLMConfigurationError as e:
+                    # Model validation error - this should have been caught in routes
+                    # but handle it gracefully here as well
+                    logger.error(
+                        f"Model configuration error: {e}",
+                        extra={"model": model, "job_id": job_id or "none"}
+                    )
+                    raise
+            else:
+                # No model override - use default singleton client
+                from app.services.store_singleton import get_llm_client
+                llm_client = get_llm_client()
         
         # Get system prompt - use provided override, otherwise fall back to config or default
         if system_prompt is None:
