@@ -129,14 +129,32 @@ class JobStore:
             self._jobs[job_id] = updated_job
             return updated_job
     
-    def list_jobs(self) -> List[Job]:
+    def list_jobs(self, limit: Optional[int] = None) -> List[Job]:
         """List all jobs in the store.
         
+        Args:
+            limit: Maximum number of jobs to return (None for all jobs).
+        
         Returns:
-            List of all Job instances, ordered by creation time (newest first).
+            List of Job instances, ordered by update time (most recently updated first).
         """
         with self._lock:
+            # Create a shallow copy to avoid holding lock during sort/slice
             jobs = list(self._jobs.values())
-            # Sort by created_at descending (newest first)
-            jobs.sort(key=lambda j: j.created_at, reverse=True)
-            return jobs
+        
+        # Sort and slice outside the lock to minimize contention
+        jobs.sort(key=lambda j: j.updated_at, reverse=True)
+        
+        if limit is not None and limit > 0:
+            jobs = jobs[:limit]
+        
+        return jobs
+    
+    def count_jobs(self) -> int:
+        """Count total number of jobs in the store.
+        
+        Returns:
+            Total count of jobs.
+        """
+        with self._lock:
+            return len(self._jobs)
