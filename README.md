@@ -10,10 +10,32 @@ A FastAPI-based software planning service with a modular, extensible architectur
 
 ### Installation
 
-1. Install dependencies:
+1. Create and activate a virtual environment (recommended):
+
+**On Linux/macOS:**
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+**On Windows (Command Prompt):**
+```cmd
+python -m venv venv
+venv\Scripts\activate.bat
+```
+
+**On Windows (PowerShell):**
+```powershell
+python -m venv venv
+venv\Scripts\Activate.ps1
+```
+
+2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
+
+> **Note:** If you encounter permission errors when activating scripts on Windows PowerShell, you may need to run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
 ### Running the Application
 
@@ -39,6 +61,11 @@ The API will be available at:
 
 Returns the health status of the API.
 
+**Example using curl:**
+```bash
+curl http://localhost:8000/health
+```
+
 **Response:**
 ```json
 {
@@ -49,6 +76,18 @@ Returns the health status of the API.
 #### POST /api/v1/plan
 
 Generate a software plan based on a project description.
+
+**Example using curl:**
+```bash
+curl -X POST http://localhost:8000/api/v1/plan \
+  -H "Content-Type: application/json" \
+  -d '{"description": "Build a REST API for managing tasks"}'
+```
+
+> **Note:** When using curl on Windows Command Prompt, use double quotes for JSON and escape inner quotes:
+> ```cmd
+> curl -X POST http://localhost:8000/api/v1/plan -H "Content-Type: application/json" -d "{\"description\": \"Build a REST API for managing tasks\"}"
+> ```
 
 **Request Body:**
 ```json
@@ -98,7 +137,14 @@ Generate a software plan based on a project description.
 
 ### Configuration
 
-Configuration is managed through environment variables or a `.env` file. Available settings:
+Configuration is managed through environment variables or a `.env` file. All settings have sensible defaults and are optional.
+
+**To use a `.env` file:**
+1. Copy the example file: `cp .env.example .env`
+2. Edit `.env` with your desired values
+3. The application will automatically load these settings on startup
+
+**Available settings:**
 
 - `APP_NAME`: Application name (default: "Software Planner API")
 - `APP_VERSION`: Application version (default: "0.1.0")
@@ -107,18 +153,48 @@ Configuration is managed through environment variables or a `.env` file. Availab
 - `PORT`: Server port (default: 8000)
 - `API_PREFIX`: API prefix for routes (default: "/api/v1")
 - `MAX_DESCRIPTION_BYTES`: Maximum byte length for plan descriptions (default: 8192)
+- `ALLOWED_ORIGINS`: CORS allowed origins (default: ["*"] - development only)
+- `ALLOWED_CREDENTIALS`: CORS allow credentials (default: False)
+- `ALLOWED_METHODS`: CORS allowed methods (default: ["*"])
+- `ALLOWED_HEADERS`: CORS allowed headers (default: ["*"])
+
+> **Security Note:** The default CORS configuration (`ALLOWED_ORIGINS=["*"]`) is suitable for development only. In production, set `ALLOWED_ORIGINS` to specific domains and configure `ALLOWED_CREDENTIALS` appropriately.
 
 ### Testing
 
-Run tests with pytest:
+The project includes comprehensive tests for all endpoints and functionality.
+
+**Run all tests:**
 ```bash
 pytest
 ```
 
-Run with coverage:
+**Run tests with verbose output:**
+```bash
+pytest -v
+```
+
+**Run specific test file:**
+```bash
+pytest tests/test_health_endpoint.py
+pytest tests/test_plan_endpoint.py
+```
+
+**Run with coverage report:**
 ```bash
 pytest --cov=app tests/
 ```
+
+**Test Coverage:**
+- `tests/test_health_endpoint.py` - Health check endpoint tests
+- `tests/test_plan_endpoint.py` - Planning endpoint tests (happy path, validation, edge cases)
+- `tests/test_main.py` - Application setup and general endpoint tests
+- `tests/test_config.py` - Configuration and settings tests
+
+All tests should pass. If you encounter any failures, ensure:
+1. All dependencies are installed (`pip install -r requirements.txt`)
+2. You're using Python 3.10 or higher
+3. Your virtual environment is activated (if using one)
 
 ## Project Structure
 
@@ -142,9 +218,11 @@ pytest --cov=app tests/
 │       └── planner.py       # Planning service with hard-coded logic
 ├── tests/                   # Test suite
 │   ├── __init__.py
-│   ├── test_config.py
-│   ├── test_main.py
-│   └── test_plan_endpoint.py  # Comprehensive /plan endpoint tests
+│   ├── test_config.py       # Configuration tests
+│   ├── test_main.py         # Application and general endpoint tests
+│   ├── test_health_endpoint.py  # Health endpoint tests
+│   └── test_plan_endpoint.py    # Comprehensive /plan endpoint tests
+├── .env.example             # Example environment configuration
 ├── requirements.txt         # Python dependencies
 └── pytest.ini              # Pytest configuration
 ```
