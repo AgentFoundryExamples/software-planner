@@ -31,6 +31,7 @@
     ├── __init__.py
     ├── job_store.py
     ├── llm_client.py
+    ├── llm_openai.py
     ├── planner.py
     └── store_singleton.py
   ├── __init__.py
@@ -42,15 +43,18 @@
   ├── test_job_model.py
   ├── test_job_store.py
   ├── test_llm_client.py
+  ├── test_llm_openai.py
   ├── test_main.py
   ├── test_plan_endpoint.py
   ├── test_planner_integration.py
   ├── test_plans_async_endpoint.py
-  └── test_plans_polling_endpoints.py
+  ├── test_plans_polling_endpoints.py
+  └── test_store_singleton.py
 ├── .env.example
 ├── .gitignore
 ├── LICENSE
 ├── LLMs.md
 ├── pytest.ini
 ├── README.md
+├── requirements-lock.txt
 └── requirements.txt

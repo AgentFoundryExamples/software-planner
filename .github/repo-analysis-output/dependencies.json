@@ -174,6 +174,22 @@
       }
     },
     {
+      "id": "app/services/llm_openai.py",
+      "path": "app/services/llm_openai.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "logging",
+          "time",
+          "typing.Optional"
+        ],
+        "third-party": [
+          "openai",
+          "openai.OpenAI"
+        ]
+      }
+    },
+    {
       "id": "app/services/planner.py",
       "path": "app/services/planner.py",
       "type": "file",
@@ -189,7 +205,11 @@
       "path": "app/services/store_singleton.py",
       "type": "file",
       "external_dependencies": {
-        "stdlib": [],
+        "stdlib": [
+          "logging",
+          "threading",
+          "typing.Optional"
+        ],
         "third-party": []
       }
     },
@@ -273,6 +293,23 @@
       }
     },
     {
+      "id": "tests/test_llm_openai.py",
+      "path": "tests/test_llm_openai.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "json",
+          "unittest.mock.MagicMock",
+          "unittest.mock.Mock",
+          "unittest.mock.patch"
+        ],
+        "third-party": [
+          "openai",
+          "pytest"
+        ]
+      }
+    },
+    {
       "id": "tests/test_main.py",
       "path": "tests/test_main.py",
       "type": "file",
@@ -339,6 +376,20 @@
         ],
         "third-party": [
           "fastapi.testclient.TestClient",
+          "pytest"
+        ]
+      }
+    },
+    {
+      "id": "tests/test_store_singleton.py",
+      "path": "tests/test_store_singleton.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "unittest.mock.Mock",
+          "unittest.mock.patch"
+        ],
+        "third-party": [
           "pytest"
         ]
       }
@@ -414,6 +465,10 @@
       "target": "app/models/response.py"
     },
     {
+      "source": "app/services/llm_openai.py",
+      "target": "app/services/llm_client.py"
+    },
+    {
       "source": "app/services/planner.py",
       "target": "app/models/response.py"
     },
@@ -423,7 +478,19 @@
     },
     {
       "source": "app/services/store_singleton.py",
+      "target": "app/core/config.py"
+    },
+    {
+      "source": "app/services/store_singleton.py",
       "target": "app/services/job_store.py"
+    },
+    {
+      "source": "app/services/store_singleton.py",
+      "target": "app/services/llm_client.py"
+    },
+    {
+      "source": "app/services/store_singleton.py",
+      "target": "app/services/llm_openai.py"
     },
     {
       "source": "tests/test_config.py",
@@ -443,6 +510,14 @@
     },
     {
       "source": "tests/test_llm_client.py",
+      "target": "app/services/llm_client.py"
+    },
+    {
+      "source": "tests/test_llm_openai.py",
+      "target": "app/services/llm_openai.py"
+    },
+    {
+      "source": "tests/test_llm_openai.py",
       "target": "app/services/llm_client.py"
     },
     {
@@ -500,6 +575,18 @@
     {
       "source": "tests/test_plans_polling_endpoints.py",
       "target": "app/core/config.py"
+    },
+    {
+      "source": "tests/test_store_singleton.py",
+      "target": "app/services/store_singleton.py"
+    },
+    {
+      "source": "tests/test_store_singleton.py",
+      "target": "app/services/llm_client.py"
+    },
+    {
+      "source": "tests/test_store_singleton.py",
+      "target": "app/services/llm_openai.py"
     }
   ],
   "external_dependencies_summary": {
@@ -514,6 +601,7 @@
       "os",
       "random",
       "re",
+      "threading",
       "threading.Lock",
       "time",
       "typing.Any",
@@ -521,7 +609,9 @@
       "typing.List",
       "typing.Literal",
       "typing.Optional",
+      "unittest.mock.MagicMock",
       "unittest.mock.Mock",
+      "unittest.mock.patch",
       "uuid"
     ],
     "third-party": [
@@ -537,6 +627,8 @@
       "fastapi.responses.JSONResponse",
       "fastapi.status",
       "fastapi.testclient.TestClient",
+      "openai",
+      "openai.OpenAI",
       "pydantic.BaseModel",
       "pydantic.Field",
       "pydantic.ValidationError",
@@ -548,7 +640,7 @@
       "starlette.exceptions.HTTPException",
       "uvicorn"
     ],
-    "stdlib_count": 19,
-    "third-party_count": 22
+    "stdlib_count": 22,
+    "third-party_count": 24
   }
 }

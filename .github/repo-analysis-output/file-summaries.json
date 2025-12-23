@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 26,
+  "total_files": 29,
   "files": [
     {
       "schema_version": "2.0",
@@ -186,6 +186,20 @@
     },
     {
       "schema_version": "2.0",
+      "path": "app/services/llm_openai.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for llm openai",
+      "summary_text": "Python module for llm openai",
+      "metrics": {
+        "size_bytes": 13464,
+        "loc": 266,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "app/services/planner.py",
       "language": "Python",
       "role": "implementation",
@@ -207,8 +221,8 @@
       "summary": "Python module for store singleton",
       "summary_text": "Python module for store singleton",
       "metrics": {
-        "size_bytes": 1247,
-        "loc": 15,
+        "size_bytes": 4579,
+        "loc": 83,
         "todo_count": 0
       }
     },
@@ -298,6 +312,20 @@
     },
     {
       "schema_version": "2.0",
+      "path": "tests/test_llm_openai.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 22759,
+        "loc": 424,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "tests/test_main.py",
       "language": "Python",
       "role": "test",
@@ -363,6 +391,20 @@
       "metrics": {
         "size_bytes": 22503,
         "loc": 398,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_store_singleton.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 5247,
+        "loc": 77,
         "todo_count": 0
       }
     }

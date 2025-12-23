@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 26
+Total files: 29
 
 ## app/__init__.py
 **Language:** Python  
@@ -123,6 +123,15 @@ Total files: 26
 **LOC:** 241  
 **TODOs/FIXMEs:** 0  
 
+## app/services/llm_openai.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for llm openai  
+**Size:** 13.15 KB  
+**LOC:** 266  
+**TODOs/FIXMEs:** 0  
+
 ## app/services/planner.py
 **Language:** Python  
 **Role:** implementation  
@@ -137,8 +146,8 @@ Total files: 26
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for store singleton  
-**Size:** 1.22 KB  
-**LOC:** 15  
+**Size:** 4.47 KB  
+**LOC:** 83  
 **TODOs/FIXMEs:** 0  
 
 ## tests/__init__.py
@@ -195,6 +204,15 @@ Total files: 26
 **LOC:** 225  
 **TODOs/FIXMEs:** 0  
 
+## tests/test_llm_openai.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 22.23 KB  
+**LOC:** 424  
+**TODOs/FIXMEs:** 0  
+
 ## tests/test_main.py
 **Language:** Python  
 **Role:** test  
@@ -238,4 +256,13 @@ Total files: 26
 **Summary:** Python test file (role: test)  
 **Size:** 21.98 KB  
 **LOC:** 398  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_store_singleton.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 5.12 KB  
+**LOC:** 77  
 **TODOs/FIXMEs:** 0  
