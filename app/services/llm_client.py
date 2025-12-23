@@ -177,7 +177,8 @@ class BaseLLMClient(ABC):
         
         # Remove markdown code blocks if present using regex
         # Matches ```json or ``` at start and ``` at end
-        markdown_pattern = r'^```(?:json)?\s*\n(.*?)\n```$'
+        # The final newline before closing backticks is optional
+        markdown_pattern = r'^```(?:json)?\s*\n(.*?)\n?```$'
         match = re.search(markdown_pattern, response_text, re.DOTALL)
         if match:
             response_text = match.group(1).strip()
@@ -276,6 +277,9 @@ class BaseLLMClient(ABC):
             # Call provider-specific implementation
             raw_response = self._call_llm_api(description, prompt)
             
+            # Mark that we're now in response processing phase
+            processing_response = True
+            
             # Parse and validate response
             result = self._parse_response(raw_response)
             
@@ -306,12 +310,11 @@ class BaseLLMClient(ABC):
                 "Unexpected error during spec generation",
                 extra={"error_type": error_type, "error": str(e)}
             )
-            # If we have raw_response, it's likely a response processing error
-            # Otherwise, it's a request error
-            if 'raw_response' in locals():
+            # Check if we were processing the response or making the request
+            if 'processing_response' in locals() and processing_response:
                 raise LLMResponseError(f"Unexpected error processing response: {e}")
             else:
-                raise LLMRequestError(f"Unexpected error: {e}")
+                raise LLMRequestError(f"Unexpected error during request: {e}")
 
 
 def get_default_system_prompt() -> str:
