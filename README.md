@@ -295,7 +295,17 @@ Response:
       "status": "succeeded",
       "created_at": "2025-01-01T12:00:00Z",
       "updated_at": "2025-01-01T12:00:05Z",
-      "result": {"specs": [...]}
+      "result": {
+        "specs": [
+          {
+            "purpose": "Core API Development",
+            "vision": "Build a robust REST API",
+            "must": ["Implement endpoints"],
+            "dont": ["Skip validation"],
+            "nice": ["Add rate limiting"]
+          }
+        ]
+      }
     }
   ],
   "total": 1,
