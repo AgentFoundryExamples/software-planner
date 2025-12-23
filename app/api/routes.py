@@ -230,7 +230,22 @@ def _background_planner_worker(job_id: str, description: str, job_store: JobStor
         }
     },
     summary="Create async software planning job",
-    description="Accepts a project description, creates a job, and returns job_id immediately. Planning executes in background."
+    description="""Create an asynchronous planning job that executes in the background.
+
+**Async Semantics:**
+- Returns immediately with HTTP 202 Accepted
+- Job starts with 'pending' status and transitions through: pending → running → succeeded/failed
+- Use returned job_id to poll for status and results via GET /plans/{job_id}
+
+**Storage Limitations:**
+- Jobs are stored in-memory only for the lifetime of the process
+- Jobs will be lost on server restart or process termination
+- No job cancellation support
+
+**Validation:**
+- Description must be non-empty and not whitespace-only
+- Maximum size: 8192 bytes (UTF-8 encoded)
+"""
 )
 def create_plan_async(
     request: PlanRequest,
@@ -241,6 +256,20 @@ def create_plan_async(
     
     This endpoint validates the request, creates a job with 'pending' status,
     schedules background execution, and returns immediately with the job_id.
+    
+    **Job Lifecycle:**
+    1. Job created with status='pending'
+    2. Background task starts, status transitions to 'running'
+    3. On success: status='succeeded', result contains specs
+    4. On failure: status='failed', error contains details
+    
+    **Polling:**
+    Use GET /plans/{job_id} to check job status and retrieve results.
+    
+    **Limitations:**
+    - Jobs stored in-memory only (lost on process restart)
+    - No cancellation support
+    - Jobs persist for process lifetime only
     
     Args:
         request: PlanRequest containing the project description.
@@ -280,21 +309,60 @@ def create_plan_async(
             "description": "Job metadata retrieved successfully",
             "content": {
                 "application/json": {
-                    "example": {
-                        "job_id": "550e8400-e29b-41d4-a716-446655440000",
-                        "status": "succeeded",
-                        "created_at": "2025-01-01T12:00:00Z",
-                        "updated_at": "2025-01-01T12:00:05Z",
-                        "result": {
-                            "specs": [
-                                {
-                                    "purpose": "Core API Development",
-                                    "vision": "Build a robust REST API",
-                                    "must": ["Implement endpoints"],
-                                    "dont": ["Skip validation"],
-                                    "nice": ["Add rate limiting"]
+                    "examples": {
+                        "pending": {
+                            "summary": "Pending job",
+                            "value": {
+                                "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                                "status": "pending",
+                                "created_at": "2025-01-01T12:00:00Z",
+                                "updated_at": "2025-01-01T12:00:00Z",
+                                "result": None
+                            }
+                        },
+                        "running": {
+                            "summary": "Running job",
+                            "value": {
+                                "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                                "status": "running",
+                                "created_at": "2025-01-01T12:00:00Z",
+                                "updated_at": "2025-01-01T12:00:02Z",
+                                "result": None
+                            }
+                        },
+                        "succeeded": {
+                            "summary": "Succeeded job",
+                            "value": {
+                                "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                                "status": "succeeded",
+                                "created_at": "2025-01-01T12:00:00Z",
+                                "updated_at": "2025-01-01T12:00:05Z",
+                                "result": {
+                                    "specs": [
+                                        {
+                                            "purpose": "Core API Development",
+                                            "vision": "Build a robust REST API",
+                                            "must": ["Implement endpoints"],
+                                            "dont": ["Skip validation"],
+                                            "nice": ["Add rate limiting"]
+                                        }
+                                    ]
                                 }
-                            ]
+                            }
+                        },
+                        "failed": {
+                            "summary": "Failed job",
+                            "value": {
+                                "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                                "status": "failed",
+                                "created_at": "2025-01-01T12:00:00Z",
+                                "updated_at": "2025-01-01T12:00:05Z",
+                                "result": None,
+                                "error": {
+                                    "error": "Planning failed",
+                                    "type": "ValueError"
+                                }
+                            }
                         }
                     }
                 }
@@ -313,7 +381,27 @@ def create_plan_async(
         }
     },
     summary="Get job status and result",
-    description="Retrieve metadata for a specific job including status, timestamps, and result/error when applicable"
+    description="""Retrieve metadata for a specific job including status, timestamps, and result/error when applicable.
+
+**Status Values:**
+- `pending`: Job created but not yet started
+- `running`: Job is currently executing
+- `succeeded`: Job completed successfully, result contains specs
+- `failed`: Job failed, error contains details
+
+**Response Fields:**
+- Always present: job_id, status, created_at, updated_at
+- `result`: Present with value when status='succeeded', null otherwise
+- `error`: Only present when status='failed'
+
+**HTTP Status Codes:**
+- 200: Job found and metadata returned (regardless of job status)
+- 404: Job not found (never existed or expired/deleted)
+
+**Polling Strategy:**
+Poll this endpoint periodically to check job completion. Jobs are stored in-memory only
+and will be lost on process restart.
+"""
 )
 def get_job_status(
     job_id: str,
@@ -325,6 +413,17 @@ def get_job_status(
     When status is 'succeeded', includes result with specs.
     When status is 'failed', includes error details.
     Pending/running jobs have result=None and no error field.
+    
+    **Status Transitions:**
+    pending → running → succeeded/failed
+    
+    **Result Field:**
+    - null for pending/running/failed jobs
+    - Contains {"specs": [...]} for succeeded jobs
+    
+    **Error Field:**
+    - Only present for failed jobs
+    - Contains error message and type
     
     Args:
         job_id: The job identifier to retrieve.
@@ -374,8 +473,22 @@ def get_job_status(
             }
         }
     },
-    summary="List recent jobs",
-    description="List recent jobs sorted by most recently updated. Use limit parameter to control number of results."
+    summary="List recent jobs (debug endpoint)",
+    description="""List recent jobs sorted by most recently updated. Use limit parameter to control number of results.
+
+**Purpose:**
+This is a debug/monitoring endpoint for viewing all jobs in the system.
+
+**Features:**
+- Returns jobs sorted by updated_at descending (most recent first)
+- Configurable limit (default: 100, max: 1000)
+- Each job has same metadata structure as GET /plans/{job_id}
+
+**Limitations:**
+- Only shows jobs in current process memory
+- Jobs are lost on process restart
+- Not intended for production job management
+"""
 )
 def list_jobs(
     limit: Optional[int] = Query(
@@ -389,6 +502,11 @@ def list_jobs(
     
     Returns a list of jobs with the same metadata shape as the single job endpoint.
     Jobs are sorted by updated_at in descending order (most recent first).
+    
+    **Debug Endpoint:**
+    This endpoint is intended for debugging and monitoring. It shows all jobs
+    currently in memory but should not be used for production job management
+    as jobs are not persisted.
     
     Args:
         limit: Maximum number of jobs to return (optional).
