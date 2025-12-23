@@ -21,6 +21,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.routes import router as plan_router
 from app.core.config import settings
+from app.services.store_singleton import get_job_store
 
 
 def create_app() -> FastAPI:
