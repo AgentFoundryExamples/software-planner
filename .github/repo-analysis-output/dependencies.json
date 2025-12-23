@@ -52,10 +52,13 @@
       "type": "file",
       "external_dependencies": {
         "stdlib": [
+          "logging",
+          "os",
           "typing.Optional"
         ],
         "third-party": [
           "pydantic.Field",
+          "pydantic.field_validator",
           "pydantic.model_validator",
           "pydantic_settings.BaseSettings",
           "pydantic_settings.SettingsConfigDict"
@@ -190,6 +193,19 @@
       }
     },
     {
+      "id": "app/services/model_registry.py",
+      "path": "app/services/model_registry.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "logging",
+          "threading",
+          "typing.Optional"
+        ],
+        "third-party": []
+      }
+    },
+    {
       "id": "app/services/planner.py",
       "path": "app/services/planner.py",
       "type": "file",
@@ -321,6 +337,20 @@
           "fastapi.FastAPI",
           "fastapi.Query",
           "fastapi.testclient.TestClient",
+          "pytest"
+        ]
+      }
+    },
+    {
+      "id": "tests/test_model_registry.py",
+      "path": "tests/test_model_registry.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "os"
+        ],
+        "third-party": [
+          "pydantic.ValidationError",
           "pytest"
         ]
       }
@@ -479,6 +509,10 @@
       "target": "app/services/llm_client.py"
     },
     {
+      "source": "app/services/model_registry.py",
+      "target": "app/core/config.py"
+    },
+    {
       "source": "app/services/planner.py",
       "target": "app/core/config.py"
     },
@@ -515,6 +549,10 @@
       "target": "app/services/llm_openai.py"
     },
     {
+      "source": "app/services/store_singleton.py",
+      "target": "app/services/model_registry.py"
+    },
+    {
       "source": "tests/test_config.py",
       "target": "app/core/config.py"
     },
@@ -545,6 +583,14 @@
     {
       "source": "tests/test_main.py",
       "target": "app/main.py"
+    },
+    {
+      "source": "tests/test_model_registry.py",
+      "target": "app/core/config.py"
+    },
+    {
+      "source": "tests/test_model_registry.py",
+      "target": "app/services/model_registry.py"
     },
     {
       "source": "tests/test_plan_endpoint.py",

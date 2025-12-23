@@ -32,6 +32,7 @@
     ├── job_store.py
     ├── llm_client.py
     ├── llm_openai.py
+    ├── model_registry.py
     ├── planner.py
     └── store_singleton.py
   ├── __init__.py
@@ -45,6 +46,7 @@
   ├── test_llm_client.py
   ├── test_llm_openai.py
   ├── test_main.py
+  ├── test_model_registry.py
   ├── test_plan_endpoint.py
   ├── test_planner_integration.py
   ├── test_plans_async_endpoint.py

@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 29
+Total files: 31
 
 ## app/__init__.py
 **Language:** Python  
@@ -47,8 +47,8 @@ Total files: 29
 **Role:** configuration  
 **Role Justification:** configuration file name 'config'  
 **Summary:** Python configuration file (role: configuration)  
-**Size:** 3.66 KB  
-**LOC:** 64  
+**Size:** 9.64 KB  
+**LOC:** 166  
 **TODOs/FIXMEs:** 0  
 
 ## app/main.py
@@ -132,6 +132,15 @@ Total files: 29
 **LOC:** 266  
 **TODOs/FIXMEs:** 0  
 
+## app/services/model_registry.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for model registry  
+**Size:** 7.51 KB  
+**LOC:** 154  
+**TODOs/FIXMEs:** 0  
+
 ## app/services/planner.py
 **Language:** Python  
 **Role:** implementation  
@@ -146,8 +155,8 @@ Total files: 29
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for store singleton  
-**Size:** 4.47 KB  
-**LOC:** 83  
+**Size:** 4.89 KB  
+**LOC:** 91  
 **TODOs/FIXMEs:** 0  
 
 ## tests/__init__.py
@@ -220,6 +229,15 @@ Total files: 29
 **Summary:** Python test file (role: test)  
 **Size:** 5.20 KB  
 **LOC:** 105  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_model_registry.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 17.07 KB  
+**LOC:** 438  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_plan_endpoint.py
