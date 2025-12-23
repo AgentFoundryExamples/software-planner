@@ -97,12 +97,14 @@ def create_app() -> FastAPI:
 
 
 def get_app() -> FastAPI:
-    """Get or create the FastAPI application instance.
+    """Create a new FastAPI application instance.
     
-    This function allows for lazy initialization of the app instance.
+    This function creates a fresh application instance each time it's called,
+    which is useful for testing or when you need isolated app instances.
+    For production use with the global app instance, see the `app` variable below.
     
     Returns:
-        FastAPI: The configured FastAPI application instance.
+        FastAPI: A new configured FastAPI application instance.
     """
     return create_app()
 

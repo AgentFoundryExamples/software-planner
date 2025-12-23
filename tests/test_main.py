@@ -144,9 +144,6 @@ def test_validation_error_handler():
 
 def test_general_exception_handler():
     """Test that unexpected exceptions return generic error response."""
-    from fastapi import FastAPI
-    from fastapi.testclient import TestClient
-    
     test_app = create_app()
     
     # Add a test endpoint that raises an exception
