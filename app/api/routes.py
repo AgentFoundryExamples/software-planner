@@ -17,6 +17,7 @@ import logging
 from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 
+from app.core.config import settings
 from app.models.request import PlanRequest
 from app.models.response import PlanResponse
 from app.services.planner import generate_plan
@@ -271,7 +272,8 @@ def create_plan_async(
             "content": {
                 "application/json": {
                     "example": {
-                        "detail": "Job not found"
+                        "error": "Job not found",
+                        "status_code": 404
                     }
                 }
             }
@@ -380,8 +382,6 @@ def list_jobs(
     Returns:
         Dict with jobs list, total count, and applied limit.
     """
-    from app.core.config import settings
-    
     # Apply limit constraints
     effective_limit = limit if limit is not None else settings.default_jobs_list_limit
     effective_limit = min(effective_limit, settings.max_jobs_list_limit)
