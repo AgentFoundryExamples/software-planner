@@ -13,8 +13,6 @@
 # limitations under the License.
 """API route handlers for the planning service."""
 
-import asyncio
-from typing import Callable
 from fastapi import APIRouter, BackgroundTasks, Depends, status
 
 from app.models.request import PlanRequest
@@ -25,20 +23,18 @@ from app.services.job_store import JobStore
 router = APIRouter()
 
 
-def get_job_store_dependency() -> Callable[[], JobStore]:
-    """Get the dependency function for JobStore.
+def get_job_store_dep() -> JobStore:
+    """Get the global job store instance for dependency injection.
     
-    Returns a callable that provides the global job store instance.
-    This allows for dependency injection and testing overrides.
+    This function is used as a FastAPI dependency to provide the global
+    job store instance. Tests can override this dependency to provide
+    a mock job store.
+    
+    Returns:
+        JobStore: The global job store instance.
     """
-    def _get_store() -> JobStore:
-        from app.main import job_store
-        return job_store
-    return _get_store
-
-
-# Create the dependency
-get_job_store_dep = get_job_store_dependency()
+    from app.main import job_store
+    return job_store
 
 
 @router.post(
