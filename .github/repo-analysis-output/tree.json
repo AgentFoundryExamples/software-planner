@@ -112,6 +112,10 @@
             },
             {
               "type": "file",
+              "name": "job.py"
+            },
+            {
+              "type": "file",
               "name": "request.py"
             },
             {
@@ -127,6 +131,10 @@
             {
               "type": "file",
               "name": "__init__.py"
+            },
+            {
+              "type": "file",
+              "name": "job_store.py"
             },
             {
               "type": "file",
@@ -162,11 +170,23 @@
         },
         {
           "type": "file",
+          "name": "test_job_model.py"
+        },
+        {
+          "type": "file",
+          "name": "test_job_store.py"
+        },
+        {
+          "type": "file",
           "name": "test_main.py"
         },
         {
           "type": "file",
           "name": "test_plan_endpoint.py"
+        },
+        {
+          "type": "file",
+          "name": "test_planner_integration.py"
         }
       ]
     },

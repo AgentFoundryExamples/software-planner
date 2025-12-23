@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 16,
+  "total_files": 21,
   "files": [
     {
       "schema_version": "2.0",
@@ -102,6 +102,20 @@
     },
     {
       "schema_version": "2.0",
+      "path": "app/models/job.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for job",
+      "summary_text": "Python module for job",
+      "metrics": {
+        "size_bytes": 1871,
+        "loc": 23,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "app/models/request.py",
       "language": "Python",
       "role": "implementation",
@@ -137,8 +151,22 @@
       "summary": "Python module initialization (role: module-init)",
       "summary_text": "Python module initialization (role: module-init)",
       "metrics": {
-        "size_bytes": 617,
-        "loc": 1,
+        "size_bytes": 750,
+        "loc": 4,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "app/services/job_store.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for job store",
+      "summary_text": "Python module for job store",
+      "metrics": {
+        "size_bytes": 4955,
+        "loc": 101,
         "todo_count": 0
       }
     },
@@ -151,8 +179,8 @@
       "summary": "Python module for planner",
       "summary_text": "Python module for planner",
       "metrics": {
-        "size_bytes": 2638,
-        "loc": 43,
+        "size_bytes": 4535,
+        "loc": 71,
         "todo_count": 0
       }
     },
@@ -200,6 +228,34 @@
     },
     {
       "schema_version": "2.0",
+      "path": "tests/test_job_model.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 6470,
+        "loc": 163,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_job_store.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 12609,
+        "loc": 251,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "tests/test_main.py",
       "language": "Python",
       "role": "test",
@@ -223,6 +279,20 @@
       "metrics": {
         "size_bytes": 12397,
         "loc": 245,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_planner_integration.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 8043,
+        "loc": 127,
         "todo_count": 0
       }
     }

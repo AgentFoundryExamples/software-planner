@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 16
+Total files: 21
 
 ## app/__init__.py
 **Language:** Python  
@@ -69,6 +69,15 @@ Total files: 16
 **LOC:** 1  
 **TODOs/FIXMEs:** 0  
 
+## app/models/job.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for job  
+**Size:** 1.83 KB  
+**LOC:** 23  
+**TODOs/FIXMEs:** 0  
+
 ## app/models/request.py
 **Language:** Python  
 **Role:** implementation  
@@ -92,8 +101,17 @@ Total files: 16
 **Role:** module-init  
 **Role Justification:** module initialization file '__init__'  
 **Summary:** Python module initialization (role: module-init)  
-**Size:** 0.60 KB  
-**LOC:** 1  
+**Size:** 0.73 KB  
+**LOC:** 4  
+**TODOs/FIXMEs:** 0  
+
+## app/services/job_store.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for job store  
+**Size:** 4.84 KB  
+**LOC:** 101  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/planner.py
@@ -101,8 +119,8 @@ Total files: 16
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for planner  
-**Size:** 2.58 KB  
-**LOC:** 43  
+**Size:** 4.43 KB  
+**LOC:** 71  
 **TODOs/FIXMEs:** 0  
 
 ## tests/__init__.py
@@ -132,6 +150,24 @@ Total files: 16
 **LOC:** 47  
 **TODOs/FIXMEs:** 0  
 
+## tests/test_job_model.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 6.32 KB  
+**LOC:** 163  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_job_store.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 12.31 KB  
+**LOC:** 251  
+**TODOs/FIXMEs:** 0  
+
 ## tests/test_main.py
 **Language:** Python  
 **Role:** test  
@@ -148,4 +184,13 @@ Total files: 16
 **Summary:** Python test file (role: test)  
 **Size:** 12.11 KB  
 **LOC:** 245  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_planner_integration.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 7.85 KB  
+**LOC:** 127  
 **TODOs/FIXMEs:** 0  

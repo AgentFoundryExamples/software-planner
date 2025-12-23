@@ -80,6 +80,22 @@
       }
     },
     {
+      "id": "app/models/job.py",
+      "path": "app/models/job.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "datetime.datetime",
+          "datetime.timezone",
+          "typing.Literal"
+        ],
+        "third-party": [
+          "pydantic.BaseModel",
+          "pydantic.Field"
+        ]
+      }
+    },
+    {
       "id": "app/models/request.py",
       "path": "app/models/request.py",
       "type": "file",
@@ -114,11 +130,30 @@
       }
     },
     {
+      "id": "app/services/job_store.py",
+      "path": "app/services/job_store.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "datetime.datetime",
+          "datetime.timezone",
+          "threading.Lock",
+          "typing.Dict",
+          "typing.List",
+          "typing.Optional",
+          "uuid"
+        ],
+        "third-party": []
+      }
+    },
+    {
       "id": "app/services/planner.py",
       "path": "app/services/planner.py",
       "type": "file",
       "external_dependencies": {
-        "stdlib": [],
+        "stdlib": [
+          "typing.Optional"
+        ],
         "third-party": []
       }
     },
@@ -158,6 +193,37 @@
       }
     },
     {
+      "id": "tests/test_job_model.py",
+      "path": "tests/test_job_model.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "datetime.datetime",
+          "datetime.timezone",
+          "json"
+        ],
+        "third-party": [
+          "pytest"
+        ]
+      }
+    },
+    {
+      "id": "tests/test_job_store.py",
+      "path": "tests/test_job_store.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "concurrent.futures.ThreadPoolExecutor",
+          "datetime.datetime",
+          "datetime.timezone",
+          "time"
+        ],
+        "third-party": [
+          "pytest"
+        ]
+      }
+    },
+    {
       "id": "tests/test_main.py",
       "path": "tests/test_main.py",
       "type": "file",
@@ -179,6 +245,17 @@
         "stdlib": [],
         "third-party": [
           "fastapi.testclient.TestClient",
+          "pytest"
+        ]
+      }
+    },
+    {
+      "id": "tests/test_planner_integration.py",
+      "path": "tests/test_planner_integration.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
           "pytest"
         ]
       }
@@ -214,8 +291,24 @@
       "target": "app/core/config.py"
     },
     {
+      "source": "app/services/__init__.py",
+      "target": "app/services/job_store.py"
+    },
+    {
+      "source": "app/services/__init__.py",
+      "target": "app/services/planner.py"
+    },
+    {
+      "source": "app/services/job_store.py",
+      "target": "app/models/job.py"
+    },
+    {
       "source": "app/services/planner.py",
       "target": "app/models/response.py"
+    },
+    {
+      "source": "app/services/planner.py",
+      "target": "app/services/job_store.py"
     },
     {
       "source": "tests/test_config.py",
@@ -224,6 +317,14 @@
     {
       "source": "tests/test_health_endpoint.py",
       "target": "app/main.py"
+    },
+    {
+      "source": "tests/test_job_model.py",
+      "target": "app/models/job.py"
+    },
+    {
+      "source": "tests/test_job_store.py",
+      "target": "app/services/job_store.py"
     },
     {
       "source": "tests/test_main.py",
@@ -236,11 +337,30 @@
     {
       "source": "tests/test_plan_endpoint.py",
       "target": "app/core/config.py"
+    },
+    {
+      "source": "tests/test_planner_integration.py",
+      "target": "app/services/job_store.py"
+    },
+    {
+      "source": "tests/test_planner_integration.py",
+      "target": "app/services/planner.py"
     }
   ],
   "external_dependencies_summary": {
     "stdlib": [
-      "os"
+      "concurrent.futures.ThreadPoolExecutor",
+      "datetime.datetime",
+      "datetime.timezone",
+      "json",
+      "os",
+      "threading.Lock",
+      "time",
+      "typing.Dict",
+      "typing.List",
+      "typing.Literal",
+      "typing.Optional",
+      "uuid"
     ],
     "third-party": [
       "fastapi.APIRouter",
@@ -263,7 +383,7 @@
       "starlette.exceptions.HTTPException",
       "uvicorn"
     ],
-    "stdlib_count": 1,
+    "stdlib_count": 12,
     "third-party_count": 19
   }
 }
