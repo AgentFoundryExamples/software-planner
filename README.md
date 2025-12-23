@@ -142,7 +142,9 @@ curl -X POST http://localhost:8000/api/v1/plan \
 
 ### Asynchronous Planning Workflow
 
-The asynchronous planning endpoints allow you to submit long-running planning jobs and poll for results without blocking your client. This is the recommended approach for production use.
+The asynchronous planning endpoints allow you to submit long-running planning jobs and poll for results without blocking your client. This is the recommended approach over the synchronous endpoint.
+
+> **Note:** Jobs are stored in-memory only and will be lost on server restart. See the "Known Limitations" section below for details.
 
 #### Step-by-Step Usage
 
@@ -256,7 +258,7 @@ The job progresses through these states:
 
 **⚠️ Important Constraints:**
 
-1. **In-Memory Storage Only**: Jobs are stored in memory and will be **lost on server restart or process termination**. Do not rely on job persistence across deployments.
+1. **In-Memory Storage Only**: Jobs are stored in memory and will be **lost on server restart**. Do not rely on job persistence across deployments.
 
 2. **Process Lifetime**: Jobs exist only for the lifetime of the current server process. There is no database or persistent storage.
 
@@ -314,45 +316,6 @@ Response:
 ```
 
 **Note:** This endpoint is intended for debugging and monitoring only. Jobs are returned in most-recently-updated order.
-
-#### GET /api/v1/plans/{job_id}
-
-Get the status and result of a specific planning job. See the "Asynchronous Planning Workflow" section above for detailed usage examples and status interpretations.
-
-**Example using curl:**
-```bash
-curl http://localhost:8000/api/v1/plans/550e8400-e29b-41d4-a716-446655440000
-```
-
-**Response Formats:**
-
-See the "Asynchronous Planning Workflow" section above for detailed examples of all job statuses (pending, running, succeeded, failed).
-
-**Error Responses:**
-- `404 Not Found`: Job not found or expired
-
-#### GET /api/v1/plans
-
-List recent planning jobs sorted by most recently updated. This is a debug/monitoring endpoint.
-
-**Example using curl:**
-```bash
-# List with default limit
-curl http://localhost:8000/api/v1/plans
-
-# List with custom limit
-curl "http://localhost:8000/api/v1/plans?limit=10"
-```
-
-**Query Parameters:**
-- `limit` (optional): Maximum number of jobs to return (default: 100, max: 1000)
-
-**Success Response (200 OK):**
-
-See the "Asynchronous Planning Workflow" section above for detailed examples.
-
-**Error Responses:**
-- `422 Unprocessable Entity`: Invalid limit parameter (must be >= 1)
 
 ### Configuration
 

@@ -239,7 +239,7 @@ def _background_planner_worker(job_id: str, description: str, job_store: JobStor
 
 **Storage Limitations:**
 - Jobs are stored in-memory only for the lifetime of the process
-- Jobs will be lost on server restart or process termination
+- Jobs will be lost on server restart
 - No job cancellation support
 
 **Validation:**
@@ -267,7 +267,7 @@ def create_plan_async(
     Use GET /plans/{job_id} to check job status and retrieve results.
     
     **Limitations:**
-    - Jobs stored in-memory only (lost on process restart)
+    - Jobs stored in-memory only (lost on server restart)
     - No cancellation support
     - Jobs persist for process lifetime only
     
@@ -400,7 +400,7 @@ def create_plan_async(
 
 **Polling Strategy:**
 Poll this endpoint periodically to check job completion. Jobs are stored in-memory only
-and will be lost on process restart.
+and will be lost on server restart.
 """
 )
 def get_job_status(
@@ -486,7 +486,7 @@ This is a debug/monitoring endpoint for viewing all jobs in the system.
 
 **Limitations:**
 - Only shows jobs in current process memory
-- Jobs are lost on process restart
+- Jobs are lost on server restart
 - Not intended for production job management
 """
 )
