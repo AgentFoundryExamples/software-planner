@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 9,
+  "total_files": 15,
   "files": [
     {
       "schema_version": "2.0",
@@ -32,6 +32,20 @@
     },
     {
       "schema_version": "2.0",
+      "path": "app/api/routes.py",
+      "language": "Python",
+      "role": "router",
+      "role_justification": "filename contains routing term",
+      "summary": "Python routing configuration (role: router)",
+      "summary_text": "Python routing configuration (role: router)",
+      "metrics": {
+        "size_bytes": 3647,
+        "loc": 80,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "app/core/__init__.py",
       "language": "Python",
       "role": "module-init",
@@ -53,8 +67,8 @@
       "summary": "Python configuration file (role: configuration)",
       "summary_text": "Python configuration file (role: configuration)",
       "metrics": {
-        "size_bytes": 2262,
-        "loc": 32,
+        "size_bytes": 2329,
+        "loc": 33,
         "todo_count": 0
       }
     },
@@ -67,8 +81,8 @@
       "summary": "Python main entry point (role: entry-point)",
       "summary_text": "Python main entry point (role: entry-point)",
       "metrics": {
-        "size_bytes": 4803,
-        "loc": 94,
+        "size_bytes": 5894,
+        "loc": 111,
         "todo_count": 0
       }
     },
@@ -83,6 +97,62 @@
       "metrics": {
         "size_bytes": 615,
         "loc": 1,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "app/models/request.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for request",
+      "summary_text": "Python module for request",
+      "metrics": {
+        "size_bytes": 2134,
+        "loc": 35,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "app/models/response.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for response",
+      "summary_text": "Python module for response",
+      "metrics": {
+        "size_bytes": 1941,
+        "loc": 29,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "app/services/__init__.py",
+      "language": "Python",
+      "role": "module-init",
+      "role_justification": "module initialization file '__init__'",
+      "summary": "Python module initialization (role: module-init)",
+      "summary_text": "Python module initialization (role: module-init)",
+      "metrics": {
+        "size_bytes": 617,
+        "loc": 1,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "app/services/planner.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for planner",
+      "summary_text": "Python module for planner",
+      "metrics": {
+        "size_bytes": 2638,
+        "loc": 43,
         "todo_count": 0
       }
     },
@@ -123,8 +193,22 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 5420,
-        "loc": 107,
+        "size_bytes": 5325,
+        "loc": 105,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_plan_endpoint.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 12397,
+        "loc": 245,
         "todo_count": 0
       }
     }

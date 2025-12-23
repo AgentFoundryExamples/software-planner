@@ -8,6 +8,8 @@
   ├── repo-analysis-output
     ├── dependencies.json
     ├── dependencies.md
+    ├── file-summaries.json
+    ├── file-summaries.md
     ├── SUMMARY.md
     ├── tree.json
     └── tree.md
@@ -15,18 +17,25 @@
     └── af_maintenance.yml
 ├── app
   ├── api
-    └── __init__.py
+    ├── __init__.py
+    └── routes.py
   ├── core
     ├── __init__.py
     └── config.py
   ├── models
-    └── __init__.py
+    ├── __init__.py
+    ├── request.py
+    └── response.py
+  ├── services
+    ├── __init__.py
+    └── planner.py
   ├── __init__.py
   └── main.py
 ├── tests
   ├── __init__.py
   ├── test_config.py
-  └── test_main.py
+  ├── test_main.py
+  └── test_plan_endpoint.py
 ├── .gitignore
 ├── LICENSE
 ├── LLMs.md

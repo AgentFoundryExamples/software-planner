@@ -38,6 +38,14 @@
             },
             {
               "type": "file",
+              "name": "file-summaries.json"
+            },
+            {
+              "type": "file",
+              "name": "file-summaries.md"
+            },
+            {
+              "type": "file",
               "name": "SUMMARY.md"
             },
             {
@@ -73,6 +81,10 @@
             {
               "type": "file",
               "name": "__init__.py"
+            },
+            {
+              "type": "file",
+              "name": "routes.py"
             }
           ]
         },
@@ -97,6 +109,28 @@
             {
               "type": "file",
               "name": "__init__.py"
+            },
+            {
+              "type": "file",
+              "name": "request.py"
+            },
+            {
+              "type": "file",
+              "name": "response.py"
+            }
+          ]
+        },
+        {
+          "type": "directory",
+          "name": "services",
+          "children": [
+            {
+              "type": "file",
+              "name": "__init__.py"
+            },
+            {
+              "type": "file",
+              "name": "planner.py"
             }
           ]
         },
@@ -125,6 +159,10 @@
         {
           "type": "file",
           "name": "test_main.py"
+        },
+        {
+          "type": "file",
+          "name": "test_plan_endpoint.py"
         }
       ]
     },

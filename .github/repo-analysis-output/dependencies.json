@@ -19,6 +19,18 @@
       }
     },
     {
+      "id": "app/api/routes.py",
+      "path": "app/api/routes.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "fastapi.APIRouter",
+          "fastapi.status"
+        ]
+      }
+    },
+    {
       "id": "app/core/__init__.py",
       "path": "app/core/__init__.py",
       "type": "file",
@@ -68,6 +80,49 @@
       }
     },
     {
+      "id": "app/models/request.py",
+      "path": "app/models/request.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "pydantic.BaseModel",
+          "pydantic.Field",
+          "pydantic.field_validator"
+        ]
+      }
+    },
+    {
+      "id": "app/models/response.py",
+      "path": "app/models/response.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "pydantic.BaseModel",
+          "pydantic.Field"
+        ]
+      }
+    },
+    {
+      "id": "app/services/__init__.py",
+      "path": "app/services/__init__.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "app/services/planner.py",
+      "path": "app/services/planner.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
       "id": "tests/__init__.py",
       "path": "tests/__init__.py",
       "type": "file",
@@ -103,16 +158,52 @@
           "pytest"
         ]
       }
+    },
+    {
+      "id": "tests/test_plan_endpoint.py",
+      "path": "tests/test_plan_endpoint.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "fastapi.testclient.TestClient",
+          "pytest"
+        ]
+      }
     }
   ],
   "edges": [
+    {
+      "source": "app/api/routes.py",
+      "target": "app/models/request.py"
+    },
+    {
+      "source": "app/api/routes.py",
+      "target": "app/models/response.py"
+    },
+    {
+      "source": "app/api/routes.py",
+      "target": "app/services/planner.py"
+    },
     {
       "source": "app/core/__init__.py",
       "target": "app/core/config.py"
     },
     {
       "source": "app/main.py",
+      "target": "app/api/routes.py"
+    },
+    {
+      "source": "app/main.py",
       "target": "app/core/config.py"
+    },
+    {
+      "source": "app/models/request.py",
+      "target": "app/core/config.py"
+    },
+    {
+      "source": "app/services/planner.py",
+      "target": "app/models/response.py"
     },
     {
       "source": "tests/test_config.py",
@@ -121,6 +212,14 @@
     {
       "source": "tests/test_main.py",
       "target": "app/main.py"
+    },
+    {
+      "source": "tests/test_plan_endpoint.py",
+      "target": "app/main.py"
+    },
+    {
+      "source": "tests/test_plan_endpoint.py",
+      "target": "app/core/config.py"
     }
   ],
   "external_dependencies_summary": {
@@ -128,6 +227,7 @@
       "os"
     ],
     "third-party": [
+      "fastapi.APIRouter",
       "fastapi.FastAPI",
       "fastapi.Query",
       "fastapi.Request",
@@ -136,7 +236,10 @@
       "fastapi.responses.JSONResponse",
       "fastapi.status",
       "fastapi.testclient.TestClient",
+      "pydantic.BaseModel",
+      "pydantic.Field",
       "pydantic.ValidationError",
+      "pydantic.field_validator",
       "pydantic.model_validator",
       "pydantic_settings.BaseSettings",
       "pydantic_settings.SettingsConfigDict",
@@ -145,6 +248,6 @@
       "uvicorn"
     ],
     "stdlib_count": 1,
-    "third-party_count": 15
+    "third-party_count": 19
   }
 }
