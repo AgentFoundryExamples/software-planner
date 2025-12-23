@@ -15,5 +15,24 @@
 
 from app.services.job_store import JobStore
 from app.services.planner import generate_plan
+from app.services.llm_client import (
+    BaseLLMClient,
+    LLMError,
+    LLMConfigurationError,
+    LLMRequestError,
+    LLMResponseError,
+    get_default_system_prompt,
+    DEFAULT_SYSTEM_PROMPT
+)
 
-__all__ = ["JobStore", "generate_plan"]
+__all__ = [
+    "JobStore",
+    "generate_plan",
+    "BaseLLMClient",
+    "LLMError",
+    "LLMConfigurationError",
+    "LLMRequestError",
+    "LLMResponseError",
+    "get_default_system_prompt",
+    "DEFAULT_SYSTEM_PROMPT"
+]

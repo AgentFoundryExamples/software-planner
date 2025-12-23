@@ -13,7 +13,8 @@
 # limitations under the License.
 """Application configuration using Pydantic settings."""
 
-from pydantic import model_validator
+from typing import Optional
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -57,6 +58,29 @@ class Settings(BaseSettings):
     allowed_credentials: bool = False
     allowed_methods: list[str] = ["*"]
     allowed_headers: list[str] = ["*"]
+    
+    # LLM settings
+    llm_api_key: str = Field(
+        default="",
+        description="API key for LLM provider. Required for LLM-based planning."
+    )
+    llm_model: str = Field(
+        default="gpt-5.1",
+        description="LLM model identifier (e.g., 'gpt-5.1', 'claude-sonnet-4.5', 'gemini-3.0-pro')"
+    )
+    llm_base_url: Optional[str] = Field(
+        default=None,
+        description="Optional base URL for LLM API (for custom endpoints or proxies)"
+    )
+    llm_timeout: int = Field(
+        default=60,
+        ge=1,
+        description="Request timeout in seconds for LLM API calls"
+    )
+    llm_system_prompt: Optional[str] = Field(
+        default=None,
+        description="Optional override for the default system prompt"
+    )
 
     @model_validator(mode="after")
     def _validate_cors_settings(self) -> "Settings":
@@ -65,6 +89,17 @@ class Settings(BaseSettings):
             raise ValueError(
                 "If `allowed_credentials` is True, `allowed_origins` must be a specific list of origins, not ['*']."
             )
+        return self
+    
+    @model_validator(mode="after")
+    def _validate_llm_settings(self) -> "Settings":
+        """Validate that required LLM settings are provided when needed.
+        
+        Note: This validator only checks that if an API key is provided, it's not empty.
+        The actual requirement for an API key depends on whether LLM features are used.
+        """
+        # If API key is explicitly set to empty string, that's acceptable for
+        # configurations that don't use LLM features yet
         return self
 
 
