@@ -30,6 +30,32 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _validate_model_or_raise(model_name: str) -> None:
+    """Validate model exists and is enabled, or raise HTTPException.
+    
+    Args:
+        model_name: The logical model name to validate.
+        
+    Raises:
+        HTTPException: 400 if model is unknown or disabled.
+    """
+    from app.services.model_registry import get_model_registry
+    registry = get_model_registry()
+    
+    model_config = registry.get_model_config(model_name)
+    if model_config is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown model '{model_name}'. Available models: {', '.join(registry.get_enabled_models().keys())}"
+        )
+    
+    if not model_config.enabled:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Model '{model_name}' is disabled"
+        )
+
+
 def _format_job_response(job: Job) -> dict:
     """Format a job instance into a response dictionary.
     
@@ -48,6 +74,13 @@ def _format_job_response(job: Job) -> dict:
         "created_at": job.created_at.isoformat(),
         "updated_at": job.updated_at.isoformat(),
     }
+    
+    # Include model metadata if present
+    if job.model is not None:
+        response["model"] = job.model
+    
+    if job.system_prompt_hash is not None:
+        response["system_prompt_hash"] = job.system_prompt_hash
     
     # Include result for succeeded jobs, otherwise null
     if job.status == "succeeded" and job.result is not None:
@@ -129,19 +162,35 @@ def create_plan(request: PlanRequest) -> PlanResponse:
     """Generate a software plan based on the provided description.
     
     Args:
-        request: PlanRequest containing the project description.
+        request: PlanRequest containing the project description and optional model/prompt overrides.
         
     Returns:
         PlanResponse with structured specifications.
         
     Raises:
-        HTTPException: 400 if description is empty, whitespace-only, or exceeds byte limit.
+        HTTPException: 400 if description is empty, whitespace-only, exceeds byte limit,
+                       or if model name is invalid/disabled.
         HTTPException: 422 if JSON is malformed or required fields are missing.
     """
-    return generate_plan(request.description)
+    # Validate model if provided
+    if request.model is not None:
+        _validate_model_or_raise(request.model)
+    
+    # Generate plan with optional overrides
+    return generate_plan(
+        description=request.description,
+        model=request.model,
+        system_prompt=request.system_prompt
+    )
 
 
-def _background_planner_worker(job_id: str, description: str, job_store: JobStore):
+def _background_planner_worker(
+    job_id: str, 
+    description: str, 
+    job_store: JobStore,
+    model: Optional[str] = None,
+    system_prompt: Optional[str] = None
+):
     """Background worker that executes the planner and updates job status.
     
     This function runs in the background after the POST /plans endpoint returns.
@@ -151,11 +200,19 @@ def _background_planner_worker(job_id: str, description: str, job_store: JobStor
         job_id: The job identifier to track.
         description: The project description to plan.
         job_store: The job store instance for status updates.
+        model: Optional logical model name to use.
+        system_prompt: Optional custom system prompt to use.
     """
     try:
-        # Execute planner with job tracking
+        # Execute planner with job tracking and optional overrides
         # The generate_plan function will update status to "running" and then "succeeded"
-        generate_plan(description, job_store=job_store, job_id=job_id)
+        generate_plan(
+            description=description, 
+            job_store=job_store, 
+            job_id=job_id,
+            model=model,
+            system_prompt=system_prompt
+        )
     except Exception as e:
         # Capture any exception and set failed status
         # Don't leak stack traces - only store sanitized error info
@@ -272,7 +329,7 @@ def create_plan_async(
     - Jobs persist for process lifetime only
     
     Args:
-        request: PlanRequest containing the project description.
+        request: PlanRequest containing the project description and optional overrides.
         background_tasks: FastAPI background tasks manager.
         job_store: JobStore instance (injected via dependency).
         
@@ -280,18 +337,34 @@ def create_plan_async(
         Dict with job_id and status "pending".
         
     Raises:
-        HTTPException: 400 if description is empty, whitespace-only, or exceeds byte limit.
+        HTTPException: 400 if description is empty, whitespace-only, exceeds byte limit,
+                       or if model name is invalid/disabled.
         HTTPException: 422 if JSON is malformed or required fields are missing.
     """
-    # Create job in pending status
-    job = job_store.create_job()
+    # Validate model if provided
+    if request.model is not None:
+        _validate_model_or_raise(request.model)
     
-    # Schedule background task
+    # Calculate system prompt hash if provided
+    system_prompt_hash = None
+    if request.system_prompt is not None:
+        import hashlib
+        system_prompt_hash = hashlib.sha256(request.system_prompt.encode('utf-8')).hexdigest()
+    
+    # Create job in pending status with metadata
+    job = job_store.create_job(
+        model=request.model,
+        system_prompt_hash=system_prompt_hash
+    )
+    
+    # Schedule background task with all parameters
     background_tasks.add_task(
         _background_planner_worker,
         job_id=job.job_id,
         description=request.description,
-        job_store=job_store
+        job_store=job_store,
+        model=request.model,
+        system_prompt=request.system_prompt
     )
     
     # Return immediately with job info

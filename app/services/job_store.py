@@ -39,7 +39,7 @@ class JobStore:
         self._jobs: Dict[str, Job] = {}
         self._lock = Lock()
     
-    def create_job(self, max_retries: int = 10) -> Job:
+    def create_job(self, model: Optional[str] = None, system_prompt_hash: Optional[str] = None, max_retries: int = 10) -> Job:
         """Create a new job with unique ID and pending status.
         
         Generates a unique job_id, initializes timestamps, and stores
@@ -47,6 +47,8 @@ class JobStore:
         duplicates are detected (highly unlikely but handles the edge case).
         
         Args:
+            model: Optional logical model name for this job.
+            system_prompt_hash: Optional hash of the system prompt used.
             max_retries: Maximum number of attempts to generate unique UUID.
             
         Returns:
@@ -67,7 +69,9 @@ class JobStore:
                         created_at=now,
                         updated_at=now,
                         result=None,
-                        error=None
+                        error=None,
+                        model=model,
+                        system_prompt_hash=system_prompt_hash
                     )
                     self._jobs[job_id] = job
                     return job

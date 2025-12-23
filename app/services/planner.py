@@ -157,7 +157,14 @@ def _normalize_specs(data: dict[str, Any]) -> dict[str, Any]:
     return {"specs": normalized_specs}
 
 
-def generate_plan(description: str, job_store: Optional[JobStore] = None, job_id: Optional[str] = None, llm_client: Optional[BaseLLMClient] = None) -> PlanResponse:
+def generate_plan(
+    description: str, 
+    job_store: Optional[JobStore] = None, 
+    job_id: Optional[str] = None, 
+    llm_client: Optional[BaseLLMClient] = None,
+    model: Optional[str] = None,
+    system_prompt: Optional[str] = None
+) -> PlanResponse:
     """Generate a software plan based on the provided description.
     
     Uses an LLM client to generate structured software specifications from
@@ -173,6 +180,8 @@ def generate_plan(description: str, job_store: Optional[JobStore] = None, job_id
         job_id: Optional job ID for status tracking.
         llm_client: Optional LLM client instance. If not provided, will use
             the global singleton from store_singleton.
+        model: Optional logical model name to use. If not provided, uses default.
+        system_prompt: Optional custom system prompt. If not provided, uses default.
         
     Returns:
         PlanResponse containing a list of specification items.
@@ -201,22 +210,46 @@ def generate_plan(description: str, job_store: Optional[JobStore] = None, job_id
             job_store.update_job(job_id, status="running")
     
     try:
-        # Get LLM client (use provided client or get singleton)
-        # Note: Import here to avoid circular dependency with store_singleton
+        # Get LLM client - if model is specified, get a client for that model
+        # Otherwise use provided client or get singleton
         if llm_client is None:
-            from app.services.store_singleton import get_llm_client
-            llm_client = get_llm_client()
+            if model is not None:
+                # Model override requested - get client for that specific model
+                from app.services.llm_client import get_llm_client_for_model
+                try:
+                    llm_client = get_llm_client_for_model(
+                        logical_model_id=model,
+                        cache_clients=True
+                    )
+                    logger.info(
+                        "Using model-specific LLM client",
+                        extra={"model": model, "job_id": job_id or "none"}
+                    )
+                except LLMConfigurationError as e:
+                    # Model validation error - this should have been caught in routes
+                    # but handle it gracefully here as well
+                    logger.error(
+                        f"Model configuration error: {e}",
+                        extra={"model": model, "job_id": job_id or "none"}
+                    )
+                    raise
+            else:
+                # No model override - use default singleton client
+                from app.services.store_singleton import get_llm_client
+                llm_client = get_llm_client()
         
-        # Get system prompt from config or use default
-        system_prompt = settings.llm_system_prompt or get_default_system_prompt()
+        # Get system prompt - use provided override, otherwise fall back to config or default
+        if system_prompt is None:
+            system_prompt = settings.llm_system_prompt or get_default_system_prompt()
         
         # Call LLM to generate specs
         logger.info(
             "Calling LLM to generate specs",
             extra={
                 "description_length": len(description),
-                "has_custom_prompt": bool(settings.llm_system_prompt),
+                "has_custom_prompt": bool(system_prompt != get_default_system_prompt()),
                 "job_id": job_id or "none",
+                "model_override": model or "none",
             }
         )
         

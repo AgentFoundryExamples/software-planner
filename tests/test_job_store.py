@@ -357,3 +357,146 @@ class TestJobStoreThreadSafety:
         retrieved = store.get_job(job.job_id)
         assert retrieved is not None
         assert retrieved.updated_at >= retrieved.created_at
+
+
+class TestJobStoreMetadata:
+    """Test cases for model and system_prompt_hash metadata in JobStore."""
+    
+    def test_create_job_with_model_metadata(self):
+        """Test creating a job with model metadata."""
+        store = JobStore()
+        job = store.create_job(model="gpt-4-turbo")
+        
+        assert job is not None
+        assert job.model == "gpt-4-turbo"
+        assert job.system_prompt_hash is None
+    
+    def test_create_job_with_system_prompt_hash_metadata(self):
+        """Test creating a job with system_prompt_hash metadata."""
+        store = JobStore()
+        job = store.create_job(system_prompt_hash="abc123def456")
+        
+        assert job is not None
+        assert job.model is None
+        assert job.system_prompt_hash == "abc123def456"
+    
+    def test_create_job_with_both_metadata_fields(self):
+        """Test creating a job with both metadata fields."""
+        store = JobStore()
+        job = store.create_job(
+            model="claude-opus",
+            system_prompt_hash="xyz789"
+        )
+        
+        assert job is not None
+        assert job.model == "claude-opus"
+        assert job.system_prompt_hash == "xyz789"
+    
+    def test_create_job_without_metadata(self):
+        """Test creating a job without metadata has None values."""
+        store = JobStore()
+        job = store.create_job()
+        
+        assert job is not None
+        assert job.model is None
+        assert job.system_prompt_hash is None
+    
+    def test_get_job_preserves_metadata(self):
+        """Test that retrieving a job preserves metadata."""
+        store = JobStore()
+        job = store.create_job(
+            model="gpt-4-turbo",
+            system_prompt_hash="hash123"
+        )
+        
+        retrieved = store.get_job(job.job_id)
+        
+        assert retrieved is not None
+        assert retrieved.model == "gpt-4-turbo"
+        assert retrieved.system_prompt_hash == "hash123"
+    
+    def test_update_job_preserves_metadata(self):
+        """Test that updating a job preserves metadata."""
+        store = JobStore()
+        job = store.create_job(
+            model="gpt-4-turbo",
+            system_prompt_hash="hash123"
+        )
+        
+        # Update status
+        updated = store.update_job(job.job_id, status="running")
+        
+        assert updated is not None
+        assert updated.status == "running"
+        assert updated.model == "gpt-4-turbo"
+        assert updated.system_prompt_hash == "hash123"
+    
+    def test_list_jobs_includes_metadata(self):
+        """Test that listing jobs includes metadata."""
+        store = JobStore()
+        job1 = store.create_job(model="gpt-4-turbo")
+        job2 = store.create_job(system_prompt_hash="hash123")
+        job3 = store.create_job()  # No metadata
+        
+        jobs = store.list_jobs()
+        
+        assert len(jobs) == 3
+        
+        # Find jobs by ID
+        jobs_by_id = {job.job_id: job for job in jobs}
+        
+        assert jobs_by_id[job1.job_id].model == "gpt-4-turbo"
+        assert jobs_by_id[job2.job_id].system_prompt_hash == "hash123"
+        assert jobs_by_id[job3.job_id].model is None
+        assert jobs_by_id[job3.job_id].system_prompt_hash is None
+    
+    def test_concurrent_creation_with_different_metadata(self):
+        """Test that concurrent job creation with different metadata is safe."""
+        store = JobStore()
+        
+        def create_with_model(model_name):
+            return store.create_job(model=model_name)
+        
+        models = [f"model-{i}" for i in range(10)]
+        
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [executor.submit(create_with_model, m) for m in models]
+            jobs = [f.result() for f in futures]
+        
+        # All jobs should have correct model
+        for i, job in enumerate(jobs):
+            assert job.model == f"model-{i}"
+    
+    def test_metadata_with_succeeded_job(self):
+        """Test that metadata is preserved when job succeeds."""
+        store = JobStore()
+        job = store.create_job(
+            model="gpt-4-turbo",
+            system_prompt_hash="hash123"
+        )
+        
+        result = {"specs": [{"purpose": "Test"}]}
+        updated = store.update_job(job.job_id, status="succeeded", result=result)
+        
+        assert updated is not None
+        assert updated.status == "succeeded"
+        assert updated.result == result
+        assert updated.model == "gpt-4-turbo"
+        assert updated.system_prompt_hash == "hash123"
+    
+    def test_metadata_with_failed_job(self):
+        """Test that metadata is preserved when job fails."""
+        store = JobStore()
+        job = store.create_job(
+            model="claude-opus",
+            system_prompt_hash="hash456"
+        )
+        
+        error = {"error": "Test error", "type": "ValueError"}
+        updated = store.update_job(job.job_id, status="failed", error=error)
+        
+        assert updated is not None
+        assert updated.status == "failed"
+        assert updated.error == error
+        assert updated.model == "claude-opus"
+        assert updated.system_prompt_hash == "hash456"

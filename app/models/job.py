@@ -35,6 +35,8 @@ class Job(BaseModel):
         updated_at: Timestamp when the job was last updated.
         result: Planning result containing specs (None until job succeeds).
         error: Error details if job failed (None otherwise).
+        model: Optional logical model name used for this job.
+        system_prompt_hash: Optional hash of the system prompt used (for tracking).
     """
     
     job_id: str = Field(..., description="Unique job identifier (UUID string)")
@@ -43,3 +45,5 @@ class Job(BaseModel):
     updated_at: datetime = Field(..., description="Last update timestamp")
     result: dict | None = Field(None, description="Job result with top-level 'specs' field")
     error: dict | None = Field(None, description="Error details if job failed")
+    model: str | None = Field(None, description="Logical model name used for this job")
+    system_prompt_hash: str | None = Field(None, description="Hash of the system prompt used")
