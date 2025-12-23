@@ -29,6 +29,37 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _format_job_response(job: "Job") -> dict:
+    """Format a job instance into a response dictionary.
+    
+    Helper function to ensure consistent job response structure across endpoints.
+    
+    Args:
+        job: Job instance to format.
+        
+    Returns:
+        Dict with job metadata in API response format.
+    """
+    response = {
+        "job_id": job.job_id,
+        "status": job.status,
+        "created_at": job.created_at.isoformat(),
+        "updated_at": job.updated_at.isoformat(),
+    }
+    
+    # Include result for succeeded jobs
+    if job.status == "succeeded" and job.result is not None:
+        response["result"] = job.result
+    else:
+        response["result"] = None
+    
+    # Include error for failed jobs
+    if job.status == "failed" and job.error is not None:
+        response["error"] = job.error
+    
+    return response
+
+
 @router.post(
     "/plan",
     response_model=PlanResponse,
@@ -311,25 +342,7 @@ def get_job_status(
             detail="Job not found"
         )
     
-    # Build response based on job status
-    response = {
-        "job_id": job.job_id,
-        "status": job.status,
-        "created_at": job.created_at.isoformat(),
-        "updated_at": job.updated_at.isoformat(),
-    }
-    
-    # Include result for succeeded jobs
-    if job.status == "succeeded" and job.result is not None:
-        response["result"] = job.result
-    else:
-        response["result"] = None
-    
-    # Include error for failed jobs
-    if job.status == "failed" and job.error is not None:
-        response["error"] = job.error
-    
-    return response
+    return _format_job_response(job)
 
 
 @router.get(
@@ -389,26 +402,7 @@ def list_jobs(
     jobs = job_store.list_jobs(limit=effective_limit)
     
     # Format jobs with same structure as single job endpoint
-    formatted_jobs = []
-    for job in jobs:
-        job_data = {
-            "job_id": job.job_id,
-            "status": job.status,
-            "created_at": job.created_at.isoformat(),
-            "updated_at": job.updated_at.isoformat(),
-        }
-        
-        # Include result for succeeded jobs
-        if job.status == "succeeded" and job.result is not None:
-            job_data["result"] = job.result
-        else:
-            job_data["result"] = None
-        
-        # Include error for failed jobs
-        if job.status == "failed" and job.error is not None:
-            job_data["error"] = job.error
-        
-        formatted_jobs.append(job_data)
+    formatted_jobs = [_format_job_response(job) for job in jobs]
     
     return {
         "jobs": formatted_jobs,
