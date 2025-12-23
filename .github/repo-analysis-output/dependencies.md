@@ -8,10 +8,10 @@ Includes classification of external dependencies as stdlib vs third-party.
 
 ## Statistics
 
-- **Total files**: 31
-- **Intra-repo dependencies**: 56
+- **Total files**: 35
+- **Intra-repo dependencies**: 68
 - **External stdlib dependencies**: 22
-- **External third-party dependencies**: 24
+- **External third-party dependencies**: 28
 
 ## External Dependencies
 
@@ -43,8 +43,10 @@ Total: 22 unique modules
 
 ### Third-Party Packages
 
-Total: 24 unique packages
+Total: 28 unique packages
 
+- `anthropic`
+- `anthropic.Anthropic`
 - `fastapi.APIRouter`
 - `fastapi.BackgroundTasks`
 - `fastapi.Depends`
@@ -57,38 +59,36 @@ Total: 24 unique packages
 - `fastapi.responses.JSONResponse`
 - `fastapi.status`
 - `fastapi.testclient.TestClient`
+- `google.genai`
+- `google.genai.types`
 - `openai`
 - `openai.OpenAI`
 - `pydantic.BaseModel`
 - `pydantic.Field`
-- `pydantic.ValidationError`
-- `pydantic.field_validator`
-- `pydantic.model_validator`
-- `pydantic_settings.BaseSettings`
-- ... and 4 more (see JSON for full list)
+- ... and 8 more (see JSON for full list)
 
 ## Most Depended Upon Files (Intra-Repo)
 
 - `app/core/config.py` (12 dependents)
+- `app/services/llm_client.py` (12 dependents)
 - `app/services/job_store.py` (8 dependents)
-- `app/services/llm_client.py` (8 dependents)
 - `app/services/store_singleton.py` (6 dependents)
+- `app/services/llm_openai.py` (5 dependents)
 - `app/main.py` (5 dependents)
 - `app/services/planner.py` (4 dependents)
+- `app/services/model_registry.py` (4 dependents)
 - `app/models/job.py` (3 dependents)
 - `app/models/response.py` (3 dependents)
-- `app/services/llm_openai.py` (3 dependents)
-- `app/services/model_registry.py` (2 dependents)
 
 ## Files with Most Dependencies (Intra-Repo)
 
 - `app/api/routes.py` (7 dependencies)
+- `app/services/llm_client.py` (5 dependencies)
 - `app/services/planner.py` (5 dependencies)
 - `app/services/store_singleton.py` (5 dependencies)
 - `tests/test_plans_async_endpoint.py` (5 dependencies)
 - `tests/test_plans_polling_endpoints.py` (4 dependencies)
 - `app/main.py` (3 dependencies)
 - `app/services/__init__.py` (3 dependencies)
+- `tests/test_llm_client.py` (3 dependencies)
 - `tests/test_planner_integration.py` (3 dependencies)
-- `tests/test_store_singleton.py` (3 dependencies)
-- `tests/test_llm_openai.py` (2 dependencies)

@@ -30,7 +30,9 @@
   ├── services
     ├── __init__.py
     ├── job_store.py
+    ├── llm_claude.py
     ├── llm_client.py
+    ├── llm_gemini.py
     ├── llm_openai.py
     ├── model_registry.py
     ├── planner.py
@@ -43,7 +45,9 @@
   ├── test_health_endpoint.py
   ├── test_job_model.py
   ├── test_job_store.py
+  ├── test_llm_claude.py
   ├── test_llm_client.py
+  ├── test_llm_gemini.py
   ├── test_llm_openai.py
   ├── test_main.py
   ├── test_model_registry.py

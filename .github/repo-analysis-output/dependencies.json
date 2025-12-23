@@ -160,6 +160,22 @@
       }
     },
     {
+      "id": "app/services/llm_claude.py",
+      "path": "app/services/llm_claude.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "logging",
+          "time",
+          "typing.Optional"
+        ],
+        "third-party": [
+          "anthropic",
+          "anthropic.Anthropic"
+        ]
+      }
+    },
+    {
       "id": "app/services/llm_client.py",
       "path": "app/services/llm_client.py",
       "type": "file",
@@ -169,11 +185,29 @@
           "abc.abstractmethod",
           "json",
           "logging",
+          "os",
           "re",
+          "threading",
           "typing.Any",
           "typing.Optional"
         ],
         "third-party": []
+      }
+    },
+    {
+      "id": "app/services/llm_gemini.py",
+      "path": "app/services/llm_gemini.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "logging",
+          "time",
+          "typing.Optional"
+        ],
+        "third-party": [
+          "google.genai",
+          "google.genai.types"
+        ]
       }
     },
     {
@@ -298,12 +332,46 @@
       }
     },
     {
+      "id": "tests/test_llm_claude.py",
+      "path": "tests/test_llm_claude.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "json",
+          "unittest.mock.MagicMock",
+          "unittest.mock.Mock",
+          "unittest.mock.patch"
+        ],
+        "third-party": [
+          "anthropic",
+          "pytest"
+        ]
+      }
+    },
+    {
       "id": "tests/test_llm_client.py",
       "path": "tests/test_llm_client.py",
       "type": "file",
       "external_dependencies": {
         "stdlib": [
-          "json"
+          "json",
+          "unittest.mock.patch"
+        ],
+        "third-party": [
+          "pytest"
+        ]
+      }
+    },
+    {
+      "id": "tests/test_llm_gemini.py",
+      "path": "tests/test_llm_gemini.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "json",
+          "unittest.mock.MagicMock",
+          "unittest.mock.Mock",
+          "unittest.mock.patch"
         ],
         "third-party": [
           "pytest"
@@ -501,8 +569,32 @@
       "target": "app/models/job.py"
     },
     {
+      "source": "app/services/llm_claude.py",
+      "target": "app/services/llm_client.py"
+    },
+    {
       "source": "app/services/llm_client.py",
       "target": "app/models/response.py"
+    },
+    {
+      "source": "app/services/llm_client.py",
+      "target": "app/services/llm_openai.py"
+    },
+    {
+      "source": "app/services/llm_client.py",
+      "target": "app/services/llm_claude.py"
+    },
+    {
+      "source": "app/services/llm_client.py",
+      "target": "app/services/llm_gemini.py"
+    },
+    {
+      "source": "app/services/llm_client.py",
+      "target": "app/services/model_registry.py"
+    },
+    {
+      "source": "app/services/llm_gemini.py",
+      "target": "app/services/llm_client.py"
     },
     {
       "source": "app/services/llm_openai.py",
@@ -569,7 +661,31 @@
       "target": "app/services/job_store.py"
     },
     {
+      "source": "tests/test_llm_claude.py",
+      "target": "app/services/llm_claude.py"
+    },
+    {
+      "source": "tests/test_llm_claude.py",
+      "target": "app/services/llm_client.py"
+    },
+    {
       "source": "tests/test_llm_client.py",
+      "target": "app/services/llm_client.py"
+    },
+    {
+      "source": "tests/test_llm_client.py",
+      "target": "app/services/llm_openai.py"
+    },
+    {
+      "source": "tests/test_llm_client.py",
+      "target": "app/services/model_registry.py"
+    },
+    {
+      "source": "tests/test_llm_gemini.py",
+      "target": "app/services/llm_gemini.py"
+    },
+    {
+      "source": "tests/test_llm_gemini.py",
       "target": "app/services/llm_client.py"
     },
     {
@@ -687,6 +803,8 @@
       "uuid"
     ],
     "third-party": [
+      "anthropic",
+      "anthropic.Anthropic",
       "fastapi.APIRouter",
       "fastapi.BackgroundTasks",
       "fastapi.Depends",
@@ -699,6 +817,8 @@
       "fastapi.responses.JSONResponse",
       "fastapi.status",
       "fastapi.testclient.TestClient",
+      "google.genai",
+      "google.genai.types",
       "openai",
       "openai.OpenAI",
       "pydantic.BaseModel",
@@ -713,6 +833,6 @@
       "uvicorn"
     ],
     "stdlib_count": 22,
-    "third-party_count": 24
+    "third-party_count": 28
   }
 }

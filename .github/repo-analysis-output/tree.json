@@ -138,7 +138,15 @@
             },
             {
               "type": "file",
+              "name": "llm_claude.py"
+            },
+            {
+              "type": "file",
               "name": "llm_client.py"
+            },
+            {
+              "type": "file",
+              "name": "llm_gemini.py"
             },
             {
               "type": "file",
@@ -194,7 +202,15 @@
         },
         {
           "type": "file",
+          "name": "test_llm_claude.py"
+        },
+        {
+          "type": "file",
           "name": "test_llm_client.py"
+        },
+        {
+          "type": "file",
+          "name": "test_llm_gemini.py"
         },
         {
           "type": "file",

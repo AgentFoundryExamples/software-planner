@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 31
+Total files: 35
 
 ## app/__init__.py
 **Language:** Python  
@@ -114,13 +114,31 @@ Total files: 31
 **LOC:** 112  
 **TODOs/FIXMEs:** 0  
 
+## app/services/llm_claude.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for llm claude  
+**Size:** 13.95 KB  
+**LOC:** 278  
+**TODOs/FIXMEs:** 0  
+
 ## app/services/llm_client.py
 **Language:** Python  
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm client  
-**Size:** 12.31 KB  
-**LOC:** 241  
+**Size:** 18.82 KB  
+**LOC:** 393  
+**TODOs/FIXMEs:** 0  
+
+## app/services/llm_gemini.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for llm gemini  
+**Size:** 15.47 KB  
+**LOC:** 297  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/llm_openai.py
@@ -155,8 +173,8 @@ Total files: 31
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for store singleton  
-**Size:** 4.89 KB  
-**LOC:** 91  
+**Size:** 7.32 KB  
+**LOC:** 129  
 **TODOs/FIXMEs:** 0  
 
 ## tests/__init__.py
@@ -204,13 +222,31 @@ Total files: 31
 **LOC:** 251  
 **TODOs/FIXMEs:** 0  
 
+## tests/test_llm_claude.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 10.87 KB  
+**LOC:** 215  
+**TODOs/FIXMEs:** 0  
+
 ## tests/test_llm_client.py
 **Language:** Python  
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 9.90 KB  
-**LOC:** 225  
+**Size:** 12.52 KB  
+**LOC:** 280  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_llm_gemini.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 11.04 KB  
+**LOC:** 200  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_llm_openai.py
