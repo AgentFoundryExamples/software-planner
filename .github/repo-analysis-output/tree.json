@@ -138,6 +138,10 @@
             },
             {
               "type": "file",
+              "name": "llm_client.py"
+            },
+            {
+              "type": "file",
               "name": "planner.py"
             },
             {
@@ -179,6 +183,10 @@
         {
           "type": "file",
           "name": "test_job_store.py"
+        },
+        {
+          "type": "file",
+          "name": "test_llm_client.py"
         },
         {
           "type": "file",

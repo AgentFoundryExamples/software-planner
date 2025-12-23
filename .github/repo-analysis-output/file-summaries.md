@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 24
+Total files: 26
 
 ## app/__init__.py
 **Language:** Python  
@@ -47,8 +47,8 @@ Total files: 24
 **Role:** configuration  
 **Role Justification:** configuration file name 'config'  
 **Summary:** Python configuration file (role: configuration)  
-**Size:** 2.38 KB  
-**LOC:** 35  
+**Size:** 3.66 KB  
+**LOC:** 64  
 **TODOs/FIXMEs:** 0  
 
 ## app/main.py
@@ -101,8 +101,8 @@ Total files: 24
 **Role:** module-init  
 **Role Justification:** module initialization file '__init__'  
 **Summary:** Python module initialization (role: module-init)  
-**Size:** 0.73 KB  
-**LOC:** 4  
+**Size:** 1.11 KB  
+**LOC:** 23  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/job_store.py
@@ -112,6 +112,15 @@ Total files: 24
 **Summary:** Python module for job store  
 **Size:** 5.36 KB  
 **LOC:** 112  
+**TODOs/FIXMEs:** 0  
+
+## app/services/llm_client.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for llm client  
+**Size:** 12.31 KB  
+**LOC:** 241  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/planner.py
@@ -146,8 +155,8 @@ Total files: 24
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 3.80 KB  
-**LOC:** 64  
+**Size:** 6.56 KB  
+**LOC:** 115  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_health_endpoint.py
@@ -175,6 +184,15 @@ Total files: 24
 **Summary:** Python test file (role: test)  
 **Size:** 12.31 KB  
 **LOC:** 251  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_llm_client.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 9.90 KB  
+**LOC:** 225  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_main.py

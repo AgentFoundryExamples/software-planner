@@ -30,6 +30,7 @@
   ├── services
     ├── __init__.py
     ├── job_store.py
+    ├── llm_client.py
     ├── planner.py
     └── store_singleton.py
   ├── __init__.py
@@ -40,6 +41,7 @@
   ├── test_health_endpoint.py
   ├── test_job_model.py
   ├── test_job_store.py
+  ├── test_llm_client.py
   ├── test_main.py
   ├── test_plan_endpoint.py
   ├── test_planner_integration.py

@@ -51,8 +51,11 @@
       "path": "app/core/config.py",
       "type": "file",
       "external_dependencies": {
-        "stdlib": [],
+        "stdlib": [
+          "typing.Optional"
+        ],
         "third-party": [
+          "pydantic.Field",
           "pydantic.model_validator",
           "pydantic_settings.BaseSettings",
           "pydantic_settings.SettingsConfigDict"
@@ -154,6 +157,23 @@
       }
     },
     {
+      "id": "app/services/llm_client.py",
+      "path": "app/services/llm_client.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "abc.ABC",
+          "abc.abstractmethod",
+          "json",
+          "logging",
+          "re",
+          "typing.Any",
+          "typing.Optional"
+        ],
+        "third-party": []
+      }
+    },
+    {
       "id": "app/services/planner.py",
       "path": "app/services/planner.py",
       "type": "file",
@@ -233,6 +253,19 @@
           "datetime.datetime",
           "datetime.timezone",
           "time"
+        ],
+        "third-party": [
+          "pytest"
+        ]
+      }
+    },
+    {
+      "id": "tests/test_llm_client.py",
+      "path": "tests/test_llm_client.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "json"
         ],
         "third-party": [
           "pytest"
@@ -369,8 +402,16 @@
       "target": "app/services/planner.py"
     },
     {
+      "source": "app/services/__init__.py",
+      "target": "app/services/llm_client.py"
+    },
+    {
       "source": "app/services/job_store.py",
       "target": "app/models/job.py"
+    },
+    {
+      "source": "app/services/llm_client.py",
+      "target": "app/models/response.py"
     },
     {
       "source": "app/services/planner.py",
@@ -399,6 +440,10 @@
     {
       "source": "tests/test_job_store.py",
       "target": "app/services/job_store.py"
+    },
+    {
+      "source": "tests/test_llm_client.py",
+      "target": "app/services/llm_client.py"
     },
     {
       "source": "tests/test_main.py",
@@ -459,6 +504,8 @@
   ],
   "external_dependencies_summary": {
     "stdlib": [
+      "abc.ABC",
+      "abc.abstractmethod",
       "concurrent.futures.ThreadPoolExecutor",
       "datetime.datetime",
       "datetime.timezone",
@@ -466,8 +513,10 @@
       "logging",
       "os",
       "random",
+      "re",
       "threading.Lock",
       "time",
+      "typing.Any",
       "typing.Dict",
       "typing.List",
       "typing.Literal",
@@ -499,7 +548,7 @@
       "starlette.exceptions.HTTPException",
       "uvicorn"
     ],
-    "stdlib_count": 15,
+    "stdlib_count": 19,
     "third-party_count": 22
   }
 }

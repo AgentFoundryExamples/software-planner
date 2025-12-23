@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 24,
+  "total_files": 26,
   "files": [
     {
       "schema_version": "2.0",
@@ -67,8 +67,8 @@
       "summary": "Python configuration file (role: configuration)",
       "summary_text": "Python configuration file (role: configuration)",
       "metrics": {
-        "size_bytes": 2436,
-        "loc": 35,
+        "size_bytes": 3743,
+        "loc": 64,
         "todo_count": 0
       }
     },
@@ -151,8 +151,8 @@
       "summary": "Python module initialization (role: module-init)",
       "summary_text": "Python module initialization (role: module-init)",
       "metrics": {
-        "size_bytes": 750,
-        "loc": 4,
+        "size_bytes": 1135,
+        "loc": 23,
         "todo_count": 0
       }
     },
@@ -167,6 +167,20 @@
       "metrics": {
         "size_bytes": 5487,
         "loc": 112,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "app/services/llm_client.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for llm client",
+      "summary_text": "Python module for llm client",
+      "metrics": {
+        "size_bytes": 12603,
+        "loc": 241,
         "todo_count": 0
       }
     },
@@ -221,8 +235,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 3889,
-        "loc": 64,
+        "size_bytes": 6714,
+        "loc": 115,
         "todo_count": 0
       }
     },
@@ -265,6 +279,20 @@
       "metrics": {
         "size_bytes": 12609,
         "loc": 251,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_llm_client.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 10135,
+        "loc": 225,
         "todo_count": 0
       }
     },

@@ -8,17 +8,19 @@ Includes classification of external dependencies as stdlib vs third-party.
 
 ## Statistics
 
-- **Total files**: 24
-- **Intra-repo dependencies**: 36
-- **External stdlib dependencies**: 15
+- **Total files**: 26
+- **Intra-repo dependencies**: 39
+- **External stdlib dependencies**: 19
 - **External third-party dependencies**: 22
 
 ## External Dependencies
 
 ### Standard Library / Core Modules
 
-Total: 15 unique modules
+Total: 19 unique modules
 
+- `abc.ABC`
+- `abc.abstractmethod`
 - `concurrent.futures.ThreadPoolExecutor`
 - `datetime.datetime`
 - `datetime.timezone`
@@ -26,8 +28,10 @@ Total: 15 unique modules
 - `logging`
 - `os`
 - `random`
+- `re`
 - `threading.Lock`
 - `time`
+- `typing.Any`
 - `typing.Dict`
 - `typing.List`
 - `typing.Literal`
@@ -69,7 +73,8 @@ Total: 22 unique packages
 - `app/services/planner.py` (4 dependents)
 - `app/services/store_singleton.py` (4 dependents)
 - `app/models/job.py` (3 dependents)
-- `app/models/response.py` (2 dependents)
+- `app/models/response.py` (3 dependents)
+- `app/services/llm_client.py` (2 dependents)
 - `app/models/request.py` (1 dependents)
 - `app/api/routes.py` (1 dependents)
 
@@ -79,7 +84,7 @@ Total: 22 unique packages
 - `tests/test_plans_async_endpoint.py` (5 dependencies)
 - `tests/test_plans_polling_endpoints.py` (4 dependencies)
 - `app/main.py` (3 dependencies)
-- `app/services/__init__.py` (2 dependencies)
+- `app/services/__init__.py` (3 dependencies)
 - `app/services/planner.py` (2 dependencies)
 - `tests/test_plan_endpoint.py` (2 dependencies)
 - `tests/test_planner_integration.py` (2 dependencies)
