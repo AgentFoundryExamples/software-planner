@@ -39,8 +39,8 @@
       "summary": "Python routing configuration (role: router)",
       "summary_text": "Python routing configuration (role: router)",
       "metrics": {
-        "size_bytes": 14680,
-        "loc": 343,
+        "size_bytes": 19364,
+        "loc": 444,
         "todo_count": 0
       }
     },

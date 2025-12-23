@@ -29,8 +29,8 @@ Total files: 24
 **Role:** router  
 **Role Justification:** filename contains routing term  
 **Summary:** Python routing configuration (role: router)  
-**Size:** 14.34 KB  
-**LOC:** 343  
+**Size:** 18.91 KB  
+**LOC:** 444  
 **TODOs/FIXMEs:** 0  
 
 ## app/core/__init__.py
