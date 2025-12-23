@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     # API settings
     api_prefix: str = "/api/v1"
     
+    # Planning settings
+    max_description_bytes: int = 8192
+    
     # CORS settings
     # For security, allow_credentials should only be True when allowed_origins is not ["*"]
     # WARNING: Default configuration is for development only. In production, set

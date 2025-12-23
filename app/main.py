@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.api.routes import router as plan_router
 from app.core.config import settings
 
 
@@ -63,12 +64,39 @@ def create_app() -> FastAPI:
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         """Handle request validation errors with detailed information."""
+        # Check if any error is a ValueError (custom validation)
+        # Return 400 for custom validation errors, 422 for schema/type errors
+        errors = exc.errors()
+        
+        # Clean error details to ensure JSON serializability
+        cleaned_errors = []
+        for err in errors:
+            cleaned_err = {
+                "loc": err.get("loc", []),
+                "msg": err.get("msg", ""),
+                "type": err.get("type", ""),
+            }
+            # Only add input if it's JSON serializable (and not too large)
+            input_val = err.get("input")
+            if input_val is not None and isinstance(input_val, (str, int, float, bool, type(None))):
+                if isinstance(input_val, str) and len(input_val) <= 100:
+                    cleaned_err["input"] = input_val
+                elif not isinstance(input_val, str):
+                    cleaned_err["input"] = input_val
+            cleaned_errors.append(cleaned_err)
+        
+        is_custom_validation = any(
+            err.get("type") == "value_error" for err in errors
+        )
+        
+        status_code = status.HTTP_400_BAD_REQUEST if is_custom_validation else status.HTTP_422_UNPROCESSABLE_ENTITY
+        
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status_code,
             content={
                 "error": "Validation error",
-                "status_code": status.HTTP_422_UNPROCESSABLE_ENTITY,
-                "details": exc.errors(),
+                "status_code": status_code,
+                "details": cleaned_errors,
             },
         )
     
@@ -87,11 +115,7 @@ def create_app() -> FastAPI:
     @app.get("/health")
     async def health_check():
         """Health check endpoint."""
-        return {
-            "status": "healthy",
-            "app_name": settings.app_name,
-            "version": settings.app_version
-        }
+        return {"status": "ok"}
     
     # Root endpoint
     @app.get("/")
@@ -103,8 +127,8 @@ def create_app() -> FastAPI:
             "docs": f"{settings.api_prefix}/docs"
         }
     
-    # Future API routes will be registered here
-    # Example: app.include_router(some_router, prefix=settings.api_prefix)
+    # Register API routes
+    app.include_router(plan_router, prefix=settings.api_prefix, tags=["planning"])
     
     return app
 
