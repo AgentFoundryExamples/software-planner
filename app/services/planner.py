@@ -157,7 +157,14 @@ def _normalize_specs(data: dict[str, Any]) -> dict[str, Any]:
     return {"specs": normalized_specs}
 
 
-def generate_plan(description: str, job_store: Optional[JobStore] = None, job_id: Optional[str] = None, llm_client: Optional[BaseLLMClient] = None) -> PlanResponse:
+def generate_plan(
+    description: str, 
+    job_store: Optional[JobStore] = None, 
+    job_id: Optional[str] = None, 
+    llm_client: Optional[BaseLLMClient] = None,
+    model: Optional[str] = None,
+    system_prompt: Optional[str] = None
+) -> PlanResponse:
     """Generate a software plan based on the provided description.
     
     Uses an LLM client to generate structured software specifications from
@@ -173,6 +180,8 @@ def generate_plan(description: str, job_store: Optional[JobStore] = None, job_id
         job_id: Optional job ID for status tracking.
         llm_client: Optional LLM client instance. If not provided, will use
             the global singleton from store_singleton.
+        model: Optional logical model name to use. If not provided, uses default.
+        system_prompt: Optional custom system prompt. If not provided, uses default.
         
     Returns:
         PlanResponse containing a list of specification items.
@@ -207,16 +216,18 @@ def generate_plan(description: str, job_store: Optional[JobStore] = None, job_id
             from app.services.store_singleton import get_llm_client
             llm_client = get_llm_client()
         
-        # Get system prompt from config or use default
-        system_prompt = settings.llm_system_prompt or get_default_system_prompt()
+        # Get system prompt - use provided override, otherwise fall back to config or default
+        if system_prompt is None:
+            system_prompt = settings.llm_system_prompt or get_default_system_prompt()
         
         # Call LLM to generate specs
         logger.info(
             "Calling LLM to generate specs",
             extra={
                 "description_length": len(description),
-                "has_custom_prompt": bool(settings.llm_system_prompt),
+                "has_custom_prompt": bool(system_prompt != get_default_system_prompt()),
                 "job_id": job_id or "none",
+                "model_override": model or "none",
             }
         )
         

@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     
     # Planning settings
     max_description_bytes: int = 8192
+    max_system_prompt_bytes: int = 32768  # Maximum length for custom system prompts
     
     # Job listing settings
     default_jobs_list_limit: int = 100
