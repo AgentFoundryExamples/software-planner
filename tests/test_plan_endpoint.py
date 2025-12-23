@@ -13,6 +13,8 @@
 # limitations under the License.
 """Tests for the /plan endpoint."""
 
+from unittest.mock import Mock, patch
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -21,9 +23,44 @@ from app.core.config import settings
 
 
 @pytest.fixture
-def client():
-    """Create a test client for the FastAPI app."""
-    return TestClient(app)
+def mock_llm_client():
+    """Create a mock LLM client that returns valid specs."""
+    client = Mock()
+    client.generate_specs.return_value = {
+        "specs": [
+            {
+                "purpose": "Core API Development",
+                "vision": "Build a robust and scalable REST API with proper error handling and validation",
+                "must": [
+                    "Implement RESTful endpoints with proper HTTP methods",
+                    "Add comprehensive input validation",
+                    "Include error handling with informative messages",
+                    "Write unit and integration tests"
+                ],
+                "dont": [
+                    "Skip validation on user inputs",
+                    "Expose internal error details to clients",
+                    "Hardcode configuration values",
+                    "Ignore security best practices"
+                ],
+                "nice": [
+                    "Add API rate limiting",
+                    "Include request/response logging",
+                    "Implement API versioning",
+                    "Add OpenAPI documentation"
+                ]
+            }
+        ]
+    }
+    return client
+
+
+@pytest.fixture
+def client(mock_llm_client):
+    """Create a test client for the FastAPI app with mocked LLM client."""
+    # Patch the get_llm_client at the source to return our mock
+    with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
+        yield TestClient(app)
 
 
 class TestPlanEndpointHappyPath:
