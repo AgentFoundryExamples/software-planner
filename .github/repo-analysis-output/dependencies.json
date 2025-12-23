@@ -1,10 +1,150 @@
 {
-  "nodes": [],
-  "edges": [],
+  "nodes": [
+    {
+      "id": "app/__init__.py",
+      "path": "app/__init__.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "app/api/__init__.py",
+      "path": "app/api/__init__.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "app/core/__init__.py",
+      "path": "app/core/__init__.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "app/core/config.py",
+      "path": "app/core/config.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "pydantic.model_validator",
+          "pydantic_settings.BaseSettings",
+          "pydantic_settings.SettingsConfigDict"
+        ]
+      }
+    },
+    {
+      "id": "app/main.py",
+      "path": "app/main.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "fastapi.FastAPI",
+          "fastapi.Request",
+          "fastapi.exceptions.RequestValidationError",
+          "fastapi.middleware.cors.CORSMiddleware",
+          "fastapi.responses.JSONResponse",
+          "fastapi.status",
+          "starlette.exceptions.HTTPException",
+          "uvicorn"
+        ]
+      }
+    },
+    {
+      "id": "app/models/__init__.py",
+      "path": "app/models/__init__.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "tests/__init__.py",
+      "path": "tests/__init__.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "tests/test_config.py",
+      "path": "tests/test_config.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "os"
+        ],
+        "third-party": [
+          "pydantic.ValidationError",
+          "pytest"
+        ]
+      }
+    },
+    {
+      "id": "tests/test_main.py",
+      "path": "tests/test_main.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "fastapi.FastAPI",
+          "fastapi.Query",
+          "fastapi.testclient.TestClient",
+          "pytest"
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "app/core/__init__.py",
+      "target": "app/core/config.py"
+    },
+    {
+      "source": "app/main.py",
+      "target": "app/core/config.py"
+    },
+    {
+      "source": "tests/test_config.py",
+      "target": "app/core/config.py"
+    },
+    {
+      "source": "tests/test_main.py",
+      "target": "app/main.py"
+    }
+  ],
   "external_dependencies_summary": {
-    "stdlib": [],
-    "third-party": [],
-    "stdlib_count": 0,
-    "third-party_count": 0
+    "stdlib": [
+      "os"
+    ],
+    "third-party": [
+      "fastapi.FastAPI",
+      "fastapi.Query",
+      "fastapi.Request",
+      "fastapi.exceptions.RequestValidationError",
+      "fastapi.middleware.cors.CORSMiddleware",
+      "fastapi.responses.JSONResponse",
+      "fastapi.status",
+      "fastapi.testclient.TestClient",
+      "pydantic.ValidationError",
+      "pydantic.model_validator",
+      "pydantic_settings.BaseSettings",
+      "pydantic_settings.SettingsConfigDict",
+      "pytest",
+      "starlette.exceptions.HTTPException",
+      "uvicorn"
+    ],
+    "stdlib_count": 1,
+    "third-party_count": 15
   }
 }

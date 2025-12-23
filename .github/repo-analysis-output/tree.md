@@ -13,6 +13,23 @@
     └── tree.md
   └── workflows
     └── af_maintenance.yml
+├── app
+  ├── api
+    └── __init__.py
+  ├── core
+    ├── __init__.py
+    └── config.py
+  ├── models
+    └── __init__.py
+  ├── __init__.py
+  └── main.py
+├── tests
+  ├── __init__.py
+  ├── test_config.py
+  └── test_main.py
+├── .gitignore
 ├── LICENSE
 ├── LLMs.md
-└── README.md
+├── pytest.ini
+├── README.md
+└── requirements.txt
