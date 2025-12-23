@@ -226,6 +226,10 @@
         },
         {
           "type": "file",
+          "name": "test_models_endpoint.py"
+        },
+        {
+          "type": "file",
           "name": "test_plan_endpoint.py"
         },
         {

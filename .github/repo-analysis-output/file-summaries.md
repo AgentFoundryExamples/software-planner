@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 35
+Total files: 36
 
 ## app/__init__.py
 **Language:** Python  
@@ -29,8 +29,8 @@ Total files: 35
 **Role:** router  
 **Role Justification:** filename contains routing term  
 **Summary:** Python routing configuration (role: router)  
-**Size:** 21.29 KB  
-**LOC:** 501  
+**Size:** 30.83 KB  
+**LOC:** 692  
 **TODOs/FIXMEs:** 0  
 
 ## app/core/__init__.py
@@ -274,6 +274,15 @@ Total files: 35
 **Summary:** Python test file (role: test)  
 **Size:** 17.07 KB  
 **LOC:** 438  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_models_endpoint.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 17.92 KB  
+**LOC:** 302  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_plan_endpoint.py

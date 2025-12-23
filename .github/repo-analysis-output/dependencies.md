@@ -8,8 +8,8 @@ Includes classification of external dependencies as stdlib vs third-party.
 
 ## Statistics
 
-- **Total files**: 35
-- **Intra-repo dependencies**: 69
+- **Total files**: 36
+- **Intra-repo dependencies**: 73
 - **External stdlib dependencies**: 23
 - **External third-party dependencies**: 28
 
@@ -69,13 +69,13 @@ Total: 28 unique packages
 
 ## Most Depended Upon Files (Intra-Repo)
 
-- `app/core/config.py` (12 dependents)
+- `app/core/config.py` (13 dependents)
 - `app/services/llm_client.py` (12 dependents)
 - `app/services/job_store.py` (8 dependents)
 - `app/services/store_singleton.py` (6 dependents)
-- `app/services/model_registry.py` (5 dependents)
+- `app/services/model_registry.py` (6 dependents)
+- `app/main.py` (6 dependents)
 - `app/services/llm_openai.py` (5 dependents)
-- `app/main.py` (5 dependents)
 - `app/services/planner.py` (4 dependents)
 - `app/models/job.py` (3 dependents)
 - `app/models/response.py` (3 dependents)
@@ -87,8 +87,8 @@ Total: 28 unique packages
 - `app/services/planner.py` (5 dependencies)
 - `app/services/store_singleton.py` (5 dependencies)
 - `tests/test_plans_async_endpoint.py` (5 dependencies)
+- `tests/test_models_endpoint.py` (4 dependencies)
 - `tests/test_plans_polling_endpoints.py` (4 dependencies)
 - `app/main.py` (3 dependencies)
 - `app/services/__init__.py` (3 dependencies)
 - `tests/test_llm_client.py` (3 dependencies)
-- `tests/test_planner_integration.py` (3 dependencies)

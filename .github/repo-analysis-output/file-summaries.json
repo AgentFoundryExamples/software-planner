@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 35,
+  "total_files": 36,
   "files": [
     {
       "schema_version": "2.0",
@@ -39,8 +39,8 @@
       "summary": "Python routing configuration (role: router)",
       "summary_text": "Python routing configuration (role: router)",
       "metrics": {
-        "size_bytes": 21802,
-        "loc": 501,
+        "size_bytes": 31565,
+        "loc": 692,
         "todo_count": 0
       }
     },
@@ -419,6 +419,20 @@
       "metrics": {
         "size_bytes": 17477,
         "loc": 438,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_models_endpoint.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 18345,
+        "loc": 302,
         "todo_count": 0
       }
     },

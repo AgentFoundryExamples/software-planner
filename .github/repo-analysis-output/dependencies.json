@@ -425,6 +425,22 @@
       }
     },
     {
+      "id": "tests/test_models_endpoint.py",
+      "path": "tests/test_models_endpoint.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "os",
+          "unittest.mock.MagicMock",
+          "unittest.mock.patch"
+        ],
+        "third-party": [
+          "fastapi.testclient.TestClient",
+          "pytest"
+        ]
+      }
+    },
+    {
       "id": "tests/test_plan_endpoint.py",
       "path": "tests/test_plan_endpoint.py",
       "type": "file",
@@ -712,6 +728,22 @@
     {
       "source": "tests/test_model_registry.py",
       "target": "app/services/model_registry.py"
+    },
+    {
+      "source": "tests/test_models_endpoint.py",
+      "target": "app/main.py"
+    },
+    {
+      "source": "tests/test_models_endpoint.py",
+      "target": "app/core/config.py"
+    },
+    {
+      "source": "tests/test_models_endpoint.py",
+      "target": "app/services/model_registry.py"
+    },
+    {
+      "source": "tests/test_models_endpoint.py",
+      "target": "app/api/routes.py"
     },
     {
       "source": "tests/test_plan_endpoint.py",
