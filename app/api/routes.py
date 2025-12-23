@@ -30,6 +30,208 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+@router.get(
+    "/models",
+    status_code=status.HTTP_200_OK,
+    responses={
+        200: {
+            "description": "List of available models with metadata",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "models": [
+                            {
+                                "logical_name": "my-gpt-model",
+                                "provider": "openai",
+                                "model_id": "gpt-5.1",
+                                "enabled": True,
+                                "timeout": 60,
+                                "max_retries": 3,
+                                "description": "OpenAI GPT-5.1 model for high-quality software planning",
+                                "metadata": {
+                                    "approximate_max_context": 128000,
+                                    "supports_streaming": False
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    summary="Discover available LLM models",
+    description="""List all enabled LLM models with their metadata.
+
+**Purpose:**
+This discovery endpoint allows clients to validate model availability before submitting
+planning jobs and understand the capabilities and constraints of each model.
+
+**Response Format:**
+- `logical_name`: User-friendly identifier to use in POST /plans requests
+- `provider`: Backend provider (openai, anthropic, google)
+- `model_id`: Provider-specific model identifier
+- `enabled`: Whether the model is currently available for use
+- `timeout`: Request timeout in seconds
+- `max_retries`: Maximum retry attempts for transient failures
+- `description`: Human-readable description of the model
+- `metadata`: Additional model-specific information (context window, etc.)
+
+**Empty Response:**
+Returns an empty list if no models are enabled (still returns 200 OK).
+
+**Usage:**
+Call this endpoint before submitting planning jobs to discover available models
+and their constraints (e.g., timeout expectations, context limits).
+"""
+)
+def list_models() -> dict:
+    """List all enabled LLM models with metadata.
+    
+    This endpoint exposes the model registry to clients, allowing them to:
+    - Discover which models are available
+    - Understand model constraints (timeout, retries, context limits)
+    - Validate model names before submitting planning jobs
+    - Select appropriate models based on their characteristics
+    
+    **Model Discovery Flow:**
+    1. Client calls GET /models to see available options
+    2. Client selects a model based on requirements (timeout, provider preference, etc.)
+    3. Client includes model name in POST /plans request body
+    4. Client can later check model used via GET /plans/{job_id}
+    
+    **Metadata:**
+    Each model includes approximate_max_context (token limit) and other
+    provider-specific metadata to help clients make informed choices.
+    
+    Returns:
+        Dict with list of model configurations including all metadata fields.
+    """
+    from app.services.model_registry import get_model_registry
+    
+    registry = get_model_registry()
+    enabled_models = registry.get_enabled_models()
+    
+    # Build response with comprehensive metadata
+    models_list = []
+    for logical_name, config in enabled_models.items():
+        # Determine approximate max context based on provider and model
+        approximate_max_context = _get_approximate_max_context(config.provider, config.model_id)
+        
+        model_info = {
+            "logical_name": logical_name,
+            "provider": config.provider,
+            "model_id": config.model_id,
+            "enabled": config.enabled,
+            "timeout": config.timeout,
+            "max_retries": config.max_retries,
+            "description": _get_model_description(config.provider, config.model_id),
+            "metadata": {
+                "approximate_max_context": approximate_max_context,
+                "supports_streaming": False  # Currently no streaming support
+            }
+        }
+        
+        # Include base_url presence indicator (but not the actual URL for security)
+        if config.base_url is not None:
+            model_info["metadata"]["has_custom_base_url"] = True
+        
+        models_list.append(model_info)
+    
+    return {"models": models_list}
+
+
+def _get_approximate_max_context(provider: str, model_id: str) -> int:
+    """Get approximate maximum context window for a model.
+    
+    Args:
+        provider: Provider identifier (openai, anthropic, google).
+        model_id: Model identifier.
+        
+    Returns:
+        Approximate token limit for the model's context window.
+    """
+    provider_lower = provider.lower()
+    model_id_lower = model_id.lower()
+    
+    # OpenAI models
+    if provider_lower == "openai":
+        if "gpt-5" in model_id_lower:
+            return 128000  # GPT-5 series
+        elif "gpt-4-turbo" in model_id_lower or "gpt-4-1106" in model_id_lower:
+            return 128000  # GPT-4 Turbo
+        elif "gpt-4" in model_id_lower:
+            return 8192  # GPT-4 base
+        else:
+            return 16384  # Conservative default for unknown OpenAI models
+    
+    # Anthropic models
+    elif provider_lower == "anthropic":
+        if "claude-3" in model_id_lower or "claude-4" in model_id_lower or "sonnet" in model_id_lower or "opus" in model_id_lower:
+            return 200000  # Claude 3/4 series has 200K context
+        else:
+            return 100000  # Conservative default for unknown Anthropic models
+    
+    # Google models
+    elif provider_lower == "google":
+        if "gemini-1.5" in model_id_lower or "gemini-2" in model_id_lower or "gemini-3" in model_id_lower:
+            return 1000000  # Gemini 1.5+ has 1M+ token context
+        else:
+            return 32000  # Conservative default for older Gemini models
+    
+    # Unknown provider
+    else:
+        return 8192  # Very conservative default
+
+
+def _get_model_description(provider: str, model_id: str) -> str:
+    """Get human-readable description for a model.
+    
+    Args:
+        provider: Provider identifier (openai, anthropic, google).
+        model_id: Model identifier.
+        
+    Returns:
+        Human-readable description of the model.
+    """
+    provider_lower = provider.lower()
+    model_id_lower = model_id.lower()
+    
+    # OpenAI models
+    if provider_lower == "openai":
+        if "gpt-5" in model_id_lower:
+            return f"OpenAI {model_id} - Latest generation model with improved reasoning and performance"
+        elif "gpt-4-turbo" in model_id_lower:
+            return f"OpenAI {model_id} - Fast GPT-4 variant with extended context window"
+        elif "gpt-4" in model_id_lower:
+            return f"OpenAI {model_id} - Advanced reasoning and code generation"
+        else:
+            return f"OpenAI {model_id}"
+    
+    # Anthropic models
+    elif provider_lower == "anthropic":
+        if "opus" in model_id_lower:
+            return f"Anthropic {model_id} - Most capable Claude model for complex tasks"
+        elif "sonnet" in model_id_lower:
+            return f"Anthropic {model_id} - Balanced performance and speed for most tasks"
+        elif "haiku" in model_id_lower:
+            return f"Anthropic {model_id} - Fast and efficient for simpler tasks"
+        else:
+            return f"Anthropic {model_id}"
+    
+    # Google models
+    elif provider_lower == "google":
+        if "pro" in model_id_lower:
+            return f"Google {model_id} - Production-grade Gemini model with large context"
+        elif "flash" in model_id_lower:
+            return f"Google {model_id} - Fast Gemini variant for quick responses"
+        else:
+            return f"Google {model_id}"
+    
+    # Unknown provider
+    else:
+        return f"{provider} {model_id}"
+
+
 def _validate_model_or_raise(model_name: str) -> None:
     """Validate model exists and is enabled, or raise HTTPException.
     
