@@ -477,8 +477,9 @@ def get_llm_client_for_model(
             f"Enable it in MODELS_REGISTRY or choose a different model."
         )
     
-    # Check cache if enabled
+    # Check cache if enabled - acquire lock for thread-safe cache access
     if cache_clients:
+        # Thread-safe cache lookup with proper locking
         with _client_cache_lock:
             if logical_model_id in _client_cache:
                 logger.debug(
@@ -486,6 +487,8 @@ def get_llm_client_for_model(
                     extra={"logical_model": logical_model_id}
                 )
                 return _client_cache[logical_model_id]
+            # If not in cache, continue to create below
+            # Lock will be reacquired when caching the new client
     
     # Get API key from environment variable
     api_key = os.environ.get(model_config.api_key_env, "").strip()

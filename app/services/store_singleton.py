@@ -141,43 +141,54 @@ def get_llm_client() -> BaseLLMClient:
                     extra={"error": str(e), "error_type": type(e).__name__}
                 )
                 raise LLMConfigurationError(f"Failed to initialize LLM client: {e}")
+        elif registry.has_registry() and not settings.default_model:
+            # Registry exists but default_model is not set - log warning and fall back
+            logger.warning(
+                "Model registry is configured but default_model is not set, falling back to legacy configuration",
+                extra={
+                    "registry_size": len(registry._registry),
+                    "available_models": list(registry._registry.keys())
+                }
+            )
+            # Fall through to legacy configuration below
         else:
-            # Use legacy single-model approach
-            logger.info("Initializing LLM client via legacy configuration")
+            # No registry configured - use legacy approach
+            logger.info("No model registry configured, using legacy single-model configuration")
+        
+        # Legacy single-model configuration (used when registry not configured or default_model not set)
+        # Validate API key is provided
+        if not settings.llm_api_key:
+            logger.error("LLM API key not configured")
+            raise LLMConfigurationError(
+                "LLM API key is not configured. Please set LLM_API_KEY environment variable."
+            )
+        
+        # Initialize OpenAI client with settings (legacy default)
+        try:
+            _llm_client = OpenAIClient(
+                api_key=settings.llm_api_key,
+                model=settings.llm_model,
+                base_url=settings.llm_base_url,
+                timeout=settings.llm_timeout,
+            )
             
-            # Validate API key is provided
-            if not settings.llm_api_key:
-                logger.error("LLM API key not configured")
-                raise LLMConfigurationError(
-                    "LLM API key is not configured. Please set LLM_API_KEY environment variable."
-                )
+            logger.info(
+                "LLM client initialized from legacy settings",
+                extra={
+                    "model": settings.llm_model,
+                    "has_base_url": bool(settings.llm_base_url),
+                    "timeout": settings.llm_timeout,
+                }
+            )
             
-            # Initialize OpenAI client with settings (legacy default)
-            try:
-                _llm_client = OpenAIClient(
-                    api_key=settings.llm_api_key,
-                    model=settings.llm_model,
-                    base_url=settings.llm_base_url,
-                    timeout=settings.llm_timeout,
-                )
-                
-                logger.info(
-                    "LLM client initialized from legacy settings",
-                    extra={
-                        "model": settings.llm_model,
-                        "has_base_url": bool(settings.llm_base_url),
-                        "timeout": settings.llm_timeout,
-                    }
-                )
-                
-                return _llm_client
-                
-            except LLMConfigurationError:
-                # Re-raise configuration errors as-is
-                raise
-            except Exception as e:
-                logger.error(
-                    "Failed to initialize LLM client",
-                    extra={"error": str(e), "error_type": type(e).__name__}
-                )
-                raise LLMConfigurationError(f"Failed to initialize LLM client: {e}")
+            return _llm_client
+            
+        except LLMConfigurationError:
+            # Re-raise configuration errors as-is
+            raise
+        except Exception as e:
+            logger.error(
+                "Failed to initialize LLM client",
+                extra={"error": str(e), "error_type": type(e).__name__}
+            )
+            raise LLMConfigurationError(f"Failed to initialize LLM client: {e}")

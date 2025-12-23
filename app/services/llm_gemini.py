@@ -172,8 +172,26 @@ class GeminiClient(BaseLLMClient):
         Returns:
             True if the error should be retried, False otherwise.
         """
-        # Check for Google API error types that are retryable
-        # Google's SDK uses different error classes than OpenAI/Anthropic
+        # First, check for specific status codes if available
+        # This is more reliable than string matching
+        if hasattr(error, 'code'):
+            code = getattr(error, 'code', None)
+            if code in [429, 500, 502, 503, 504]:
+                return True
+            # Non-retryable status codes
+            if code in [400, 401, 403, 404]:
+                return False
+        
+        # Check for status in response if available
+        if hasattr(error, 'response') and error.response is not None:
+            status_code = getattr(error.response, 'status_code', None)
+            if status_code in [429, 500, 502, 503, 504]:
+                return True
+            if status_code in [400, 401, 403, 404]:
+                return False
+        
+        # Fall back to string matching for error types and messages
+        # Convert to lowercase for case-insensitive matching
         error_str = str(error).lower()
         error_type = type(error).__name__.lower()
         
@@ -184,24 +202,29 @@ class GeminiClient(BaseLLMClient):
             'quota',
             'unavailable',
             'deadline',
-            '429',
-            '500',
-            '502',
-            '503',
-            '504',
+            'overloaded',
+            'resource exhausted',
         ]
         
         for keyword in retryable_keywords:
             if keyword in error_str or keyword in error_type:
                 return True
         
-        # Check for specific Google API error types if available
-        if hasattr(error, 'code'):
-            # HTTP status codes
-            code = getattr(error, 'code', None)
-            if code in [429, 500, 502, 503, 504]:
-                return True
+        # Check for non-retryable conditions
+        non_retryable_keywords = [
+            'authentication',
+            'auth',
+            'permission',
+            'forbidden',
+            'invalid',
+            'not found',
+        ]
         
+        for keyword in non_retryable_keywords:
+            if keyword in error_str or keyword in error_type:
+                return False
+        
+        # Default to non-retryable for unknown errors to avoid infinite loops
         return False
     
     def _call_llm_api(self, description: str, system_prompt: str) -> str:
