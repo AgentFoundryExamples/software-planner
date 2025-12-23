@@ -15,6 +15,7 @@
 
 import time
 from datetime import datetime, timezone
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -24,9 +25,29 @@ from app.services.job_store import JobStore
 
 
 @pytest.fixture
-def client():
-    """Create a test client for the FastAPI app."""
-    return TestClient(app)
+def mock_llm_client():
+    """Create a mock LLM client that returns valid specs."""
+    client = Mock()
+    client.generate_specs.return_value = {
+        "specs": [
+            {
+                "purpose": "Core API Development",
+                "vision": "Build a robust and scalable REST API",
+                "must": ["Implement RESTful endpoints", "Add validation"],
+                "dont": ["Skip validation", "Expose errors"],
+                "nice": ["Add rate limiting", "Include logging"]
+            }
+        ]
+    }
+    return client
+
+
+@pytest.fixture
+def client(mock_llm_client):
+    """Create a test client for the FastAPI app with mocked LLM client."""
+    # Patch the get_llm_client at the source to return our mock
+    with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
+        yield TestClient(app)
 
 
 @pytest.fixture
@@ -36,13 +57,15 @@ def mock_job_store():
 
 
 @pytest.fixture
-def override_job_store(mock_job_store):
+def override_job_store(mock_job_store, mock_llm_client):
     """Override the job store dependency for testing."""
     from app.services.store_singleton import get_job_store
     
-    app.dependency_overrides[get_job_store] = lambda: mock_job_store
-    yield mock_job_store
-    app.dependency_overrides.clear()
+    # Patch both job store and LLM client
+    with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
+        app.dependency_overrides[get_job_store] = lambda: mock_job_store
+        yield mock_job_store
+        app.dependency_overrides.clear()
 
 
 class TestGetJobStatusEndpoint:
