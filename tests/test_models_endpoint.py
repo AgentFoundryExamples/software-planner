@@ -306,6 +306,7 @@ class TestModelsEndpointContextWindowEstimates:
         
         assert _get_approximate_max_context("openai", "gpt-5.1") == 128000
         assert _get_approximate_max_context("openai", "gpt-5.0") == 128000
+        assert _get_approximate_max_context("openai", "gpt-5-turbo") == 128000
     
     def test_gpt4_turbo_context_window(self):
         """Test GPT-4 Turbo has correct context window estimate."""
@@ -313,12 +314,21 @@ class TestModelsEndpointContextWindowEstimates:
         
         assert _get_approximate_max_context("openai", "gpt-4-turbo") == 128000
         assert _get_approximate_max_context("openai", "gpt-4-1106-preview") == 128000
+        assert _get_approximate_max_context("openai", "gpt-4-turbo-preview") == 128000
     
     def test_gpt4_base_context_window(self):
         """Test GPT-4 base has correct context window estimate."""
         from app.api.routes import _get_approximate_max_context
         
         assert _get_approximate_max_context("openai", "gpt-4") == 8192
+        assert _get_approximate_max_context("openai", "gpt-4-0613") == 8192
+    
+    def test_gpt4_32k_context_window(self):
+        """Test GPT-4 32K variant has correct context window estimate."""
+        from app.api.routes import _get_approximate_max_context
+        
+        assert _get_approximate_max_context("openai", "gpt-4-32k") == 32768
+        assert _get_approximate_max_context("openai", "gpt-4-32k-0613") == 32768
     
     def test_claude_context_window(self):
         """Test Claude models have correct context window estimate."""
@@ -327,6 +337,7 @@ class TestModelsEndpointContextWindowEstimates:
         assert _get_approximate_max_context("anthropic", "claude-4-opus") == 200000
         assert _get_approximate_max_context("anthropic", "claude-3-sonnet") == 200000
         assert _get_approximate_max_context("anthropic", "claude-sonnet-4.5") == 200000
+        assert _get_approximate_max_context("anthropic", "opus-3") == 200000
     
     def test_gemini_context_window(self):
         """Test Gemini models have correct context window estimate."""
@@ -341,6 +352,24 @@ class TestModelsEndpointContextWindowEstimates:
         from app.api.routes import _get_approximate_max_context
         
         assert _get_approximate_max_context("unknown-provider", "some-model") == 8192
+    
+    def test_unknown_openai_model_gets_default(self):
+        """Test unknown OpenAI models get provider default."""
+        from app.api.routes import _get_approximate_max_context
+        
+        assert _get_approximate_max_context("openai", "gpt-3.5-turbo") == 16384
+        assert _get_approximate_max_context("openai", "unknown-model") == 16384
+    
+    def test_prefix_matching_avoids_false_positives(self):
+        """Test that prefix matching doesn't match substrings incorrectly."""
+        from app.api.routes import _get_approximate_max_context
+        
+        # Model with gpt-5 in the middle shouldn't match gpt-5 prefix
+        # Since we use startswith, "my-gpt-5-custom" won't match "gpt-5" prefix
+        assert _get_approximate_max_context("openai", "my-gpt-5-custom") == 16384  # Gets default
+        
+        # But "gpt-5-custom" should match
+        assert _get_approximate_max_context("openai", "gpt-5-custom") == 128000
 
 
 class TestModelsEndpointDescriptions:
@@ -354,6 +383,15 @@ class TestModelsEndpointDescriptions:
         assert "OpenAI" in desc
         assert "gpt-5.1" in desc
         assert "reasoning" in desc.lower() or "performance" in desc.lower()
+    
+    def test_gpt4_turbo_description(self):
+        """Test GPT-4 Turbo has appropriate description."""
+        from app.api.routes import _get_model_description
+        
+        desc = _get_model_description("openai", "gpt-4-turbo")
+        assert "OpenAI" in desc
+        assert "gpt-4-turbo" in desc
+        assert "fast" in desc.lower() or "turbo" in desc.lower()
     
     def test_claude_opus_description(self):
         """Test Claude Opus has appropriate description."""
@@ -388,3 +426,15 @@ class TestModelsEndpointDescriptions:
         desc = _get_model_description("unknown", "mystery-model")
         assert "unknown" in desc
         assert "mystery-model" in desc
+    
+    def test_prefix_matching_for_descriptions(self):
+        """Test that description prefix matching works correctly."""
+        from app.api.routes import _get_model_description
+        
+        # Test that startswith is used for OpenAI models
+        desc1 = _get_model_description("openai", "gpt-5-custom")
+        assert "Latest generation" in desc1
+        
+        # Model with gpt-5 not at start should get generic description
+        desc2 = _get_model_description("openai", "my-gpt-5-model")
+        assert desc2 == "OpenAI my-gpt-5-model"  # Generic format

@@ -140,8 +140,54 @@ def list_models() -> dict:
     return {"models": models_list}
 
 
+# Context window sizes by provider and model prefix
+# Note: These are approximate values based on published provider documentation.
+# Update this configuration as providers release new models or update context limits.
+_MODEL_CONTEXT_SIZES = {
+    "openai": {
+        "prefixes": [
+            ("gpt-5", 128000),  # GPT-5 series
+            ("gpt-4-turbo", 128000),  # GPT-4 Turbo
+            ("gpt-4-1106", 128000),  # GPT-4 Turbo variants
+            ("gpt-4-32k", 32768),  # GPT-4 32K variant
+            ("gpt-4", 8192),  # GPT-4 base (must come after more specific matches)
+        ],
+        "default": 16384,  # Conservative default for unknown OpenAI models
+    },
+    "anthropic": {
+        # Anthropic uses model variant names (opus, sonnet, haiku) in various positions
+        # so we use substring matching for these, but prefix matching for version numbers
+        "prefixes": [
+            ("claude-3", 200000),  # Claude 3 series
+            ("claude-4", 200000),  # Claude 4 series
+        ],
+        "substrings": [
+            ("sonnet", 200000),  # Sonnet variants (e.g., claude-sonnet-4.5)
+            ("opus", 200000),  # Opus variants
+            ("haiku", 200000),  # Haiku variants
+        ],
+        "default": 100000,  # Conservative default for unknown Anthropic models
+    },
+    "google": {
+        "prefixes": [
+            ("gemini-1.5", 1000000),  # Gemini 1.5+
+            ("gemini-2", 1000000),  # Gemini 2.x
+            ("gemini-3", 1000000),  # Gemini 3.x
+        ],
+        "default": 32000,  # Conservative default for older Gemini models
+    },
+}
+_DEFAULT_CONTEXT_SIZE = 8192  # Very conservative default for unknown providers
+
+
 def _get_approximate_max_context(provider: str, model_id: str) -> int:
     """Get approximate maximum context window for a model.
+    
+    Uses prefix matching against known model patterns for most providers.
+    For Anthropic models, also checks substrings for variant names (opus, sonnet, haiku)
+    which can appear in various positions in model IDs.
+    
+    Prefixes are checked in order, so more specific patterns should come before general ones.
     
     Args:
         provider: Provider identifier (openai, anthropic, google).
@@ -149,42 +195,38 @@ def _get_approximate_max_context(provider: str, model_id: str) -> int:
         
     Returns:
         Approximate token limit for the model's context window.
+        
+    Note:
+        Context limits are based on published provider documentation and may
+        become outdated. Update _MODEL_CONTEXT_SIZES when providers release
+        new models or change context limits.
     """
     provider_lower = provider.lower()
     model_id_lower = model_id.lower()
     
-    # OpenAI models
-    if provider_lower == "openai":
-        if "gpt-5" in model_id_lower:
-            return 128000  # GPT-5 series
-        elif "gpt-4-turbo" in model_id_lower or "gpt-4-1106" in model_id_lower:
-            return 128000  # GPT-4 Turbo
-        elif "gpt-4" in model_id_lower:
-            return 8192  # GPT-4 base
-        else:
-            return 16384  # Conservative default for unknown OpenAI models
+    provider_info = _MODEL_CONTEXT_SIZES.get(provider_lower)
+    if not provider_info:
+        return _DEFAULT_CONTEXT_SIZE
     
-    # Anthropic models
-    elif provider_lower == "anthropic":
-        if "claude-3" in model_id_lower or "claude-4" in model_id_lower or "sonnet" in model_id_lower or "opus" in model_id_lower:
-            return 200000  # Claude 3/4 series has 200K context
-        else:
-            return 100000  # Conservative default for unknown Anthropic models
+    # Check prefixes first (more specific matching)
+    for prefix, size in provider_info.get("prefixes", []):
+        if model_id_lower.startswith(prefix):
+            return size
     
-    # Google models
-    elif provider_lower == "google":
-        if "gemini-1.5" in model_id_lower or "gemini-2" in model_id_lower or "gemini-3" in model_id_lower:
-            return 1000000  # Gemini 1.5+ has 1M+ token context
-        else:
-            return 32000  # Conservative default for older Gemini models
-    
-    # Unknown provider
-    else:
-        return 8192  # Very conservative default
+    # For providers that need it (like Anthropic), check substrings
+    # This handles model variants like "claude-sonnet-4.5" where "sonnet" is in the middle
+    for substring, size in provider_info.get("substrings", []):
+        if substring in model_id_lower:
+            return size
+            
+    return provider_info["default"]
 
 
 def _get_model_description(provider: str, model_id: str) -> str:
     """Get human-readable description for a model.
+    
+    Uses prefix matching against known model patterns. More specific patterns
+    are checked before general ones to avoid false positives.
     
     Args:
         provider: Provider identifier (openai, anthropic, google).
@@ -196,13 +238,13 @@ def _get_model_description(provider: str, model_id: str) -> str:
     provider_lower = provider.lower()
     model_id_lower = model_id.lower()
     
-    # OpenAI models
+    # OpenAI models - check more specific patterns first
     if provider_lower == "openai":
-        if "gpt-5" in model_id_lower:
+        if model_id_lower.startswith("gpt-5"):
             return f"OpenAI {model_id} - Latest generation model with improved reasoning and performance"
-        elif "gpt-4-turbo" in model_id_lower:
+        elif model_id_lower.startswith("gpt-4-turbo"):
             return f"OpenAI {model_id} - Fast GPT-4 variant with extended context window"
-        elif "gpt-4" in model_id_lower:
+        elif model_id_lower.startswith("gpt-4"):
             return f"OpenAI {model_id} - Advanced reasoning and code generation"
         else:
             return f"OpenAI {model_id}"
