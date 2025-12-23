@@ -18,6 +18,7 @@ from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 
 from app.core.config import settings
+from app.models.job import Job
 from app.models.request import PlanRequest
 from app.models.response import PlanResponse
 from app.services.planner import generate_plan
@@ -29,7 +30,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _format_job_response(job: "Job") -> dict:
+def _format_job_response(job: Job) -> dict:
     """Format a job instance into a response dictionary.
     
     Helper function to ensure consistent job response structure across endpoints.
