@@ -76,6 +76,150 @@ curl http://localhost:8000/health
 }
 ```
 
+#### GET /api/v1/models
+
+Discover available LLM models with their metadata and constraints.
+
+**Purpose:**
+This discovery endpoint allows clients to:
+- See which models are currently enabled and available
+- Understand model constraints (timeout limits, context windows, retries)
+- Validate model names before submitting planning jobs
+- Choose appropriate models based on requirements
+
+**Example using curl:**
+```bash
+curl http://localhost:8000/api/v1/models
+```
+
+**Response:**
+```json
+{
+  "models": [
+    {
+      "logical_name": "my-gpt-model",
+      "provider": "openai",
+      "model_id": "gpt-5.1",
+      "enabled": true,
+      "timeout": 60,
+      "max_retries": 3,
+      "description": "OpenAI gpt-5.1 - Latest generation model with improved reasoning and performance",
+      "metadata": {
+        "approximate_max_context": 128000,
+        "supports_streaming": false
+      }
+    },
+    {
+      "logical_name": "my-claude-model",
+      "provider": "anthropic",
+      "model_id": "claude-sonnet-4.5",
+      "enabled": true,
+      "timeout": 90,
+      "max_retries": 5,
+      "description": "Anthropic claude-sonnet-4.5 - Balanced performance and speed for most tasks",
+      "metadata": {
+        "approximate_max_context": 200000,
+        "supports_streaming": false
+      }
+    }
+  ]
+}
+```
+
+**Response Fields:**
+- `logical_name`: The identifier to use when selecting this model in planning requests
+- `provider`: Backend provider (openai, anthropic, google)
+- `model_id`: Provider-specific model identifier
+- `enabled`: Whether the model is currently available (only enabled models are returned)
+- `timeout`: Request timeout in seconds - expect responses within this time
+- `max_retries`: Maximum automatic retry attempts for transient failures
+- `description`: Human-readable description of the model
+- `metadata.approximate_max_context`: Approximate token limit for context window
+- `metadata.supports_streaming`: Whether streaming responses are supported (currently always false)
+
+**Empty Registry:**
+If no models are configured or all models are disabled, returns an empty list:
+```json
+{
+  "models": []
+}
+```
+
+**Usage Pattern:**
+1. Call `GET /api/v1/models` to discover available models
+2. Review model constraints (timeout, context limits)
+3. Select appropriate model based on your requirements
+4. Include `model` field in your planning request (see "Selecting a Model" below)
+
+#### Selecting a Model for Planning
+
+Both the synchronous (`POST /api/v1/plan`) and asynchronous (`POST /api/v1/plans`) endpoints support model selection via the request body.
+
+**Default Behavior:**
+If you don't specify a model, the system uses the configured default model. To see which model is the default, call `GET /api/v1/models` and look for common characteristics (typically the first listed model or one with lower timeout).
+
+**Specifying a Model:**
+
+Include the `model` field in your request body with the logical name from `GET /api/v1/models`:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Build a REST API for managing tasks",
+    "model": "my-claude-model"
+  }'
+```
+
+**Custom System Prompt (Advanced):**
+
+You can also override the default system prompt. This is for advanced users who understand prompt engineering:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Build a REST API for managing tasks",
+    "model": "my-gpt-model",
+    "system_prompt": "You are an expert software architect. Generate detailed technical specifications..."
+  }'
+```
+
+**Validation:**
+- If you specify an unknown model name, you'll get a 400 Bad Request error listing available models
+- If you specify a disabled model, you'll get a 400 Bad Request error
+- System prompts must not exceed 32768 bytes
+
+**Viewing Model Used in Job Results:**
+
+When you retrieve a job via `GET /api/v1/plans/{job_id}`, the response includes which model was used:
+
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "succeeded",
+  "model": "my-claude-model",
+  "system_prompt_hash": "a7b3c...",
+  "created_at": "2025-01-01T12:00:00Z",
+  "updated_at": "2025-01-01T12:00:05Z",
+  "result": {
+    "specs": [...]
+  }
+}
+```
+
+**Fields:**
+- `model`: The logical model name that was used (null if default was used with legacy configuration)
+- `system_prompt_hash`: SHA-256 hash of the system prompt (only present if custom prompt was provided)
+
+**Backward Compatibility:**
+
+The model selection feature is fully backward compatible:
+- If you don't specify a model, the default is used
+- Legacy single-model configuration (using `LLM_API_KEY` and `LLM_MODEL`) still works
+- Existing API requests without `model` field continue to work unchanged
+- The `model` and `system_prompt_hash` fields in responses are optional and may be null
+
 #### POST /api/v1/plan
 
 Generate a software plan based on a project description (synchronous).
