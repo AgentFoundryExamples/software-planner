@@ -35,13 +35,18 @@ from app.services.llm_client import (
 logger = logging.getLogger(__name__)
 
 
+# Constants for response size limits
+MAX_STRING_FIELD_LENGTH = 10000  # Maximum length for purpose/vision fields
+MAX_ARRAY_ITEM_LENGTH = 5000     # Maximum length for items in must/dont/nice arrays
+
+
 def _normalize_specs(data: dict[str, Any]) -> dict[str, Any]:
     """Normalize LLM response to ensure specs is a list with valid structure.
     
     Handles edge cases:
     - Single spec object instead of list: wraps it in a list
     - Empty specs list: raises error (schema violation)
-    - Non-list values in must/dont/nice: wraps single values in lists
+    - Single string values in must/dont/nice: wraps in lists
     - Whitespace in string values: strips leading/trailing whitespace
     - Oversized responses: truncates string fields to reasonable limits
     
@@ -86,12 +91,12 @@ def _normalize_specs(data: dict[str, Any]) -> dict[str, Any]:
             
             # Strip whitespace and guard against oversized strings
             value = value.strip()
-            if len(value) > 10000:  # Reasonable limit for string fields
+            if len(value) > MAX_STRING_FIELD_LENGTH:
                 logger.warning(
                     f"Truncating oversized {field} field",
                     extra={"spec_index": idx, "original_length": len(value)}
                 )
-                value = value[:10000]
+                value = value[:MAX_STRING_FIELD_LENGTH]
             
             normalized_spec[field] = value
         
@@ -126,12 +131,12 @@ def _normalize_specs(data: dict[str, Any]) -> dict[str, Any]:
                 item = item.strip()
                 
                 # Guard against oversized items
-                if len(item) > 5000:
+                if len(item) > MAX_ARRAY_ITEM_LENGTH:
                     logger.warning(
                         f"Truncating oversized array item",
                         extra={"spec_index": idx, "field": field, "item_index": item_idx, "original_length": len(item)}
                     )
-                    item = item[:5000]
+                    item = item[:MAX_ARRAY_ITEM_LENGTH]
                 
                 # Only include non-empty items
                 if item:

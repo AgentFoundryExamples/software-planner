@@ -14,7 +14,7 @@
 """Tests for planner service integration with JobStore and LLM client."""
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 
 from app.services.job_store import JobStore
 from app.services.planner import generate_plan, _normalize_specs
