@@ -13,9 +13,10 @@
 # limitations under the License.
 """Tests for the /plan endpoint."""
 
+from unittest.mock import Mock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import Mock, patch
 
 from app.main import app
 from app.core.config import settings

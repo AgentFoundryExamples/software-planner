@@ -194,6 +194,7 @@ def generate_plan(description: str, job_store: Optional[JobStore] = None, job_id
     
     try:
         # Get LLM client (use provided client or get singleton)
+        # Note: Import here to avoid circular dependency with store_singleton
         if llm_client is None:
             from app.services.store_singleton import get_llm_client
             llm_client = get_llm_client()
