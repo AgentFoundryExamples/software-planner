@@ -47,12 +47,13 @@ def _format_job_response(job: Job) -> dict:
         "status": job.status,
         "created_at": job.created_at.isoformat(),
         "updated_at": job.updated_at.isoformat(),
-        "result": None
     }
     
-    # Include result for succeeded jobs
+    # Include result for succeeded jobs, otherwise null
     if job.status == "succeeded" and job.result is not None:
         response["result"] = job.result
+    else:
+        response["result"] = None
     
     # Include error for failed jobs (omit for non-failed jobs)
     if job.status == "failed" and job.error is not None:

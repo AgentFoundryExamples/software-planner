@@ -270,14 +270,14 @@ class TestListJobsEndpoint:
         # The update will change updated_at, making job1 the most recent
         override_job_store.update_job(job1.job_id, status="running")
         
-        # Get all jobs to verify final state
+        # Get all jobs to verify final state (in logical order for readability)
         final_job1 = override_job_store.get_job(job1.job_id)
-        final_job3 = override_job_store.get_job(job3.job_id)
         final_job2 = override_job_store.get_job(job2.job_id)
+        final_job3 = override_job_store.get_job(job3.job_id)
         
         # Verify that job1's updated_at is indeed more recent
-        assert final_job1.updated_at > final_job3.updated_at
         assert final_job1.updated_at > final_job2.updated_at
+        assert final_job1.updated_at > final_job3.updated_at
         
         response = client.get("/api/v1/plans")
         
