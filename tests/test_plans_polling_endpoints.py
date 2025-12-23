@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app, get_job_store
+from app.main import app
 from app.services.job_store import JobStore
 
 
