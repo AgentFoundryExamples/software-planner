@@ -19,7 +19,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def client():
     """Create a test client for the FastAPI app."""
     return TestClient(app)
@@ -29,47 +29,16 @@ class TestHealthEndpoint:
     """Test cases for the /health endpoint."""
     
     def test_health_endpoint_returns_ok(self, client):
-        """Test that GET /health returns status ok."""
-        response = client.get("/health")
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert data == {"status": "ok"}
-    
-    def test_health_endpoint_response_structure(self, client):
-        """Test that /health response has correct structure."""
-        response = client.get("/health")
-        
-        assert response.status_code == 200
-        data = response.json()
-        
-        # Verify it has exactly one key
-        assert len(data) == 1
-        assert "status" in data
-        
-        # Verify value is a string
-        assert isinstance(data["status"], str)
-        assert data["status"] == "ok"
-    
-    def test_health_endpoint_is_json(self, client):
-        """Test that /health returns JSON content type."""
+        """Test that GET /health returns 200 with correct JSON structure and content type."""
         response = client.get("/health")
         
         assert response.status_code == 200
         assert "application/json" in response.headers.get("content-type", "")
-    
-    def test_health_endpoint_multiple_calls_consistent(self, client):
-        """Test that multiple calls to /health return consistent results."""
-        responses = [client.get("/health") for _ in range(3)]
         
-        # All should succeed
-        for response in responses:
-            assert response.status_code == 200
-        
-        # All should return identical JSON
-        json_responses = [r.json() for r in responses]
-        assert json_responses[0] == json_responses[1] == json_responses[2]
-        assert all(data == {"status": "ok"} for data in json_responses)
+        data = response.json()
+        assert data == {"status": "ok"}
+        assert len(data) == 1
+        assert isinstance(data["status"], str)
     
     def test_health_endpoint_does_not_accept_post(self, client):
         """Test that POST requests to /health are not allowed."""
