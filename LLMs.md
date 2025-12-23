@@ -388,6 +388,274 @@ No code changes required!
 
 ---
 
+# Model Discovery and Selection
+
+This section explains how to discover available models and select them for planning requests.
+
+## Discovery Endpoint
+
+### GET /api/v1/models
+
+The discovery endpoint lists all enabled models with their metadata, allowing clients to:
+- Validate model availability before submitting jobs
+- Understand model constraints (timeout limits, context windows)
+- Select appropriate models based on requirements
+- Monitor what models are currently available
+
+**Example Request:**
+```bash
+curl http://localhost:8000/api/v1/models
+```
+
+**Example Response:**
+```json
+{
+  "models": [
+    {
+      "logical_name": "my-gpt-model",
+      "provider": "openai",
+      "model_id": "gpt-5.1",
+      "enabled": true,
+      "timeout": 60,
+      "max_retries": 3,
+      "description": "OpenAI gpt-5.1 - Latest generation model with improved reasoning and performance",
+      "metadata": {
+        "approximate_max_context": 128000,
+        "supports_streaming": false,
+        "has_custom_base_url": false
+      }
+    },
+    {
+      "logical_name": "my-claude-model",
+      "provider": "anthropic",
+      "model_id": "claude-sonnet-4.5",
+      "enabled": true,
+      "timeout": 90,
+      "max_retries": 5,
+      "description": "Anthropic claude-sonnet-4.5 - Balanced performance and speed for most tasks",
+      "metadata": {
+        "approximate_max_context": 200000,
+        "supports_streaming": false
+      }
+    }
+  ]
+}
+```
+
+### Response Field Reference
+
+**Top-Level Fields:**
+- `logical_name` (string): User-friendly identifier to use in planning requests
+- `provider` (string): Backend provider (`openai`, `anthropic`, `google`)
+- `model_id` (string): Provider-specific model identifier (e.g., `gpt-5.1`, `claude-sonnet-4.5`)
+- `enabled` (boolean): Whether the model is available (always `true` in responses, disabled models are filtered out)
+- `timeout` (integer): Request timeout in seconds - planning requests will time out after this duration
+- `max_retries` (integer): Maximum automatic retry attempts for transient failures (rate limits, timeouts, 5xx errors)
+- `description` (string): Human-readable description of the model's capabilities
+
+**Metadata Fields:**
+- `approximate_max_context` (integer): Approximate token limit for the model's context window
+  - OpenAI GPT-5: 128,000 tokens
+  - OpenAI GPT-4 Turbo: 128,000 tokens
+  - OpenAI GPT-4: 8,192 tokens
+  - Anthropic Claude 4/Sonnet/Opus: 200,000 tokens
+  - Google Gemini 1.5+/2.0/3.0: 1,000,000 tokens
+- `supports_streaming` (boolean): Whether streaming responses are supported (currently always `false`)
+- `has_custom_base_url` (boolean, optional): Indicates a custom base URL is configured (actual URL not exposed for security)
+
+### Empty Response Behavior
+
+When no models are enabled or the registry is empty:
+```json
+{
+  "models": []
+}
+```
+
+This is still a successful response (HTTP 200 OK). Clients should handle this gracefully and inform users that no models are currently available.
+
+### Security Considerations
+
+The `/models` endpoint **does not expose**:
+- API keys or credentials
+- Full base URLs (only presence indicator)
+- Internal environment variable names
+- Any sensitive configuration beyond what's necessary for model selection
+
+## Selecting Models in Planning Requests
+
+### Default Model Behavior
+
+If you don't specify a model in your planning request, the system uses the configured default model:
+- For model registry configuration: The model specified by `DEFAULT_MODEL` environment variable
+- For legacy configuration: The model specified by `LLM_MODEL` (defaults to `gpt-4`)
+
+### Specifying a Model
+
+Include the `model` field in your planning request body:
+
+**Synchronous Planning:**
+```bash
+curl -X POST http://localhost:8000/api/v1/plan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Build a REST API for managing tasks",
+    "model": "my-claude-model"
+  }'
+```
+
+**Asynchronous Planning:**
+```bash
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Build a REST API for managing tasks",
+    "model": "my-gpt-model"
+  }'
+```
+
+### Custom System Prompts
+
+You can override the default system prompt (advanced users only):
+
+```bash
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Build a REST API for managing tasks",
+    "model": "my-gpt-model",
+    "system_prompt": "You are an expert software architect specializing in microservices..."
+  }'
+```
+
+**Constraints:**
+- System prompts must not exceed 32,768 bytes (UTF-8 encoded)
+- Custom prompts should enforce JSON-only output matching the expected schema
+- Improper prompts may break response parsing - use with caution
+
+### Model Validation
+
+The API validates model names at request time:
+
+**Unknown Model:**
+```bash
+# Request with invalid model
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -d '{"description": "Build an API", "model": "nonexistent-model"}'
+
+# Response: 400 Bad Request
+{
+  "error": "Unknown model 'nonexistent-model'. Available models: my-gpt-model, my-claude-model",
+  "status_code": 400
+}
+```
+
+**Disabled Model:**
+```bash
+# Response: 400 Bad Request
+{
+  "error": "Model 'disabled-model' is disabled",
+  "status_code": 400
+}
+```
+
+### Tracking Model Usage in Results
+
+When you retrieve job status, the response includes which model was used:
+
+```bash
+curl http://localhost:8000/api/v1/plans/550e8400-e29b-41d4-a716-446655440000
+```
+
+**Response:**
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "succeeded",
+  "model": "my-claude-model",
+  "system_prompt_hash": "a7b3c2d1e5f6...",
+  "created_at": "2025-01-01T12:00:00Z",
+  "updated_at": "2025-01-01T12:00:05Z",
+  "result": {
+    "specs": [...]
+  }
+}
+```
+
+**Fields:**
+- `model` (string, optional): Logical model name that was used (null if legacy config or default was used without registry)
+- `system_prompt_hash` (string, optional): SHA-256 hash of the system prompt (only present if custom prompt was provided)
+
+**Uses for Metadata:**
+- **Debugging**: Identify which model generated a specific result
+- **Performance Analysis**: Compare results across different models
+- **Cost Tracking**: Monitor which models are being used most frequently
+- **Audit Trail**: Track custom prompts via hash (actual prompt not stored for security)
+
+## Telemetry and Monitoring
+
+### Model Usage Logging
+
+All model usage is logged with structured metadata:
+
+```
+INFO: Created LLM client for model 'my-claude-model'
+  logical_model=my-claude-model
+  provider=anthropic
+  model_id=claude-sonnet-4.5
+  timeout=90
+  max_retries=5
+
+INFO: Starting plan generation
+  job_id=550e8400-...
+  model=my-claude-model
+  description_length=245
+  using_custom_prompt=false
+
+INFO: Claude API call succeeded
+  model=claude-sonnet-4.5
+  retry_count=0
+  latency_ms=3421
+  input_tokens=50
+  output_tokens=100
+  stop_reason=end_turn
+```
+
+### Monitoring Model Availability
+
+Use the `/models` endpoint for health checks:
+
+```bash
+# Check model availability periodically
+curl -s http://localhost:8000/api/v1/models | jq '.models | length'
+
+# Expected: Number of enabled models (e.g., 2)
+# If 0: All models are disabled or misconfigured
+```
+
+### Latency Expectations by Model
+
+Based on typical usage patterns:
+
+| Model | Typical Latency | Timeout Setting | Notes |
+|-------|----------------|-----------------|-------|
+| GPT-5.1 | 2-6 seconds | 60 seconds | Fastest for most tasks |
+| GPT-4 Turbo | 3-8 seconds | 60 seconds | Good balance |
+| GPT-4 | 4-10 seconds | 60 seconds | Slower but reliable |
+| Claude Sonnet 4.5 | 3-7 seconds | 90 seconds | Balanced performance |
+| Claude Opus 4 | 5-12 seconds | 120 seconds | Best quality, slowest |
+| Gemini 3.0 Pro | 2-5 seconds | 60 seconds | Very fast |
+
+**Factors Affecting Latency:**
+- Description length and complexity
+- Model generation speed
+- Provider API load
+- Network conditions
+- Retry attempts
+
+---
+
 # Operational Guide
 
 This section describes how the LLM integration operates at runtime, including logging, monitoring, error handling, and troubleshooting.
