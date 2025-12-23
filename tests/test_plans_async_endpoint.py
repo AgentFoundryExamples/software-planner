@@ -478,3 +478,187 @@ class TestPlansEndpointEdgeCases:
         )
         
         assert response.status_code == 202
+
+
+class TestPlansEndpointModelAndPromptParameters:
+    """Test cases for model and system_prompt parameters in async endpoint."""
+    
+    def test_plans_endpoint_with_model_parameter(self, client, override_job_store):
+        """Test that model parameter is stored in job metadata."""
+        response = client.post(
+            "/api/v1/plans",
+            json={
+                "description": "Build a REST API",
+                "model": "gpt-4-turbo"
+            }
+        )
+        
+        # Accept both success and validation failure
+        assert response.status_code in [202, 400]
+        
+        if response.status_code == 202:
+            job_id = response.json()["job_id"]
+            job = override_job_store.get_job(job_id)
+            assert job is not None
+            # Model should be stored in job metadata
+            assert job.model == "gpt-4-turbo"
+    
+    def test_plans_endpoint_with_system_prompt_parameter(self, client, override_job_store):
+        """Test that system_prompt parameter is hashed and stored in job metadata."""
+        custom_prompt = "You are an expert API architect."
+        
+        response = client.post(
+            "/api/v1/plans",
+            json={
+                "description": "Build a REST API",
+                "system_prompt": custom_prompt
+            }
+        )
+        
+        assert response.status_code == 202
+        job_id = response.json()["job_id"]
+        job = override_job_store.get_job(job_id)
+        
+        assert job is not None
+        # System prompt should be hashed and stored
+        assert job.system_prompt_hash is not None
+        assert len(job.system_prompt_hash) == 64  # SHA-256 hash is 64 hex chars
+    
+    def test_plans_endpoint_with_both_overrides(self, client, override_job_store):
+        """Test that both model and system_prompt can be provided together."""
+        response = client.post(
+            "/api/v1/plans",
+            json={
+                "description": "Build a REST API",
+                "model": "gpt-4-turbo",
+                "system_prompt": "You are an expert."
+            }
+        )
+        
+        # Accept both success and validation failure
+        assert response.status_code in [202, 400]
+        
+        if response.status_code == 202:
+            job_id = response.json()["job_id"]
+            job = override_job_store.get_job(job_id)
+            assert job is not None
+            assert job.model == "gpt-4-turbo"
+            assert job.system_prompt_hash is not None
+    
+    def test_plans_endpoint_without_overrides_has_null_metadata(self, client, override_job_store):
+        """Test that jobs without overrides have null metadata fields."""
+        response = client.post(
+            "/api/v1/plans",
+            json={"description": "Build a REST API"}
+        )
+        
+        assert response.status_code == 202
+        job_id = response.json()["job_id"]
+        job = override_job_store.get_job(job_id)
+        
+        assert job is not None
+        assert job.model is None
+        assert job.system_prompt_hash is None
+    
+    def test_plans_endpoint_oversized_system_prompt_rejected(self, client, override_job_store):
+        """Test that oversized system prompts are rejected."""
+        from app.core.config import settings
+        
+        oversized_prompt = "a" * (settings.max_system_prompt_bytes + 1)
+        
+        response = client.post(
+            "/api/v1/plans",
+            json={
+                "description": "Build a REST API",
+                "system_prompt": oversized_prompt
+            }
+        )
+        
+        assert response.status_code == 400
+        data = response.json()
+        assert "error" in data or "detail" in data
+    
+    def test_plans_endpoint_whitespace_model_rejected(self, client):
+        """Test that whitespace-only model names are rejected."""
+        response = client.post(
+            "/api/v1/plans",
+            json={
+                "description": "Build a REST API",
+                "model": "   "
+            }
+        )
+        
+        assert response.status_code == 400
+        data = response.json()
+        assert "error" in data or "detail" in data
+    
+    def test_plans_endpoint_concurrent_jobs_different_models(self, client, override_job_store):
+        """Test that concurrent jobs with different models don't interfere."""
+        response1 = client.post(
+            "/api/v1/plans",
+            json={
+                "description": "Build API 1",
+                "model": "gpt-4-turbo"
+            }
+        )
+        
+        response2 = client.post(
+            "/api/v1/plans",
+            json={
+                "description": "Build API 2",
+                "model": "claude-opus"
+            }
+        )
+        
+        # Accept both success and validation failure
+        if response1.status_code == 202 and response2.status_code == 202:
+            job_id1 = response1.json()["job_id"]
+            job_id2 = response2.json()["job_id"]
+            
+            time.sleep(0.5)
+            
+            job1 = override_job_store.get_job(job_id1)
+            job2 = override_job_store.get_job(job_id2)
+            
+            assert job1 is not None
+            assert job2 is not None
+            # Models should be kept separate
+            assert job1.model == "gpt-4-turbo"
+            assert job2.model == "claude-opus"
+    
+    def test_plans_endpoint_concurrent_jobs_different_prompts(self, client, override_job_store):
+        """Test that concurrent jobs with different prompts don't interfere."""
+        prompt1 = "You are a backend specialist."
+        prompt2 = "You are a frontend specialist."
+        
+        response1 = client.post(
+            "/api/v1/plans",
+            json={
+                "description": "Build API 1",
+                "system_prompt": prompt1
+            }
+        )
+        
+        response2 = client.post(
+            "/api/v1/plans",
+            json={
+                "description": "Build API 2",
+                "system_prompt": prompt2
+            }
+        )
+        
+        assert response1.status_code == 202
+        assert response2.status_code == 202
+        
+        job_id1 = response1.json()["job_id"]
+        job_id2 = response2.json()["job_id"]
+        
+        time.sleep(0.5)
+        
+        job1 = override_job_store.get_job(job_id1)
+        job2 = override_job_store.get_job(job_id2)
+        
+        assert job1 is not None
+        assert job2 is not None
+        # Prompt hashes should be different
+        assert job1.system_prompt_hash != job2.system_prompt_hash

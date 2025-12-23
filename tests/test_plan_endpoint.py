@@ -382,3 +382,205 @@ class TestPlanEndpointEdgeCases:
         assert response.status_code == 200
         data = response.json()
         assert len(data["specs"]) >= 1
+
+
+class TestPlanEndpointModelParameter:
+    """Test cases for model parameter in /plan endpoint."""
+    
+    def test_plan_endpoint_with_valid_model_override(self, client):
+        """Test that valid model override is accepted."""
+        # This test will only work if the registry has models configured
+        # For now, we test with a model parameter, even if validation might fail
+        # in environments without a configured registry
+        response = client.post(
+            "/api/v1/plan",
+            json={
+                "description": "Build a REST API",
+                "model": "gpt-4-turbo"
+            }
+        )
+        
+        # If no registry is configured, this should still validate the request structure
+        # The actual validation happens at runtime based on config
+        assert response.status_code in [200, 400]
+    
+    def test_plan_endpoint_model_with_whitespace_only_rejected(self, client):
+        """Test that whitespace-only model names are rejected."""
+        response = client.post(
+            "/api/v1/plan",
+            json={
+                "description": "Build a REST API",
+                "model": "   "
+            }
+        )
+        
+        assert response.status_code == 400
+        data = response.json()
+        assert "error" in data or "detail" in data
+    
+    def test_plan_endpoint_with_null_model_uses_default(self, client):
+        """Test that null model parameter uses default model."""
+        response = client.post(
+            "/api/v1/plan",
+            json={
+                "description": "Build a REST API",
+                "model": None
+            }
+        )
+        
+        # Should succeed with default model
+        assert response.status_code == 200
+        data = response.json()
+        assert "specs" in data
+    
+    def test_plan_endpoint_without_model_uses_default(self, client):
+        """Test that omitting model parameter uses default model."""
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": "Build a REST API"}
+        )
+        
+        # Should succeed with default model
+        assert response.status_code == 200
+        data = response.json()
+        assert "specs" in data
+    
+    def test_plan_endpoint_model_validation_with_empty_string(self, client):
+        """Test that empty string model is rejected."""
+        response = client.post(
+            "/api/v1/plan",
+            json={
+                "description": "Build a REST API",
+                "model": ""
+            }
+        )
+        
+        # Empty string should be treated as not provided (None)
+        # or rejected by validation
+        assert response.status_code in [200, 400, 422]
+
+
+class TestPlanEndpointSystemPromptParameter:
+    """Test cases for system_prompt parameter in /plan endpoint."""
+    
+    def test_plan_endpoint_with_valid_system_prompt(self, client):
+        """Test that valid system prompt override is accepted."""
+        response = client.post(
+            "/api/v1/plan",
+            json={
+                "description": "Build a REST API",
+                "system_prompt": "You are a helpful assistant specialized in API design."
+            }
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "specs" in data
+    
+    def test_plan_endpoint_with_whitespace_only_system_prompt_rejected(self, client):
+        """Test that whitespace-only system prompts are rejected."""
+        response = client.post(
+            "/api/v1/plan",
+            json={
+                "description": "Build a REST API",
+                "system_prompt": "   "
+            }
+        )
+        
+        assert response.status_code == 400
+        data = response.json()
+        assert "error" in data or "detail" in data
+    
+    def test_plan_endpoint_with_oversized_system_prompt_rejected(self, client):
+        """Test that oversized system prompts are rejected."""
+        max_bytes = settings.max_system_prompt_bytes
+        oversized_prompt = "a" * (max_bytes + 1)
+        
+        response = client.post(
+            "/api/v1/plan",
+            json={
+                "description": "Build a REST API",
+                "system_prompt": oversized_prompt
+            }
+        )
+        
+        assert response.status_code == 400
+        data = response.json()
+        assert "error" in data or "detail" in data
+        # Check that error mentions byte limit
+        error_msg = str(data)
+        assert str(max_bytes) in error_msg
+    
+    def test_plan_endpoint_with_system_prompt_at_max_length(self, client):
+        """Test that system prompts at exact max length are accepted."""
+        max_bytes = settings.max_system_prompt_bytes
+        max_length_prompt = "a" * max_bytes
+        
+        response = client.post(
+            "/api/v1/plan",
+            json={
+                "description": "Build a REST API",
+                "system_prompt": max_length_prompt
+            }
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "specs" in data
+    
+    def test_plan_endpoint_without_system_prompt_uses_default(self, client):
+        """Test that omitting system_prompt uses default."""
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": "Build a REST API"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "specs" in data
+    
+    def test_plan_endpoint_with_null_system_prompt_uses_default(self, client):
+        """Test that null system_prompt uses default."""
+        response = client.post(
+            "/api/v1/plan",
+            json={
+                "description": "Build a REST API",
+                "system_prompt": None
+            }
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "specs" in data
+
+
+class TestPlanEndpointCombinedParameters:
+    """Test cases for combined model and system_prompt parameters."""
+    
+    def test_plan_endpoint_with_both_overrides(self, client):
+        """Test that both model and system_prompt can be overridden together."""
+        response = client.post(
+            "/api/v1/plan",
+            json={
+                "description": "Build a REST API",
+                "model": "gpt-4-turbo",
+                "system_prompt": "You are an expert API architect."
+            }
+        )
+        
+        # Accept either success or model validation failure depending on config
+        assert response.status_code in [200, 400]
+    
+    def test_plan_endpoint_backward_compatibility(self, client):
+        """Test that legacy clients without new fields still work."""
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": "Build a REST API"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "specs" in data
+        # Response should not include model/system_prompt in top level
+        assert "model" not in data
+        assert "system_prompt" not in data

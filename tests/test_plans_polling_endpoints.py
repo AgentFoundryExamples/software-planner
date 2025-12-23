@@ -618,3 +618,136 @@ class TestPollingEndpointsEdgeCases:
         assert data["total"] == 10
         assert len(data["jobs"]) == 5
         assert data["limit"] == 5
+
+
+class TestJobMetadataExposure:
+    """Test cases for model and system_prompt_hash metadata in job responses."""
+    
+    def test_get_job_with_model_metadata(self, client, override_job_store):
+        """Test that job with model metadata exposes it in GET response."""
+        job = override_job_store.create_job(model="gpt-4-turbo")
+        
+        response = client.get(f"/api/v1/plans/{job.job_id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert "model" in data
+        assert data["model"] == "gpt-4-turbo"
+    
+    def test_get_job_with_system_prompt_hash_metadata(self, client, override_job_store):
+        """Test that job with system_prompt_hash exposes it in GET response."""
+        prompt_hash = "abc123def456"
+        job = override_job_store.create_job(system_prompt_hash=prompt_hash)
+        
+        response = client.get(f"/api/v1/plans/{job.job_id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert "system_prompt_hash" in data
+        assert data["system_prompt_hash"] == prompt_hash
+    
+    def test_get_job_with_both_metadata_fields(self, client, override_job_store):
+        """Test that job with both metadata fields exposes both."""
+        job = override_job_store.create_job(
+            model="claude-opus",
+            system_prompt_hash="xyz789abc"
+        )
+        
+        response = client.get(f"/api/v1/plans/{job.job_id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert data["model"] == "claude-opus"
+        assert data["system_prompt_hash"] == "xyz789abc"
+    
+    def test_get_job_without_metadata_omits_fields(self, client, override_job_store):
+        """Test that job without metadata doesn't include those fields."""
+        job = override_job_store.create_job()
+        
+        response = client.get(f"/api/v1/plans/{job.job_id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Fields should not be present if None
+        assert "model" not in data or data.get("model") is None
+        assert "system_prompt_hash" not in data or data.get("system_prompt_hash") is None
+    
+    def test_get_pending_job_with_metadata(self, client, override_job_store):
+        """Test that pending jobs expose metadata even before completion."""
+        job = override_job_store.create_job(
+            model="gpt-4-turbo",
+            system_prompt_hash="pending123"
+        )
+        
+        response = client.get(f"/api/v1/plans/{job.job_id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert data["status"] == "pending"
+        assert data["model"] == "gpt-4-turbo"
+        assert data["system_prompt_hash"] == "pending123"
+    
+    def test_list_jobs_includes_metadata(self, client, override_job_store):
+        """Test that job list includes metadata fields."""
+        job1 = override_job_store.create_job(model="gpt-4-turbo")
+        job2 = override_job_store.create_job(system_prompt_hash="hash123")
+        job3 = override_job_store.create_job()  # No metadata
+        
+        response = client.get("/api/v1/plans")
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert data["total"] == 3
+        
+        # Find jobs in response
+        jobs_by_id = {job["job_id"]: job for job in data["jobs"]}
+        
+        # Check metadata is included
+        assert jobs_by_id[job1.job_id]["model"] == "gpt-4-turbo"
+        assert jobs_by_id[job2.job_id]["system_prompt_hash"] == "hash123"
+    
+    def test_succeeded_job_with_metadata_includes_all_fields(self, client, override_job_store):
+        """Test that succeeded job includes metadata alongside result."""
+        job = override_job_store.create_job(
+            model="gpt-4-turbo",
+            system_prompt_hash="success123"
+        )
+        
+        result = {"specs": [{"purpose": "Test"}]}
+        override_job_store.update_job(job.job_id, status="succeeded", result=result)
+        
+        response = client.get(f"/api/v1/plans/{job.job_id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert data["status"] == "succeeded"
+        assert data["result"] == result
+        assert data["model"] == "gpt-4-turbo"
+        assert data["system_prompt_hash"] == "success123"
+    
+    def test_failed_job_with_metadata_includes_all_fields(self, client, override_job_store):
+        """Test that failed job includes metadata alongside error."""
+        job = override_job_store.create_job(
+            model="claude-opus",
+            system_prompt_hash="fail123"
+        )
+        
+        error = {"error": "Test error", "type": "ValueError"}
+        override_job_store.update_job(job.job_id, status="failed", error=error)
+        
+        response = client.get(f"/api/v1/plans/{job.job_id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert data["status"] == "failed"
+        assert data["error"] == error
+        assert data["model"] == "claude-opus"
+        assert data["system_prompt_hash"] == "fail123"
