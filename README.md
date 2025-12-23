@@ -369,7 +369,9 @@ When you submit a planning request via the asynchronous API (`POST /api/v1/plans
 
 **Optional Environment Variables:**
 
-- `LLM_MODEL`: Model identifier (default: "gpt-4", recommended: "gpt-5.1")
+- `LLM_MODEL`: Model identifier (default: "gpt-4")
+  - Recommended: "gpt-5.1" for improved quality and performance
+  - Other options: "gpt-4", "gpt-4-turbo"
 - `LLM_BASE_URL`: Custom base URL for OpenAI-compatible endpoints or proxies
   - Omit this setting to use the default OpenAI endpoint
   - Use for: Azure OpenAI, custom proxies, or other OpenAI-compatible services
@@ -386,7 +388,8 @@ When you submit a planning request via the asynchronous API (`POST /api/v1/plans
 # Required: Your OpenAI API key
 LLM_API_KEY=sk-your-actual-api-key-here
 
-# Optional: Use GPT-5.1 for better results
+# Optional: Specify model (defaults to gpt-4 if not set)
+# Recommended: Use gpt-5.1 for better results
 LLM_MODEL=gpt-5.1
 
 # Optional: Increase timeout for complex projects
