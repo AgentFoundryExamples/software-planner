@@ -1,6 +1,6 @@
 {
   "type": "directory",
-  "name": "agent-foundry-template",
+  "name": "software-planner",
   "children": [
     {
       "type": "directory",
@@ -65,6 +65,10 @@
     {
       "type": "file",
       "name": "LICENSE"
+    },
+    {
+      "type": "file",
+      "name": "LLMs.md"
     },
     {
       "type": "file",

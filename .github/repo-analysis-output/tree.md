@@ -1,4 +1,4 @@
-# agent-foundry-template
+# software-planner
 
 ├── .github
   ├── af-config
@@ -14,4 +14,5 @@
   └── workflows
     └── af_maintenance.yml
 ├── LICENSE
+├── LLMs.md
 └── README.md
