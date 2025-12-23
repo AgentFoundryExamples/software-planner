@@ -144,6 +144,14 @@ def _normalize_specs(data: dict[str, Any]) -> dict[str, Any]:
             
             normalized_spec[field] = normalized_items
         
+        # Validate that at least 'must' field has content
+        # The 'must' field should contain actual requirements
+        if not normalized_spec.get("must"):
+            logger.warning(
+                "Spec has empty 'must' field after normalization",
+                extra={"spec_index": idx, "purpose": normalized_spec.get("purpose", "unknown")}
+            )
+        
         normalized_specs.append(normalized_spec)
     
     return {"specs": normalized_specs}
@@ -243,15 +251,18 @@ def generate_plan(description: str, job_store: Optional[JobStore] = None, job_id
         
         return response
         
-    except LLMConfigurationError as e:
-        # Configuration errors: missing API key, invalid model, etc.
-        error_msg = f"LLM configuration error: {e}"
+    except LLMError as e:
+        # Handles all specific LLM errors (Configuration, Request, Response)
+        error_type_name = type(e).__name__
+        error_category = error_type_name.replace('LLM', '').replace('Error', '').lower()
+        error_msg = f"LLM {error_category} error: {e}"
+        
         logger.error(
-            "Plan generation failed due to configuration error",
+            f"Plan generation failed due to {error_category} error",
             extra={
                 "job_id": job_id or "none",
                 "error": str(e),
-                "error_type": type(e).__name__,
+                "error_type": error_type_name,
             }
         )
         
@@ -260,66 +271,12 @@ def generate_plan(description: str, job_store: Optional[JobStore] = None, job_id
             try:
                 error_dict = {
                     "error": error_msg,
-                    "type": "LLMConfigurationError"
+                    "type": error_type_name
                 }
                 job_store.update_job(job_id, status="failed", error=error_dict)
             except Exception as update_exc:
                 logger.error(
-                    "Failed to update job status after configuration error",
-                    extra={"job_id": job_id, "update_error": str(update_exc)}
-                )
-        raise
-        
-    except LLMRequestError as e:
-        # Request errors: timeout, rate limit, API errors, network issues
-        error_msg = f"LLM request failed: {e}"
-        logger.error(
-            "Plan generation failed due to request error",
-            extra={
-                "job_id": job_id or "none",
-                "error": str(e),
-                "error_type": type(e).__name__,
-            }
-        )
-        
-        # Update job with error if job tracking is enabled
-        if job_store and job_id:
-            try:
-                error_dict = {
-                    "error": error_msg,
-                    "type": "LLMRequestError"
-                }
-                job_store.update_job(job_id, status="failed", error=error_dict)
-            except Exception as update_exc:
-                logger.error(
-                    "Failed to update job status after request error",
-                    extra={"job_id": job_id, "update_error": str(update_exc)}
-                )
-        raise
-        
-    except LLMResponseError as e:
-        # Response errors: invalid JSON, schema violations, empty specs
-        error_msg = f"LLM response error: {e}"
-        logger.error(
-            "Plan generation failed due to response error",
-            extra={
-                "job_id": job_id or "none",
-                "error": str(e),
-                "error_type": type(e).__name__,
-            }
-        )
-        
-        # Update job with error if job tracking is enabled
-        if job_store and job_id:
-            try:
-                error_dict = {
-                    "error": error_msg,
-                    "type": "LLMResponseError"
-                }
-                job_store.update_job(job_id, status="failed", error=error_dict)
-            except Exception as update_exc:
-                logger.error(
-                    "Failed to update job status after response error",
+                    f"Failed to update job status after {error_category} error",
                     extra={"job_id": job_id, "update_error": str(update_exc)}
                 )
         raise

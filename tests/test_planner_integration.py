@@ -403,7 +403,7 @@ class TestPlannerErrorHandling:
         assert updated_job is not None
         assert updated_job.status == "failed"
         assert updated_job.error is not None
-        assert "request failed" in updated_job.error["error"].lower()
+        assert "request error" in updated_job.error["error"].lower()
     
     def test_generate_plan_handles_llm_response_error(self):
         """Test that LLMResponseError is handled and job is marked failed."""
