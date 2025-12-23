@@ -13,6 +13,7 @@ The abstraction is designed to:
 
 import json
 import logging
+import re
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
@@ -174,15 +175,12 @@ class BaseLLMClient(ABC):
         # Try to extract JSON from response (in case LLM wrapped it in markdown)
         response_text = raw_response.strip()
         
-        # Remove markdown code blocks if present
-        if response_text.startswith("```"):
-            lines = response_text.split("\n")
-            # Remove first line (```json or similar)
-            lines = lines[1:]
-            # Remove last line if it's closing backticks
-            if lines and lines[-1].strip() == "```":
-                lines = lines[:-1]
-            response_text = "\n".join(lines).strip()
+        # Remove markdown code blocks if present using regex
+        # Matches ```json or ``` at start and ``` at end
+        markdown_pattern = r'^```(?:json)?\s*\n(.*?)\n```$'
+        match = re.search(markdown_pattern, response_text, re.DOTALL)
+        if match:
+            response_text = match.group(1).strip()
         
         try:
             data = json.loads(response_text)
@@ -203,8 +201,24 @@ class BaseLLMClient(ABC):
         if not isinstance(data["specs"], list):
             raise LLMResponseError("'specs' field must be an array")
         
-        if len(data["specs"]) == 0:
-            raise LLMResponseError("'specs' array must contain at least one specification")
+        # Validate individual spec objects for clearer error messages
+        for idx, spec in enumerate(data["specs"]):
+            if not isinstance(spec, dict):
+                raise LLMResponseError(f"Spec at index {idx} must be an object")
+            
+            required_fields = ["purpose", "vision", "must", "dont", "nice"]
+            for field in required_fields:
+                if field not in spec:
+                    raise LLMResponseError(
+                        f"Spec at index {idx} missing required field '{field}'"
+                    )
+            
+            # Validate array fields
+            for array_field in ["must", "dont", "nice"]:
+                if not isinstance(spec[array_field], list):
+                    raise LLMResponseError(
+                        f"Spec at index {idx}: field '{array_field}' must be an array"
+                    )
         
         return data
     
@@ -286,12 +300,18 @@ class BaseLLMClient(ABC):
             # Re-raise our own exceptions
             raise
         except Exception as e:
-            # Wrap unexpected errors
+            # Wrap unexpected errors with better classification
+            error_type = type(e).__name__
             logger.error(
                 "Unexpected error during spec generation",
-                extra={"error_type": type(e).__name__, "error": str(e)}
+                extra={"error_type": error_type, "error": str(e)}
             )
-            raise LLMRequestError(f"Unexpected error: {e}")
+            # If we have raw_response, it's likely a response processing error
+            # Otherwise, it's a request error
+            if 'raw_response' in locals():
+                raise LLMResponseError(f"Unexpected error processing response: {e}")
+            else:
+                raise LLMRequestError(f"Unexpected error: {e}")
 
 
 def get_default_system_prompt() -> str:

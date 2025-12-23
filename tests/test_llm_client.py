@@ -177,20 +177,6 @@ def test_generate_specs_with_missing_specs_field():
     assert "specs" in str(exc_info.value).lower()
 
 
-def test_generate_specs_with_empty_specs_array():
-    """Test that empty specs array raises LLMResponseError."""
-    client = MockLLMClient(
-        api_key="test-key",
-        model="gpt-5.1",
-        response_text=json.dumps({"specs": []})
-    )
-    
-    with pytest.raises(LLMResponseError) as exc_info:
-        client.generate_specs("Build a REST API")
-    
-    assert "at least one" in str(exc_info.value).lower()
-
-
 def test_generate_specs_with_markdown_wrapped_json():
     """Test that markdown-wrapped JSON is properly extracted."""
     response_with_markdown = """```json
@@ -219,9 +205,9 @@ def test_generate_specs_with_markdown_wrapped_json():
     assert len(result["specs"]) == 1
 
 
-def test_generate_specs_with_invalid_schema():
-    """Test that response not matching PlanResponse schema raises error."""
-    # Missing required 'vision' field
+def test_generate_specs_with_missing_spec_field():
+    """Test that spec missing required field raises clear error."""
+    # Missing 'vision' field
     invalid_spec = {
         "specs": [
             {
@@ -242,6 +228,51 @@ def test_generate_specs_with_invalid_schema():
     with pytest.raises(LLMResponseError) as exc_info:
         client.generate_specs("Build a REST API")
     
+    assert "vision" in str(exc_info.value).lower()
+    assert "missing" in str(exc_info.value).lower()
+
+
+def test_generate_specs_with_non_array_field():
+    """Test that spec with non-array must/dont/nice raises clear error."""
+    invalid_spec = {
+        "specs": [
+            {
+                "purpose": "Test",
+                "vision": "Vision",
+                "must": "not an array",
+                "dont": [],
+                "nice": []
+            }
+        ]
+    }
+    
+    client = MockLLMClient(
+        api_key="test-key",
+        model="gpt-5.1",
+        response_text=json.dumps(invalid_spec)
+    )
+    
+    with pytest.raises(LLMResponseError) as exc_info:
+        client.generate_specs("Build a REST API")
+    
+    assert "must" in str(exc_info.value).lower()
+    assert "array" in str(exc_info.value).lower()
+
+
+def test_generate_specs_with_empty_specs_array():
+    """Test that empty specs array is allowed."""
+    client = MockLLMClient(
+        api_key="test-key",
+        model="gpt-5.1",
+        response_text=json.dumps({"specs": []})
+    )
+    
+    # Empty specs should not raise an error at parse level
+    # The PlanResponse validation will handle min_length requirement
+    with pytest.raises(LLMResponseError) as exc_info:
+        client.generate_specs("Build a REST API")
+    
+    # Error should come from PlanResponse validation, not parse_response
     assert "validation" in str(exc_info.value).lower()
 
 

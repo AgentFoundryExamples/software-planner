@@ -112,7 +112,7 @@ def test_llm_settings_default_values():
     test_settings = Settings()
     
     assert test_settings.llm_api_key == ""
-    assert test_settings.llm_model == "gpt-5.1"
+    assert test_settings.llm_model == "gpt-4"
     assert test_settings.llm_base_url is None
     assert test_settings.llm_timeout == 60
     assert test_settings.llm_system_prompt is None
@@ -185,4 +185,4 @@ def test_llm_settings_without_api_key_allowed():
     test_settings = Settings()
     
     assert test_settings.llm_api_key == ""
-    assert test_settings.llm_model == "gpt-5.1"
+    assert test_settings.llm_model == "gpt-4"

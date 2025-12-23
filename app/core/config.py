@@ -65,8 +65,8 @@ class Settings(BaseSettings):
         description="API key for LLM provider. Required for LLM-based planning."
     )
     llm_model: str = Field(
-        default="gpt-5.1",
-        description="LLM model identifier (e.g., 'gpt-5.1', 'claude-sonnet-4.5', 'gemini-3.0-pro')"
+        default="gpt-4",
+        description="LLM model identifier (e.g., 'gpt-4', 'claude-sonnet-4.5', 'gemini-3.0-pro')"
     )
     llm_base_url: Optional[str] = Field(
         default=None,
