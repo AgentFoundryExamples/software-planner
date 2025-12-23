@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 23,
+  "total_files": 24,
   "files": [
     {
       "schema_version": "2.0",
@@ -39,8 +39,8 @@
       "summary": "Python routing configuration (role: router)",
       "summary_text": "Python routing configuration (role: router)",
       "metrics": {
-        "size_bytes": 8696,
-        "loc": 194,
+        "size_bytes": 14680,
+        "loc": 343,
         "todo_count": 0
       }
     },
@@ -67,8 +67,8 @@
       "summary": "Python configuration file (role: configuration)",
       "summary_text": "Python configuration file (role: configuration)",
       "metrics": {
-        "size_bytes": 2329,
-        "loc": 33,
+        "size_bytes": 2436,
+        "loc": 35,
         "todo_count": 0
       }
     },
@@ -165,8 +165,8 @@
       "summary": "Python module for job store",
       "summary_text": "Python module for job store",
       "metrics": {
-        "size_bytes": 4955,
-        "loc": 101,
+        "size_bytes": 5487,
+        "loc": 112,
         "todo_count": 0
       }
     },
@@ -321,6 +321,20 @@
       "metrics": {
         "size_bytes": 16574,
         "loc": 312,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_plans_polling_endpoints.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 22503,
+        "loc": 398,
         "todo_count": 0
       }
     }

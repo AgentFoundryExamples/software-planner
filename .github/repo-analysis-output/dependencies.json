@@ -24,12 +24,15 @@
       "type": "file",
       "external_dependencies": {
         "stdlib": [
-          "logging"
+          "logging",
+          "typing.Optional"
         ],
         "third-party": [
           "fastapi.APIRouter",
           "fastapi.BackgroundTasks",
           "fastapi.Depends",
+          "fastapi.HTTPException",
+          "fastapi.Query",
           "fastapi.status"
         ]
       }
@@ -288,9 +291,35 @@
           "pytest"
         ]
       }
+    },
+    {
+      "id": "tests/test_plans_polling_endpoints.py",
+      "path": "tests/test_plans_polling_endpoints.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "concurrent.futures.ThreadPoolExecutor",
+          "datetime.datetime",
+          "datetime.timezone",
+          "random",
+          "time"
+        ],
+        "third-party": [
+          "fastapi.testclient.TestClient",
+          "pytest"
+        ]
+      }
     }
   ],
   "edges": [
+    {
+      "source": "app/api/routes.py",
+      "target": "app/core/config.py"
+    },
+    {
+      "source": "app/api/routes.py",
+      "target": "app/models/job.py"
+    },
     {
       "source": "app/api/routes.py",
       "target": "app/models/request.py"
@@ -410,6 +439,22 @@
     {
       "source": "tests/test_plans_async_endpoint.py",
       "target": "app/core/config.py"
+    },
+    {
+      "source": "tests/test_plans_polling_endpoints.py",
+      "target": "app/main.py"
+    },
+    {
+      "source": "tests/test_plans_polling_endpoints.py",
+      "target": "app/services/job_store.py"
+    },
+    {
+      "source": "tests/test_plans_polling_endpoints.py",
+      "target": "app/services/store_singleton.py"
+    },
+    {
+      "source": "tests/test_plans_polling_endpoints.py",
+      "target": "app/core/config.py"
     }
   ],
   "external_dependencies_summary": {
@@ -420,6 +465,7 @@
       "json",
       "logging",
       "os",
+      "random",
       "threading.Lock",
       "time",
       "typing.Dict",
@@ -434,6 +480,7 @@
       "fastapi.BackgroundTasks",
       "fastapi.Depends",
       "fastapi.FastAPI",
+      "fastapi.HTTPException",
       "fastapi.Query",
       "fastapi.Request",
       "fastapi.exceptions.RequestValidationError",
@@ -452,7 +499,7 @@
       "starlette.exceptions.HTTPException",
       "uvicorn"
     ],
-    "stdlib_count": 14,
-    "third-party_count": 21
+    "stdlib_count": 15,
+    "third-party_count": 22
   }
 }

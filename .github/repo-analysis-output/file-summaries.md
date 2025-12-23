@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 23
+Total files: 24
 
 ## app/__init__.py
 **Language:** Python  
@@ -29,8 +29,8 @@ Total files: 23
 **Role:** router  
 **Role Justification:** filename contains routing term  
 **Summary:** Python routing configuration (role: router)  
-**Size:** 8.49 KB  
-**LOC:** 194  
+**Size:** 14.34 KB  
+**LOC:** 343  
 **TODOs/FIXMEs:** 0  
 
 ## app/core/__init__.py
@@ -47,8 +47,8 @@ Total files: 23
 **Role:** configuration  
 **Role Justification:** configuration file name 'config'  
 **Summary:** Python configuration file (role: configuration)  
-**Size:** 2.27 KB  
-**LOC:** 33  
+**Size:** 2.38 KB  
+**LOC:** 35  
 **TODOs/FIXMEs:** 0  
 
 ## app/main.py
@@ -110,8 +110,8 @@ Total files: 23
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for job store  
-**Size:** 4.84 KB  
-**LOC:** 101  
+**Size:** 5.36 KB  
+**LOC:** 112  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/planner.py
@@ -211,4 +211,13 @@ Total files: 23
 **Summary:** Python test file (role: test)  
 **Size:** 16.19 KB  
 **LOC:** 312  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_plans_polling_endpoints.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 21.98 KB  
+**LOC:** 398  
 **TODOs/FIXMEs:** 0  
