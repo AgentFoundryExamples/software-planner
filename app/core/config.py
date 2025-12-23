@@ -13,9 +13,40 @@
 # limitations under the License.
 """Application configuration using Pydantic settings."""
 
+import logging
+import os
 from typing import Optional
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+logger = logging.getLogger(__name__)
+
+
+class ModelConfig(BaseSettings):
+    """Configuration for a single logical LLM model.
+    
+    Attributes:
+        provider: Provider identifier (e.g., 'openai', 'anthropic', 'google').
+        model_id: Model identifier for the provider (e.g., 'gpt-5.1', 'claude-sonnet-4.5').
+        base_url: Optional custom base URL for API endpoint.
+        api_key_env: Name of environment variable containing the API key.
+        enabled: Whether this model is enabled for use.
+        timeout: Request timeout in seconds for API calls.
+        max_retries: Maximum number of retry attempts for failed requests.
+    """
+    provider: str = Field(..., description="Provider identifier (openai, anthropic, google)")
+    model_id: str = Field(..., description="Model identifier for the provider")
+    base_url: Optional[str] = Field(None, description="Optional custom base URL")
+    api_key_env: str = Field(..., description="Environment variable name for API key")
+    enabled: bool = Field(True, description="Whether this model is enabled")
+    timeout: int = Field(60, ge=1, description="Request timeout in seconds")
+    max_retries: int = Field(3, ge=0, description="Maximum retry attempts")
+    
+    model_config = SettingsConfigDict(
+        extra="forbid",
+        protected_namespaces=()
+    )
 
 
 class Settings(BaseSettings):
@@ -59,7 +90,7 @@ class Settings(BaseSettings):
     allowed_methods: list[str] = ["*"]
     allowed_headers: list[str] = ["*"]
     
-    # LLM settings
+    # LLM settings (legacy, kept for backward compatibility)
     llm_api_key: str = Field(
         default="",
         description="API key for LLM provider. Required for LLM-based planning."
@@ -81,6 +112,16 @@ class Settings(BaseSettings):
         default=None,
         description="Optional override for the default system prompt"
     )
+    
+    # Multi-provider LLM model registry
+    models_registry: dict[str, ModelConfig] = Field(
+        default_factory=dict,
+        description="Mapping of logical model names to provider configurations"
+    )
+    default_model: Optional[str] = Field(
+        default=None,
+        description="Logical name of the default model to use"
+    )
 
     @model_validator(mode="after")
     def _validate_cors_settings(self) -> "Settings":
@@ -100,6 +141,99 @@ class Settings(BaseSettings):
         """
         # If API key is explicitly set to empty string, that's acceptable for
         # configurations that don't use LLM features yet
+        return self
+    
+    @model_validator(mode="after")
+    def _validate_model_registry(self) -> "Settings":
+        """Validate model registry configuration.
+        
+        Ensures:
+        - At least one model is enabled (if registry is configured)
+        - Exactly one default model is specified
+        - Default model is enabled
+        - All enabled models reference existing environment variables
+        - Provider identifiers are known (openai, anthropic, google)
+        """
+        # If no registry is configured, skip validation (backward compatibility)
+        if not self.models_registry:
+            return self
+        
+        # Collect enabled models
+        enabled_models = {
+            name: config 
+            for name, config in self.models_registry.items() 
+            if config.enabled
+        }
+        
+        # At least one model must be enabled
+        if not enabled_models:
+            raise ValueError(
+                "Model registry validation failed: At least one model must be enabled. "
+                f"All {len(self.models_registry)} configured models are disabled."
+            )
+        
+        # Exactly one default model must be specified
+        if not self.default_model:
+            raise ValueError(
+                "Model registry validation failed: default_model must be specified when using model registry. "
+                f"Available models: {', '.join(self.models_registry.keys())}"
+            )
+        
+        # Default model must exist in registry
+        if self.default_model not in self.models_registry:
+            raise ValueError(
+                f"Model registry validation failed: default_model '{self.default_model}' not found in registry. "
+                f"Available models: {', '.join(self.models_registry.keys())}"
+            )
+        
+        # Default model must be enabled
+        default_config = self.models_registry[self.default_model]
+        if not default_config.enabled:
+            raise ValueError(
+                f"Model registry validation failed: default_model '{self.default_model}' is disabled. "
+                "The default model must be enabled."
+            )
+        
+        # Validate all enabled models have their API key env vars set
+        missing_env_vars = []
+        for name, config in enabled_models.items():
+            api_key_value = os.environ.get(config.api_key_env, "").strip()
+            if not api_key_value:
+                missing_env_vars.append(f"{name} (env var: {config.api_key_env})")
+        
+        if missing_env_vars:
+            raise ValueError(
+                "Model registry validation failed: The following enabled models have missing or empty API key environment variables:\n" +
+                "\n".join(f"  - {item}" for item in missing_env_vars) +
+                "\n\nEither disable these models or set their API key environment variables."
+            )
+        
+        # Validate provider identifiers
+        known_providers = {"openai", "anthropic", "google"}
+        unknown_providers = []
+        for name, config in self.models_registry.items():
+            if config.provider.lower() not in known_providers:
+                unknown_providers.append(f"{name} (provider: {config.provider})")
+        
+        if unknown_providers:
+            raise ValueError(
+                f"Model registry validation failed: Unknown provider identifiers found. "
+                f"Known providers: {', '.join(sorted(known_providers))}. Unknown:\n" +
+                "\n".join(f"  - {item}" for item in unknown_providers)
+            )
+        
+        # Validate timeout values
+        invalid_timeouts = []
+        for name, config in self.models_registry.items():
+            if config.timeout < 1:
+                invalid_timeouts.append(f"{name} (timeout: {config.timeout})")
+        
+        if invalid_timeouts:
+            raise ValueError(
+                "Model registry validation failed: Invalid timeout values (must be >= 1 second):\n" +
+                "\n".join(f"  - {item}" for item in invalid_timeouts)
+            )
+        
         return self
 
 
