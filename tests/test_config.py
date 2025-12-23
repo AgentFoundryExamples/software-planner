@@ -105,3 +105,84 @@ def test_cors_validator_allows_credentials_with_specific_origins():
     assert test_settings.allowed_credentials is True
     assert "http://localhost:3000" in test_settings.allowed_origins
     assert "https://example.com" in test_settings.allowed_origins
+
+
+def test_llm_settings_default_values():
+    """Test that LLM settings have correct default values."""
+    test_settings = Settings()
+    
+    assert test_settings.llm_api_key == ""
+    assert test_settings.llm_model == "gpt-4"
+    assert test_settings.llm_base_url is None
+    assert test_settings.llm_timeout == 60
+    assert test_settings.llm_system_prompt is None
+
+
+def test_llm_settings_environment_override(monkeypatch):
+    """Test that LLM environment variables override default settings."""
+    monkeypatch.setenv("LLM_API_KEY", "test-key-123")
+    monkeypatch.setenv("LLM_MODEL", "claude-sonnet-4.5")
+    monkeypatch.setenv("LLM_BASE_URL", "https://api.example.com")
+    monkeypatch.setenv("LLM_TIMEOUT", "90")
+    monkeypatch.setenv("LLM_SYSTEM_PROMPT", "Custom prompt")
+    
+    test_settings = Settings()
+    
+    assert test_settings.llm_api_key == "test-key-123"
+    assert test_settings.llm_model == "claude-sonnet-4.5"
+    assert test_settings.llm_base_url == "https://api.example.com"
+    assert test_settings.llm_timeout == 90
+    assert test_settings.llm_system_prompt == "Custom prompt"
+
+
+def test_llm_timeout_validation_minimum(monkeypatch):
+    """Test that LLM timeout must be at least 1 second."""
+    monkeypatch.setenv("LLM_TIMEOUT", "0")
+    
+    with pytest.raises(ValidationError) as exc_info:
+        Settings()
+    
+    assert "llm_timeout" in str(exc_info.value).lower()
+
+
+def test_llm_settings_case_insensitive(monkeypatch):
+    """Test that LLM environment variables are case-insensitive."""
+    monkeypatch.setenv("llm_api_key", "lowercase-key")
+    monkeypatch.setenv("llm_model", "lowercase-model")
+    
+    test_settings = Settings()
+    
+    assert test_settings.llm_api_key == "lowercase-key"
+    assert test_settings.llm_model == "lowercase-model"
+
+
+def test_llm_base_url_optional(monkeypatch):
+    """Test that LLM base URL is optional."""
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_MODEL", "gpt-5.1")
+    # Not setting LLM_BASE_URL
+    
+    test_settings = Settings()
+    
+    assert test_settings.llm_base_url is None
+
+
+def test_llm_system_prompt_optional(monkeypatch):
+    """Test that LLM system prompt override is optional."""
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_MODEL", "gpt-5.1")
+    # Not setting LLM_SYSTEM_PROMPT
+    
+    test_settings = Settings()
+    
+    assert test_settings.llm_system_prompt is None
+
+
+def test_llm_settings_without_api_key_allowed():
+    """Test that settings can be created without API key for non-LLM usage."""
+    # This should not raise an error - API key is optional at config level
+    # It will be validated when trying to use LLM features
+    test_settings = Settings()
+    
+    assert test_settings.llm_api_key == ""
+    assert test_settings.llm_model == "gpt-4"
