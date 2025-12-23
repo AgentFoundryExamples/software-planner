@@ -8,12 +8,17 @@ The following is instructions for implementing with LLM APIs. The models that ar
 
 **✅ Implemented:**
 - OpenAI GPT-4/5 series (via Chat Completions API)
+- Anthropic Claude Sonnet/Opus 4+ series (via Messages API)
+- Google Gemini 2/3 series (via Gemini API)
+- Multi-provider routing with model registry support
 
-**🚧 Planned:**
-- Anthropic Claude Sonnet/Opus 4 (via Messages API)
-- Google Gemini 3 (via Gemini API)
-
-**Note**: Currently, only OpenAI is supported. The architecture is designed to be provider-agnostic through the `BaseLLMClient` abstraction, but concrete implementations for Anthropic and Google are not yet available.
+**Architecture:**
+- Provider-agnostic `BaseLLMClient` abstraction
+- Factory pattern for client instantiation (`create_llm_client`)
+- Model registry-based routing (`get_llm_client_for_model`)
+- Per-model timeout/retry configuration
+- Thread-safe client caching
+- Normalized error handling across providers
 
 ## OpenAI GPT5
 
@@ -63,7 +68,36 @@ When implementing Anthropic integration, the target API should be the **Messages
 
 **Do NOT use:** Text Completions API (deprecated), Claude 2.x or older models
 
-**Status**: Not yet implemented. The `BaseLLMClient` abstraction is ready for a concrete Anthropic implementation.
+**Status**: ✅ Implemented in `app/services/llm_claude.py`
+
+### Current Implementation Details
+
+The Software Planner uses the Anthropic Messages API with the following characteristics:
+
+**SDK**: `anthropic==0.75.0` (official Python SDK)
+
+**API Endpoint**: Messages (`/v1/messages`)
+
+**Request Format**:
+```python
+response = client.messages.create(
+    model="claude-sonnet-4.5",
+    max_tokens=2000,
+    system=system_prompt,
+    messages=[
+        {"role": "user", "content": user_description}
+    ],
+    temperature=0.7
+)
+```
+
+**Retry Logic**:
+- Max retries: 3 attempts (configurable per model)
+- Backoff: Exponential (1s → 2s → 4s, capped at 10s)
+- Retryable errors: Timeouts, rate limits (429), connection errors, 5xx server errors
+- Non-retryable errors: Authentication (401), permission (403), not found (404), bad request (400)
+
+**Timeout**: Configurable per model in registry (default: 60 seconds per attempt)
 
 ## Google Gemini 3
 
@@ -75,7 +109,37 @@ When implementing Google integration, the target API should be the **Gemini API*
 
 **Do NOT use:** PaLM API (deprecated), Gemini 1.x models, or legacy Bard endpoints
 
-**Status**: Not yet implemented. The `BaseLLMClient` abstraction is ready for a concrete Google implementation.
+**Status**: ✅ Implemented in `app/services/llm_gemini.py`
+
+### Current Implementation Details
+
+The Software Planner uses the Google GenAI API with the following characteristics:
+
+**SDK**: `google-genai==1.56.0` (official Python SDK)
+
+**API Endpoint**: Generate Content
+
+**Request Format**:
+```python
+response = client.models.generate_content(
+    model="gemini-3.0-pro",
+    contents=full_prompt,  # System prompt + user description
+    config=types.GenerateContentConfig(
+        temperature=0.7,
+        max_output_tokens=2000
+    )
+)
+```
+
+**Retry Logic**:
+- Max retries: 3 attempts (configurable per model)
+- Backoff: Exponential (1s → 2s → 4s, capped at 10s)
+- Retryable errors: Timeouts, rate limits (429), quota errors, unavailable (503), 5xx server errors
+- Non-retryable errors: Authentication (401), permission (403), not found (404), bad request (400)
+
+**Timeout**: Configurable per model in registry (default: 60 seconds per attempt)
+
+**Note**: The `base_url` parameter is not directly supported by Google's GenAI SDK and will be ignored with a warning.
 
 ## General Best Practices
 
@@ -84,6 +148,243 @@ When implementing Google integration, the target API should be the **Gemini API*
 - Implement proper error handling and rate limiting
 - Use streaming responses when available for better UX
 - Keep SDKs updated to the latest stable versions
+
+---
+
+# Multi-Provider Architecture
+
+## Overview
+
+The Software Planner supports multiple LLM providers through a unified routing architecture. This allows you to:
+
+- Use different providers for different models
+- Configure timeout and retry policies per model
+- Switch providers without code changes
+- Cache client instances for efficiency
+- Get normalized errors across providers
+
+## Model Registry
+
+The model registry is a configuration-based system for managing logical models and their provider mappings. Each model has:
+
+- **Logical name**: User-friendly identifier (e.g., `my-gpt-model`, `my-claude-model`)
+- **Provider**: Backend provider (`openai`, `anthropic`, `google`)
+- **Model ID**: Provider-specific model identifier (e.g., `gpt-5.1`, `claude-sonnet-4.5`)
+- **API key environment variable**: Name of env var containing the API key
+- **Enabled flag**: Whether the model can be used
+- **Timeout**: Request timeout in seconds
+- **Max retries**: Maximum retry attempts for transient failures
+
+### Configuration Example
+
+Using environment variables (recommended for production):
+
+```bash
+# Legacy single-model configuration (still supported)
+LLM_API_KEY=sk-...
+LLM_MODEL=gpt-4
+
+# Or use model registry for multi-provider support
+MODELS_REGISTRY='{"my-gpt-model": {"provider": "openai", "model_id": "gpt-5.1", "api_key_env": "OPENAI_API_KEY", "enabled": true, "timeout": 60, "max_retries": 3}}'
+DEFAULT_MODEL=my-gpt-model
+OPENAI_API_KEY=sk-...
+```
+
+Using Python configuration (for programmatic setup):
+
+```python
+from app.core.config import Settings, ModelConfig
+
+settings = Settings(
+    models_registry={
+        'my-gpt-model': ModelConfig(
+            provider='openai',
+            model_id='gpt-5.1',
+            api_key_env='OPENAI_API_KEY',
+            enabled=True,
+            timeout=60,
+            max_retries=3
+        ),
+        'my-claude-model': ModelConfig(
+            provider='anthropic',
+            model_id='claude-sonnet-4.5',
+            api_key_env='ANTHROPIC_API_KEY',
+            enabled=True,
+            timeout=90,
+            max_retries=5
+        ),
+        'my-gemini-model': ModelConfig(
+            provider='google',
+            model_id='gemini-3.0-pro',
+            api_key_env='GOOGLE_API_KEY',
+            enabled=True,
+            timeout=45,
+            max_retries=3
+        )
+    },
+    default_model='my-gpt-model'
+)
+```
+
+## Client Factory and Router
+
+### Creating Clients Directly
+
+```python
+from app.services.llm_client import create_llm_client
+
+# Create an OpenAI client
+client = create_llm_client(
+    provider='openai',
+    model_id='gpt-5.1',
+    api_key='sk-...',
+    timeout=60,
+    max_retries=3
+)
+
+# Create a Claude client
+client = create_llm_client(
+    provider='anthropic',
+    model_id='claude-sonnet-4.5',
+    api_key='sk-ant-...',
+    timeout=90
+)
+
+# Create a Gemini client
+client = create_llm_client(
+    provider='google',
+    model_id='gemini-3.0-pro',
+    api_key='...',
+    timeout=45
+)
+```
+
+### Using the Router (Recommended)
+
+```python
+from app.services.llm_client import get_llm_client_for_model
+
+# Get client for a logical model
+client = get_llm_client_for_model('my-gpt-model')
+
+# Use the client (provider-agnostic)
+result = client.generate_specs("Build a REST API")
+```
+
+The router:
+1. Fetches model config from the registry
+2. Validates the model is enabled
+3. Gets API key from the configured environment variable
+4. Creates or returns a cached client instance
+5. Enforces timeout and retry policies
+
+### Client Caching
+
+Clients are cached by logical model ID to avoid repeated SDK initialization. Caching is:
+
+- **Thread-safe**: Uses locks to prevent race conditions
+- **Per-model**: Each logical model gets its own cached client
+- **Persistent**: Cached for the lifetime of the application
+- **Optional**: Can be disabled by passing `cache_clients=False`
+
+## Error Normalization
+
+All providers raise consistent error types:
+
+- `LLMConfigurationError`: Missing API key, invalid model, disabled model
+- `LLMRequestError`: API request failures (timeout, rate limit, network error)
+- `LLMResponseError`: Invalid or unparseable responses
+
+This allows consistent error handling regardless of provider:
+
+```python
+from app.services.llm_client import (
+    LLMConfigurationError,
+    LLMRequestError,
+    LLMResponseError
+)
+
+try:
+    result = client.generate_specs(description)
+except LLMConfigurationError as e:
+    # Fix configuration (API key, model name, etc.)
+    log_error("Configuration issue", error=e)
+except LLMRequestError as e:
+    # Retry or backoff (already retried internally)
+    log_error("API request failed", error=e)
+except LLMResponseError as e:
+    # Invalid response format
+    log_error("Response parsing failed", error=e)
+```
+
+## Telemetry and Logging
+
+All clients emit structured logs with provider and model context:
+
+```
+INFO: Created LLM client for model 'my-claude-model'
+  logical_model=my-claude-model
+  provider=anthropic
+  model_id=claude-sonnet-4.5
+  timeout=90
+  max_retries=5
+
+INFO: Claude API call succeeded
+  model=claude-sonnet-4.5
+  retry_count=0
+  latency_ms=3421
+  input_tokens=50
+  output_tokens=100
+  stop_reason=end_turn
+```
+
+This allows:
+- Tracking which provider/model was used for each request
+- Monitoring latency per provider
+- Tracking token usage per provider
+- Debugging provider-specific issues
+
+## Migration Guide
+
+### From Legacy Single-Model to Registry
+
+**Before** (legacy):
+```bash
+LLM_API_KEY=sk-...
+LLM_MODEL=gpt-4
+```
+
+**After** (registry):
+```bash
+MODELS_REGISTRY='{"my-model": {"provider": "openai", "model_id": "gpt-5.1", "api_key_env": "OPENAI_API_KEY", "enabled": true}}'
+DEFAULT_MODEL=my-model
+OPENAI_API_KEY=sk-...
+```
+
+The legacy configuration still works, but the registry provides more flexibility.
+
+### Adding a New Provider
+
+To add a new provider (e.g., `my-claude-model`):
+
+1. Set up API key:
+   ```bash
+   export ANTHROPIC_API_KEY=sk-ant-...
+   ```
+
+2. Add model to registry:
+   ```bash
+   export MODELS_REGISTRY='{"my-claude-model": {"provider": "anthropic", "model_id": "claude-sonnet-4.5", "api_key_env": "ANTHROPIC_API_KEY", "enabled": true}}'
+   ```
+
+3. Optionally set as default:
+   ```bash
+   export DEFAULT_MODEL=my-claude-model
+   ```
+
+4. Restart the application
+
+No code changes required!
 
 ---
 

@@ -62,10 +62,13 @@ def get_llm_client() -> BaseLLMClient:
     Uses thread-safe double-checked locking to ensure only one instance is created.
     
     The client is configured based on settings:
-    - API key from settings.llm_api_key
-    - Model from settings.llm_model
-    - Base URL from settings.llm_base_url (optional)
-    - Timeout from settings.llm_timeout
+    - If a model registry is configured, uses the default model from registry
+      with router-based multi-provider support
+    - Otherwise, falls back to legacy single-model configuration:
+      - API key from settings.llm_api_key
+      - Model from settings.llm_model
+      - Base URL from settings.llm_base_url (optional)
+      - Timeout from settings.llm_timeout
     
     Returns:
         BaseLLMClient: The global LLM client instance.
@@ -103,6 +106,56 @@ def get_llm_client() -> BaseLLMClient:
         if _llm_client is not None:
             return _llm_client
         
+        # Check if model registry is configured
+        registry = get_model_registry()
+        
+        if registry.has_registry() and settings.default_model:
+            # Use router-based multi-provider approach
+            logger.info(
+                "Initializing LLM client via model registry",
+                extra={"default_model": settings.default_model}
+            )
+            
+            try:
+                # Import here to avoid circular dependency
+                from app.services.llm_client import get_llm_client_for_model
+                
+                _llm_client = get_llm_client_for_model(
+                    logical_model_id=settings.default_model,
+                    cache_clients=True
+                )
+                
+                logger.info(
+                    "LLM client initialized via model registry",
+                    extra={"default_model": settings.default_model}
+                )
+                
+                return _llm_client
+                
+            except LLMConfigurationError:
+                # Re-raise configuration errors as-is
+                raise
+            except Exception as e:
+                logger.error(
+                    "Failed to initialize LLM client via registry",
+                    extra={"error": str(e), "error_type": type(e).__name__}
+                )
+                raise LLMConfigurationError(f"Failed to initialize LLM client: {e}")
+        elif registry.has_registry() and not settings.default_model:
+            # Registry exists but default_model is not set - log warning and fall back
+            logger.warning(
+                "Model registry is configured but default_model is not set, falling back to legacy configuration",
+                extra={
+                    "registry_size": len(registry._registry),
+                    "available_models": list(registry._registry.keys())
+                }
+            )
+            # Fall through to legacy configuration below
+        else:
+            # No registry configured - use legacy approach
+            logger.info("No model registry configured, using legacy single-model configuration")
+        
+        # Legacy single-model configuration (used when registry not configured or default_model not set)
         # Validate API key is provided
         if not settings.llm_api_key:
             logger.error("LLM API key not configured")
@@ -110,7 +163,7 @@ def get_llm_client() -> BaseLLMClient:
                 "LLM API key is not configured. Please set LLM_API_KEY environment variable."
             )
         
-        # Initialize OpenAI client with settings
+        # Initialize OpenAI client with settings (legacy default)
         try:
             _llm_client = OpenAIClient(
                 api_key=settings.llm_api_key,
@@ -120,7 +173,7 @@ def get_llm_client() -> BaseLLMClient:
             )
             
             logger.info(
-                "LLM client initialized from settings",
+                "LLM client initialized from legacy settings",
                 extra={
                     "model": settings.llm_model,
                     "has_base_url": bool(settings.llm_base_url),

@@ -15,6 +15,7 @@
 
 import json
 import pytest
+from unittest.mock import patch
 from app.services.llm_client import (
     BaseLLMClient,
     LLMError,
@@ -318,3 +319,78 @@ def test_llm_error_hierarchy():
     
     # All should inherit from Exception
     assert issubclass(LLMError, Exception)
+
+
+class TestClientFactory:
+    """Tests for create_llm_client factory function."""
+    
+    @patch('app.services.llm_openai.OpenAI')
+    def test_create_openai_client(self, mock_openai_class):
+        """Test creating an OpenAI client via factory."""
+        from app.services.llm_client import create_llm_client
+        from app.services.llm_openai import OpenAIClient
+        
+        # Should successfully create client
+        client = create_llm_client(
+            provider='openai',
+            model_id='gpt-5.1',
+            api_key='test-key',
+            timeout=30
+        )
+        assert isinstance(client, OpenAIClient)
+        assert client.model == 'gpt-5.1'
+    
+    def test_create_client_unknown_provider(self):
+        """Test that unknown provider raises error."""
+        from app.services.llm_client import create_llm_client
+        
+        with pytest.raises(LLMConfigurationError) as exc_info:
+            create_llm_client(
+                provider='unknown-provider',
+                model_id='some-model',
+                api_key='test-key'
+            )
+        
+        assert "unknown" in str(exc_info.value).lower()
+        assert "provider" in str(exc_info.value).lower()
+    
+    @patch('app.services.llm_openai.OpenAI')
+    def test_create_client_case_insensitive(self, mock_openai_class):
+        """Test that provider names are case-insensitive."""
+        from app.services.llm_client import create_llm_client
+        
+        # Both should create clients successfully
+        client1 = create_llm_client(
+            provider='OpenAI',
+            model_id='gpt-5.1',
+            api_key='test-key'
+        )
+        assert client1.model == 'gpt-5.1'
+        
+        client2 = create_llm_client(
+            provider='OPENAI',
+            model_id='gpt-5.1',
+            api_key='test-key'
+        )
+        assert client2.model == 'gpt-5.1'
+
+
+class TestClientRouter:
+    """Tests for get_llm_client_for_model router function."""
+    
+    def test_router_nonexistent_model(self, monkeypatch):
+        """Test that requesting non-existent model raises error."""
+        from app.services.llm_client import get_llm_client_for_model
+        from app.services import model_registry
+        
+        # Reset registry cache
+        model_registry._model_registry = None
+        
+        # Set empty registry
+        monkeypatch.setenv('MODELS_REGISTRY', '{}')
+        
+        with pytest.raises(LLMConfigurationError) as exc_info:
+            get_llm_client_for_model('nonexistent-model')
+        
+        assert "not found" in str(exc_info.value).lower()
+        assert "nonexistent-model" in str(exc_info.value)
