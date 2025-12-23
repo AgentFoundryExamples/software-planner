@@ -27,6 +27,7 @@ The abstraction is designed to:
 import json
 import logging
 import re
+import threading
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
@@ -340,3 +341,193 @@ def get_default_system_prompt() -> str:
         The default system prompt string.
     """
     return DEFAULT_SYSTEM_PROMPT
+
+
+# Global client cache for reusing provider instances
+_client_cache: dict[str, BaseLLMClient] = {}
+_client_cache_lock = threading.Lock()
+
+
+def create_llm_client(
+    provider: str,
+    model_id: str,
+    api_key: str,
+    base_url: Optional[str] = None,
+    timeout: int = 60,
+    max_retries: int = 3,
+) -> BaseLLMClient:
+    """Create an LLM client instance for a specific provider.
+    
+    This factory function instantiates the appropriate concrete client
+    based on the provider identifier. It handles provider-specific
+    initialization and validates configuration.
+    
+    Args:
+        provider: Provider identifier ('openai', 'anthropic', 'google').
+        model_id: Model identifier for the provider.
+        api_key: API key for authentication.
+        base_url: Optional custom base URL for API endpoint.
+        timeout: Request timeout in seconds.
+        max_retries: Maximum number of retry attempts.
+        
+    Returns:
+        Initialized LLM client instance.
+        
+    Raises:
+        LLMConfigurationError: If provider is unknown or initialization fails.
+        
+    Example:
+        >>> client = create_llm_client(
+        ...     provider='openai',
+        ...     model_id='gpt-5.1',
+        ...     api_key='sk-...',
+        ...     timeout=60
+        ... )
+    """
+    provider_lower = provider.lower()
+    
+    # Import providers lazily to avoid circular dependencies
+    if provider_lower == 'openai':
+        from app.services.llm_openai import OpenAIClient
+        return OpenAIClient(
+            api_key=api_key,
+            model=model_id,
+            base_url=base_url,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
+    elif provider_lower == 'anthropic':
+        from app.services.llm_claude import ClaudeClient
+        return ClaudeClient(
+            api_key=api_key,
+            model=model_id,
+            base_url=base_url,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
+    elif provider_lower == 'google':
+        from app.services.llm_gemini import GeminiClient
+        return GeminiClient(
+            api_key=api_key,
+            model=model_id,
+            base_url=base_url,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
+    else:
+        raise LLMConfigurationError(
+            f"Unknown LLM provider: {provider}. "
+            f"Supported providers: openai, anthropic, google"
+        )
+
+
+def get_llm_client_for_model(
+    logical_model_id: str,
+    cache_clients: bool = True
+) -> BaseLLMClient:
+    """Get or create an LLM client for a logical model ID.
+    
+    This function is the main routing entry point that:
+    1. Fetches model configuration from the registry
+    2. Validates the model is enabled
+    3. Creates or retrieves a cached client instance
+    4. Returns a ready-to-use client with proper configuration
+    
+    The function uses a thread-safe cache to reuse client instances for
+    the same logical model. This avoids repeated SDK initialization overhead
+    and preserves connection pools.
+    
+    Args:
+        logical_model_id: Logical name of the model from the registry.
+        cache_clients: Whether to cache and reuse client instances (default: True).
+            Set to False in tests or when dynamic reconfiguration is needed.
+            
+    Returns:
+        Initialized LLM client instance ready to generate specs.
+        
+    Raises:
+        LLMConfigurationError: If model is not found, disabled, or misconfigured.
+        
+    Example:
+        >>> client = get_llm_client_for_model('my-gpt-model')
+        >>> result = client.generate_specs("Build a REST API")
+        
+    Note:
+        This function imports model_registry lazily to avoid circular dependencies
+        between core config and service layers.
+    """
+    # Import here to avoid circular dependency
+    from app.services.model_registry import get_model_registry
+    import os
+    
+    # Get model configuration from registry
+    registry = get_model_registry()
+    model_config = registry.get_model_config(logical_model_id)
+    
+    if model_config is None:
+        raise LLMConfigurationError(
+            f"Model '{logical_model_id}' not found in registry. "
+            f"Check your MODELS_REGISTRY configuration."
+        )
+    
+    # Enforce enabled flag
+    if not model_config.enabled:
+        raise LLMConfigurationError(
+            f"Model '{logical_model_id}' is disabled. "
+            f"Enable it in MODELS_REGISTRY or choose a different model."
+        )
+    
+    # Check cache if enabled
+    if cache_clients:
+        with _client_cache_lock:
+            if logical_model_id in _client_cache:
+                logger.debug(
+                    f"Using cached client for model '{logical_model_id}'",
+                    extra={"logical_model": logical_model_id}
+                )
+                return _client_cache[logical_model_id]
+    
+    # Get API key from environment variable
+    api_key = os.environ.get(model_config.api_key_env, "").strip()
+    if not api_key:
+        raise LLMConfigurationError(
+            f"API key not found for model '{logical_model_id}'. "
+            f"Set environment variable {model_config.api_key_env}."
+        )
+    
+    # Create client instance
+    try:
+        client = create_llm_client(
+            provider=model_config.provider,
+            model_id=model_config.model_id,
+            api_key=api_key,
+            base_url=model_config.base_url,
+            timeout=model_config.timeout,
+            max_retries=model_config.max_retries,
+        )
+        
+        # Cache the client if enabled
+        if cache_clients:
+            with _client_cache_lock:
+                _client_cache[logical_model_id] = client
+        
+        logger.info(
+            f"Created LLM client for model '{logical_model_id}'",
+            extra={
+                "logical_model": logical_model_id,
+                "provider": model_config.provider,
+                "model_id": model_config.model_id,
+                "timeout": model_config.timeout,
+                "max_retries": model_config.max_retries,
+            }
+        )
+        
+        return client
+        
+    except LLMConfigurationError:
+        # Re-raise configuration errors as-is with context
+        raise
+    except Exception as e:
+        raise LLMConfigurationError(
+            f"Failed to create client for model '{logical_model_id}': {e}"
+        )

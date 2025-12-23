@@ -62,10 +62,13 @@ def get_llm_client() -> BaseLLMClient:
     Uses thread-safe double-checked locking to ensure only one instance is created.
     
     The client is configured based on settings:
-    - API key from settings.llm_api_key
-    - Model from settings.llm_model
-    - Base URL from settings.llm_base_url (optional)
-    - Timeout from settings.llm_timeout
+    - If a model registry is configured, uses the default model from registry
+      with router-based multi-provider support
+    - Otherwise, falls back to legacy single-model configuration:
+      - API key from settings.llm_api_key
+      - Model from settings.llm_model
+      - Base URL from settings.llm_base_url (optional)
+      - Timeout from settings.llm_timeout
     
     Returns:
         BaseLLMClient: The global LLM client instance.
@@ -103,39 +106,78 @@ def get_llm_client() -> BaseLLMClient:
         if _llm_client is not None:
             return _llm_client
         
-        # Validate API key is provided
-        if not settings.llm_api_key:
-            logger.error("LLM API key not configured")
-            raise LLMConfigurationError(
-                "LLM API key is not configured. Please set LLM_API_KEY environment variable."
-            )
+        # Check if model registry is configured
+        registry = get_model_registry()
         
-        # Initialize OpenAI client with settings
-        try:
-            _llm_client = OpenAIClient(
-                api_key=settings.llm_api_key,
-                model=settings.llm_model,
-                base_url=settings.llm_base_url,
-                timeout=settings.llm_timeout,
-            )
-            
+        if registry.has_registry() and settings.default_model:
+            # Use router-based multi-provider approach
             logger.info(
-                "LLM client initialized from settings",
-                extra={
-                    "model": settings.llm_model,
-                    "has_base_url": bool(settings.llm_base_url),
-                    "timeout": settings.llm_timeout,
-                }
+                "Initializing LLM client via model registry",
+                extra={"default_model": settings.default_model}
             )
             
-            return _llm_client
+            try:
+                # Import here to avoid circular dependency
+                from app.services.llm_client import get_llm_client_for_model
+                
+                _llm_client = get_llm_client_for_model(
+                    logical_model_id=settings.default_model,
+                    cache_clients=True
+                )
+                
+                logger.info(
+                    "LLM client initialized via model registry",
+                    extra={"default_model": settings.default_model}
+                )
+                
+                return _llm_client
+                
+            except LLMConfigurationError:
+                # Re-raise configuration errors as-is
+                raise
+            except Exception as e:
+                logger.error(
+                    "Failed to initialize LLM client via registry",
+                    extra={"error": str(e), "error_type": type(e).__name__}
+                )
+                raise LLMConfigurationError(f"Failed to initialize LLM client: {e}")
+        else:
+            # Use legacy single-model approach
+            logger.info("Initializing LLM client via legacy configuration")
             
-        except LLMConfigurationError:
-            # Re-raise configuration errors as-is
-            raise
-        except Exception as e:
-            logger.error(
-                "Failed to initialize LLM client",
-                extra={"error": str(e), "error_type": type(e).__name__}
-            )
-            raise LLMConfigurationError(f"Failed to initialize LLM client: {e}")
+            # Validate API key is provided
+            if not settings.llm_api_key:
+                logger.error("LLM API key not configured")
+                raise LLMConfigurationError(
+                    "LLM API key is not configured. Please set LLM_API_KEY environment variable."
+                )
+            
+            # Initialize OpenAI client with settings (legacy default)
+            try:
+                _llm_client = OpenAIClient(
+                    api_key=settings.llm_api_key,
+                    model=settings.llm_model,
+                    base_url=settings.llm_base_url,
+                    timeout=settings.llm_timeout,
+                )
+                
+                logger.info(
+                    "LLM client initialized from legacy settings",
+                    extra={
+                        "model": settings.llm_model,
+                        "has_base_url": bool(settings.llm_base_url),
+                        "timeout": settings.llm_timeout,
+                    }
+                )
+                
+                return _llm_client
+                
+            except LLMConfigurationError:
+                # Re-raise configuration errors as-is
+                raise
+            except Exception as e:
+                logger.error(
+                    "Failed to initialize LLM client",
+                    extra={"error": str(e), "error_type": type(e).__name__}
+                )
+                raise LLMConfigurationError(f"Failed to initialize LLM client: {e}")
