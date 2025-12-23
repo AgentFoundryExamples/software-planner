@@ -16,6 +16,7 @@ def test_settings_default_values():
     assert test_settings.port == 8000
     assert test_settings.api_prefix == "/api/v1"
     assert test_settings.allowed_origins == ["*"]
+    assert test_settings.allowed_credentials is False  # Security: False by default with wildcard origins
     assert test_settings.allowed_methods == ["*"]
     assert test_settings.allowed_headers == ["*"]
 

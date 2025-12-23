@@ -29,7 +29,9 @@ class Settings(BaseSettings):
     api_prefix: str = "/api/v1"
     
     # CORS settings
+    # For security, allow_credentials should only be True when allowed_origins is not ["*"]
     allowed_origins: list[str] = ["*"]
+    allowed_credentials: bool = False
     allowed_methods: list[str] = ["*"]
     allowed_headers: list[str] = ["*"]
 
