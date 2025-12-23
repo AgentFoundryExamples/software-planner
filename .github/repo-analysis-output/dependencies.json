@@ -195,6 +195,8 @@
       "type": "file",
       "external_dependencies": {
         "stdlib": [
+          "logging",
+          "typing.Any",
           "typing.Optional"
         ],
         "third-party": []
@@ -328,7 +330,10 @@
       "path": "tests/test_plan_endpoint.py",
       "type": "file",
       "external_dependencies": {
-        "stdlib": [],
+        "stdlib": [
+          "unittest.mock.Mock",
+          "unittest.mock.patch"
+        ],
         "third-party": [
           "fastapi.testclient.TestClient",
           "pytest"
@@ -340,7 +345,9 @@
       "path": "tests/test_planner_integration.py",
       "type": "file",
       "external_dependencies": {
-        "stdlib": [],
+        "stdlib": [
+          "unittest.mock.Mock"
+        ],
         "third-party": [
           "pytest"
         ]
@@ -354,7 +361,8 @@
         "stdlib": [
           "concurrent.futures.ThreadPoolExecutor",
           "time",
-          "unittest.mock.Mock"
+          "unittest.mock.Mock",
+          "unittest.mock.patch"
         ],
         "third-party": [
           "fastapi.testclient.TestClient",
@@ -372,7 +380,9 @@
           "datetime.datetime",
           "datetime.timezone",
           "random",
-          "time"
+          "time",
+          "unittest.mock.Mock",
+          "unittest.mock.patch"
         ],
         "third-party": [
           "fastapi.testclient.TestClient",
@@ -470,11 +480,23 @@
     },
     {
       "source": "app/services/planner.py",
+      "target": "app/core/config.py"
+    },
+    {
+      "source": "app/services/planner.py",
       "target": "app/models/response.py"
     },
     {
       "source": "app/services/planner.py",
       "target": "app/services/job_store.py"
+    },
+    {
+      "source": "app/services/planner.py",
+      "target": "app/services/llm_client.py"
+    },
+    {
+      "source": "app/services/planner.py",
+      "target": "app/services/store_singleton.py"
     },
     {
       "source": "app/services/store_singleton.py",
@@ -539,6 +561,10 @@
     {
       "source": "tests/test_planner_integration.py",
       "target": "app/services/planner.py"
+    },
+    {
+      "source": "tests/test_planner_integration.py",
+      "target": "app/services/llm_client.py"
     },
     {
       "source": "tests/test_plans_async_endpoint.py",

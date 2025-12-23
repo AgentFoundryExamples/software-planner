@@ -137,8 +137,8 @@ Total files: 29
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for planner  
-**Size:** 4.43 KB  
-**LOC:** 71  
+**Size:** 11.81 KB  
+**LOC:** 215  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/store_singleton.py
@@ -227,8 +227,8 @@ Total files: 29
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 12.11 KB  
-**LOC:** 245  
+**Size:** 13.53 KB  
+**LOC:** 278  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_planner_integration.py
@@ -236,8 +236,8 @@ Total files: 29
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 7.85 KB  
-**LOC:** 127  
+**Size:** 17.92 KB  
+**LOC:** 360  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_plans_async_endpoint.py
@@ -245,8 +245,8 @@ Total files: 29
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 16.19 KB  
-**LOC:** 312  
+**Size:** 17.10 KB  
+**LOC:** 330  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_plans_polling_endpoints.py
@@ -254,8 +254,8 @@ Total files: 29
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 21.98 KB  
-**LOC:** 398  
+**Size:** 22.92 KB  
+**LOC:** 417  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_store_singleton.py
