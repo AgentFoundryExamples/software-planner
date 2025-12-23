@@ -342,6 +342,25 @@ Configuration is managed through environment variables or a `.env` file. All set
 - `ALLOWED_METHODS`: CORS allowed methods (default: ["*"])
 - `ALLOWED_HEADERS`: CORS allowed headers (default: ["*"])
 
+**LLM Configuration:**
+
+To use LLM-based planning (OpenAI GPT-5.1), configure these environment variables:
+
+- `LLM_API_KEY`: **Required** - Your OpenAI API key (e.g., "sk-...")
+- `LLM_MODEL`: Model identifier (default: "gpt-4", recommended: "gpt-5.1")
+- `LLM_BASE_URL`: Optional base URL for custom endpoints or proxies
+- `LLM_TIMEOUT`: Request timeout in seconds (default: 60)
+- `LLM_SYSTEM_PROMPT`: Optional override for the default system prompt
+
+Example `.env` configuration for LLM features:
+```bash
+LLM_API_KEY=sk-your-openai-api-key-here
+LLM_MODEL=gpt-5.1
+LLM_TIMEOUT=90
+```
+
+> **Note:** LLM features require the OpenAI SDK. The implementation uses the Chat Completions API with automatic retry logic for transient errors (timeouts, rate limits, 5xx errors). API keys are never logged or exposed in responses.
+
 > **Security Note:** The default CORS configuration (`ALLOWED_ORIGINS=["*"]`) is suitable for development only. In production, set `ALLOWED_ORIGINS` to specific domains and configure `ALLOWED_CREDENTIALS` appropriately.
 
 ### Testing
@@ -379,6 +398,9 @@ pytest --cov=app tests/
 - `tests/test_job_model.py` - Job model tests
 - `tests/test_main.py` - Application setup and general endpoint tests
 - `tests/test_config.py` - Configuration and settings tests
+- `tests/test_llm_client.py` - LLM client abstraction tests
+- `tests/test_llm_openai.py` - OpenAI client implementation tests
+- `tests/test_store_singleton.py` - Service singleton factory tests
 
 All tests should pass. If you encounter any failures, ensure:
 1. All dependencies are installed (`pip install -r requirements.txt`)
