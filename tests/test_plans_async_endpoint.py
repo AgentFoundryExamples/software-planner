@@ -309,7 +309,7 @@ class TestPlansEndpointErrorHandling:
     def test_plans_endpoint_with_simulated_failure(self, client, override_job_store, monkeypatch):
         """Test that exceptions in background worker set failed status."""
         # Mock generate_plan to raise an exception
-        def mock_generate_plan_error(description, job_store=None, job_id=None):
+        def mock_generate_plan_error(description, job_store=None, job_id=None, llm_client=None, model=None, system_prompt=None):
             if job_store and job_id:
                 job_store.update_job(job_id, status="running")
             raise ValueError("Simulated planning error")
@@ -331,7 +331,7 @@ class TestPlansEndpointErrorHandling:
     
     def test_plans_endpoint_error_does_not_leak_stack_trace(self, client, override_job_store, monkeypatch):
         """Test that error details don't include stack traces."""
-        def mock_generate_plan_error(description, job_store=None, job_id=None):
+        def mock_generate_plan_error(description, job_store=None, job_id=None, llm_client=None, model=None, system_prompt=None):
             if job_store and job_id:
                 job_store.update_job(job_id, status="running")
             raise RuntimeError("Internal error with sensitive data")
@@ -358,7 +358,7 @@ class TestPlansEndpointErrorHandling:
     
     def test_plans_endpoint_error_does_not_crash_server(self, client, override_job_store, monkeypatch):
         """Test that background errors don't crash the server."""
-        def mock_generate_plan_error(description, job_store=None, job_id=None):
+        def mock_generate_plan_error(description, job_store=None, job_id=None, llm_client=None, model=None, system_prompt=None):
             if job_store and job_id:
                 job_store.update_job(job_id, status="running")
             raise Exception("Critical error")
