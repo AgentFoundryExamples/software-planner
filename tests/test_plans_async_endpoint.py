@@ -40,9 +40,9 @@ def mock_job_store():
 @pytest.fixture
 def override_job_store(mock_job_store):
     """Override the job store dependency for testing."""
-    from app.api.routes import get_job_store_dep
+    from app.services.store_singleton import get_job_store
     
-    app.dependency_overrides[get_job_store_dep] = lambda: mock_job_store
+    app.dependency_overrides[get_job_store] = lambda: mock_job_store
     yield mock_job_store
     app.dependency_overrides.clear()
 
@@ -203,7 +203,14 @@ class TestPlansEndpointValidationErrors:
 
 
 class TestPlansEndpointBackgroundExecution:
-    """Test cases for background task execution."""
+    """Test cases for background task execution.
+    
+    Note: TestClient runs background tasks synchronously by default, but the tasks
+    are still executed after the response is returned. The time.sleep() calls in
+    these tests ensure the background tasks have completed before checking results.
+    This is not a race condition - it's the expected behavior with FastAPI's
+    BackgroundTasks in test environments.
+    """
     
     def test_plans_endpoint_background_task_succeeds(self, client, override_job_store):
         """Test that background task completes successfully."""
@@ -214,7 +221,7 @@ class TestPlansEndpointBackgroundExecution:
         
         job_id = response.json()["job_id"]
         
-        # Give background task time to complete
+        # Wait for background task to complete (TestClient runs them synchronously)
         time.sleep(0.5)
         
         # Check job status

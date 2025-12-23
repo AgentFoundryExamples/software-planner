@@ -13,28 +13,18 @@
 # limitations under the License.
 """API route handlers for the planning service."""
 
+import logging
 from fastapi import APIRouter, BackgroundTasks, Depends, status
 
 from app.models.request import PlanRequest
 from app.models.response import PlanResponse
 from app.services.planner import generate_plan
 from app.services.job_store import JobStore
+from app.services.store_singleton import get_job_store
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-
-def get_job_store_dep() -> JobStore:
-    """Get the global job store instance for dependency injection.
-    
-    This function is used as a FastAPI dependency to provide the global
-    job store instance. Tests can override this dependency to provide
-    a mock job store.
-    
-    Returns:
-        JobStore: The global job store instance.
-    """
-    from app.main import job_store
-    return job_store
 
 
 @router.post(
@@ -134,16 +124,22 @@ def _background_planner_worker(job_id: str, description: str, job_store: JobStor
     except Exception as e:
         # Capture any exception and set failed status
         # Don't leak stack traces - only store sanitized error info
+        logger.error(f"Background task for job {job_id} failed: {e}", exc_info=True)
         try:
             error_dict = {
                 "error": str(e),
                 "type": type(e).__name__
             }
             job_store.update_job(job_id, status="failed", error=error_dict)
-        except Exception:
-            # If we can't even update the job status, suppress this error
-            # to avoid masking the original exception
-            pass
+        except Exception as update_exc:
+            # If we can't even update the job status, log this critical failure
+            # to avoid masking the original exception and losing all trace of the error.
+            logger.critical(
+                f"CRITICAL: Failed to update job {job_id} to 'failed' status "
+                f"after planner error. Original error: {e}. "
+                f"Update error: {update_exc}",
+                exc_info=True
+            )
 
 
 @router.post(
@@ -204,7 +200,7 @@ def _background_planner_worker(job_id: str, description: str, job_store: JobStor
 def create_plan_async(
     request: PlanRequest,
     background_tasks: BackgroundTasks,
-    job_store: JobStore = Depends(get_job_store_dep)
+    job_store: JobStore = Depends(get_job_store)
 ) -> dict:
     """Create an async planning job that executes in the background.
     

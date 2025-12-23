@@ -21,20 +21,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.routes import router as plan_router
 from app.core.config import settings
-from app.services.job_store import JobStore
-
-
-# Global job store instance
-job_store = JobStore()
-
-
-def get_job_store() -> JobStore:
-    """Get the global job store instance for dependency injection.
-    
-    Returns:
-        JobStore: The global job store instance.
-    """
-    return job_store
+from app.services.store_singleton import get_job_store
 
 
 def create_app() -> FastAPI:
