@@ -17,10 +17,11 @@ The following is instructions for implementing with LLM APIs. The models that ar
 
 ## OpenAI GPT5
 
-When implementing OpenAI integration, the target API should be the **Responses API** since it is the recommended most long term compatible option. The GPT 5 series models are supportive of the responses API and these are the models we want to use when implementing AI integration. Do not use completions it is not recommended moving forward.
+When implementing OpenAI integration, the target API should be the **Chat Completions API** since it is the recommended most long term compatible option. The GPT 5 series models support the Chat Completions API and these are the models we want to use when implementing AI integration. Do not use the legacy Completions API as it is not recommended moving forward.
 
 - Target model: `gpt-5.1`
 - Use the official `openai` Python package or equivalent SDK for your language
+- API endpoint: `/v1/chat/completions`
 
 **Do NOT use:** Completions API (deprecated), legacy models like GPT-3.5 or older
 
