@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 21
+Total files: 23
 
 ## app/__init__.py
 **Language:** Python  
@@ -29,8 +29,8 @@ Total files: 21
 **Role:** router  
 **Role Justification:** filename contains routing term  
 **Summary:** Python routing configuration (role: router)  
-**Size:** 3.56 KB  
-**LOC:** 80  
+**Size:** 8.49 KB  
+**LOC:** 194  
 **TODOs/FIXMEs:** 0  
 
 ## app/core/__init__.py
@@ -56,8 +56,8 @@ Total files: 21
 **Role:** entry-point  
 **Role Justification:** common entry point name 'main'  
 **Summary:** Python main entry point (role: entry-point)  
-**Size:** 5.76 KB  
-**LOC:** 111  
+**Size:** 5.81 KB  
+**LOC:** 112  
 **TODOs/FIXMEs:** 0  
 
 ## app/models/__init__.py
@@ -121,6 +121,15 @@ Total files: 21
 **Summary:** Python module for planner  
 **Size:** 4.43 KB  
 **LOC:** 71  
+**TODOs/FIXMEs:** 0  
+
+## app/services/store_singleton.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for store singleton  
+**Size:** 1.22 KB  
+**LOC:** 15  
 **TODOs/FIXMEs:** 0  
 
 ## tests/__init__.py
@@ -193,4 +202,13 @@ Total files: 21
 **Summary:** Python test file (role: test)  
 **Size:** 7.85 KB  
 **LOC:** 127  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_plans_async_endpoint.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 16.19 KB  
+**LOC:** 312  
 **TODOs/FIXMEs:** 0  

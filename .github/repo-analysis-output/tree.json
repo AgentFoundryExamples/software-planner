@@ -139,6 +139,10 @@
             {
               "type": "file",
               "name": "planner.py"
+            },
+            {
+              "type": "file",
+              "name": "store_singleton.py"
             }
           ]
         },
@@ -187,6 +191,10 @@
         {
           "type": "file",
           "name": "test_planner_integration.py"
+        },
+        {
+          "type": "file",
+          "name": "test_plans_async_endpoint.py"
         }
       ]
     },
