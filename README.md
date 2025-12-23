@@ -212,9 +212,9 @@ The job progresses through these states:
       {
         "purpose": "Core API Development",
         "vision": "Build a robust REST API",
-        "must": ["Implement endpoints", "Add validation"],
-        "dont": ["Skip error handling"],
-        "nice": ["Add rate limiting", "Include caching"]
+        "must": ["Implement endpoints"],
+        "dont": ["Skip validation"],
+        "nice": ["Add rate limiting"]
       }
     ]
   }
@@ -230,7 +230,7 @@ The job progresses through these states:
   "updated_at": "2025-01-01T12:00:05Z",
   "result": null,
   "error": {
-    "error": "Planning execution failed",
+    "error": "Planning failed",
     "type": "ValueError"
   }
 }
