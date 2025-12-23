@@ -158,6 +158,10 @@
         },
         {
           "type": "file",
+          "name": "test_health_endpoint.py"
+        },
+        {
+          "type": "file",
           "name": "test_main.py"
         },
         {
@@ -165,6 +169,10 @@
           "name": "test_plan_endpoint.py"
         }
       ]
+    },
+    {
+      "type": "file",
+      "name": ".env.example"
     },
     {
       "type": "file",

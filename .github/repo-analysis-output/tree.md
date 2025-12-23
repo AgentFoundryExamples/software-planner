@@ -34,8 +34,10 @@
 ├── tests
   ├── __init__.py
   ├── test_config.py
+  ├── test_health_endpoint.py
   ├── test_main.py
   └── test_plan_endpoint.py
+├── .env.example
 ├── .gitignore
 ├── LICENSE
 ├── LLMs.md

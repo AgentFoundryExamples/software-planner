@@ -146,6 +146,18 @@
       }
     },
     {
+      "id": "tests/test_health_endpoint.py",
+      "path": "tests/test_health_endpoint.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "fastapi.testclient.TestClient",
+          "pytest"
+        ]
+      }
+    },
+    {
       "id": "tests/test_main.py",
       "path": "tests/test_main.py",
       "type": "file",
@@ -208,6 +220,10 @@
     {
       "source": "tests/test_config.py",
       "target": "app/core/config.py"
+    },
+    {
+      "source": "tests/test_health_endpoint.py",
+      "target": "app/main.py"
     },
     {
       "source": "tests/test_main.py",

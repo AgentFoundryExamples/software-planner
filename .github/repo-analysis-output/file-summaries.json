@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 15,
+  "total_files": 16,
   "files": [
     {
       "schema_version": "2.0",
@@ -181,6 +181,20 @@
       "metrics": {
         "size_bytes": 3889,
         "loc": 64,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_health_endpoint.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 3019,
+        "loc": 47,
         "todo_count": 0
       }
     },
