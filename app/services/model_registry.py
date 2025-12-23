@@ -5,6 +5,7 @@ allowing routing logic to query model configurations without duplicating parsing
 """
 
 import logging
+import threading
 from typing import Optional
 
 from app.core.config import ModelConfig, settings
@@ -165,8 +166,9 @@ class ModelRegistry:
             )
 
 
-# Global registry instance
+# Global registry instance and lock for thread-safe initialization
 _model_registry: Optional[ModelRegistry] = None
+_model_registry_lock = threading.Lock()
 
 
 def get_model_registry() -> ModelRegistry:
@@ -175,10 +177,29 @@ def get_model_registry() -> ModelRegistry:
     This function returns a singleton ModelRegistry instance that provides
     access to the configured logical models and their metadata.
     
+    The registry is initialized once on first access and cached thereafter.
+    It reads from settings.models_registry at construction time, so any
+    subsequent changes to settings will not be reflected in the registry.
+    This is intentional for production use where configuration is immutable
+    after startup.
+    
     Returns:
         ModelRegistry: The global model registry instance.
+        
+    Note:
+        In testing scenarios where settings need to be modified, tests should
+        reset the global _model_registry variable to None to force re-initialization.
     """
     global _model_registry
-    if _model_registry is None:
-        _model_registry = ModelRegistry()
+    
+    # Fast path: return existing registry without acquiring lock
+    if _model_registry is not None:
+        return _model_registry
+    
+    # Slow path: acquire lock and initialize registry
+    with _model_registry_lock:
+        # Check again after acquiring lock (double-checked locking)
+        if _model_registry is None:
+            _model_registry = ModelRegistry()
+    
     return _model_registry

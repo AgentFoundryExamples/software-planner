@@ -147,6 +147,16 @@ class Settings(BaseSettings):
     def _validate_model_registry(self) -> "Settings":
         """Validate model registry configuration.
         
+        This validation runs at Settings instantiation time (typically at application
+        startup). It checks that environment variables exist at that moment, which is
+        the intended behavior - we want to fail fast at startup if configuration is
+        invalid rather than failing later when a model is actually used.
+        
+        The Settings object is typically created once at application startup and
+        is immutable thereafter, so the validation timing is appropriate. If
+        environment variables change after startup, the application should be
+        restarted to pick up the new configuration.
+        
         Ensures:
         - At least one model is enabled (if registry is configured)
         - Exactly one default model is specified
@@ -222,17 +232,8 @@ class Settings(BaseSettings):
                 "\n".join(f"  - {item}" for item in unknown_providers)
             )
         
-        # Validate timeout values
-        invalid_timeouts = []
-        for name, config in self.models_registry.items():
-            if config.timeout < 1:
-                invalid_timeouts.append(f"{name} (timeout: {config.timeout})")
-        
-        if invalid_timeouts:
-            raise ValueError(
-                "Model registry validation failed: Invalid timeout values (must be >= 1 second):\n" +
-                "\n".join(f"  - {item}" for item in invalid_timeouts)
-            )
+        # Note: Timeout validation is handled by ModelConfig's Field(ge=1) constraint
+        # and does not need to be checked here.
         
         return self
 
