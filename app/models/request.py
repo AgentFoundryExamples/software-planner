@@ -15,6 +15,8 @@
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.config import settings
+
 
 class PlanRequest(BaseModel):
     """Request model for the /plan endpoint.
@@ -50,7 +52,6 @@ class PlanRequest(BaseModel):
         
         # Check byte length (UTF-8 encoding)
         byte_length = len(v.encode('utf-8'))
-        from app.core.config import settings
         max_bytes = settings.max_description_bytes
         
         if byte_length > max_bytes:
