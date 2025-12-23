@@ -17,10 +17,23 @@ This module provides a centralized location for the global job store instance,
 avoiding circular import issues between main.py and routes.py.
 """
 
+import logging
+import threading
+from typing import Optional
+
+from app.core.config import settings
 from app.services.job_store import JobStore
+from app.services.llm_client import BaseLLMClient, LLMConfigurationError
+from app.services.llm_openai import OpenAIClient
+
+logger = logging.getLogger(__name__)
 
 # Global job store instance
 _job_store = JobStore()
+
+# Global LLM client instance (lazily initialized)
+_llm_client: Optional[BaseLLMClient] = None
+_llm_client_lock = threading.Lock()
 
 
 def get_job_store() -> JobStore:
@@ -34,3 +47,83 @@ def get_job_store() -> JobStore:
         JobStore: The global job store instance.
     """
     return _job_store
+
+
+def get_llm_client() -> BaseLLMClient:
+    """Get the global LLM client instance for dependency injection.
+    
+    This function returns a singleton LLM client instance configured from
+    application settings. The client is lazily initialized on first access.
+    Uses thread-safe double-checked locking to ensure only one instance is created.
+    
+    The client is configured based on settings:
+    - API key from settings.llm_api_key
+    - Model from settings.llm_model
+    - Base URL from settings.llm_base_url (optional)
+    - Timeout from settings.llm_timeout
+    
+    Returns:
+        BaseLLMClient: The global LLM client instance.
+        
+    Raises:
+        LLMConfigurationError: If LLM client cannot be initialized due to
+            missing or invalid configuration.
+    
+    Note:
+        Tests can override this dependency to provide a mock client.
+        The implementation uses synchronous calls (time.sleep for backoff).
+        If using in async contexts, consider running in a thread pool executor.
+        
+    Example:
+        >>> from app.services.store_singleton import get_llm_client
+        >>> client = get_llm_client()
+        >>> result = client.generate_specs("Build a REST API")
+    """
+    global _llm_client
+    
+    # Fast path: return existing client without acquiring lock
+    if _llm_client is not None:
+        return _llm_client
+    
+    # Slow path: acquire lock and initialize client
+    with _llm_client_lock:
+        # Check again after acquiring lock (double-checked locking)
+        if _llm_client is not None:
+            return _llm_client
+        
+        # Validate API key is provided
+        if not settings.llm_api_key:
+            logger.error("LLM API key not configured")
+            raise LLMConfigurationError(
+                "LLM API key is not configured. Please set LLM_API_KEY environment variable."
+            )
+        
+        # Initialize OpenAI client with settings
+        try:
+            _llm_client = OpenAIClient(
+                api_key=settings.llm_api_key,
+                model=settings.llm_model,
+                base_url=settings.llm_base_url,
+                timeout=settings.llm_timeout,
+            )
+            
+            logger.info(
+                "LLM client initialized from settings",
+                extra={
+                    "model": settings.llm_model,
+                    "has_base_url": bool(settings.llm_base_url),
+                    "timeout": settings.llm_timeout,
+                }
+            )
+            
+            return _llm_client
+            
+        except LLMConfigurationError:
+            # Re-raise configuration errors as-is
+            raise
+        except Exception as e:
+            logger.error(
+                "Failed to initialize LLM client",
+                extra={"error": str(e), "error_type": type(e).__name__}
+            )
+            raise LLMConfigurationError(f"Failed to initialize LLM client: {e}")
