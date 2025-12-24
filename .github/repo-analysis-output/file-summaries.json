@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 57,
+  "total_files": 63,
   "files": [
     {
       "schema_version": "2.0",
@@ -53,8 +53,8 @@
       "summary": "Python routing configuration (role: router)",
       "summary_text": "Python routing configuration (role: router)",
       "metrics": {
-        "size_bytes": 39689,
-        "loc": 869,
+        "size_bytes": 41300,
+        "loc": 908,
         "todo_count": 0
       }
     },
@@ -95,8 +95,8 @@
       "summary": "Python main entry point (role: entry-point)",
       "summary_text": "Python main entry point (role: entry-point)",
       "metrics": {
-        "size_bytes": 11262,
-        "loc": 195,
+        "size_bytes": 11413,
+        "loc": 197,
         "todo_count": 0
       }
     },
@@ -111,6 +111,20 @@
       "metrics": {
         "size_bytes": 721,
         "loc": 3,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "app/middleware/metrics.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for metrics",
+      "summary_text": "Python module for metrics",
+      "metrics": {
+        "size_bytes": 3416,
+        "loc": 63,
         "todo_count": 0
       }
     },
@@ -249,8 +263,8 @@
       "summary": "Python module for job repository",
       "summary_text": "Python module for job repository",
       "metrics": {
-        "size_bytes": 25765,
-        "loc": 520,
+        "size_bytes": 28478,
+        "loc": 566,
         "todo_count": 0
       }
     },
@@ -277,8 +291,8 @@
       "summary": "Python module for llm claude",
       "summary_text": "Python module for llm claude",
       "metrics": {
-        "size_bytes": 14284,
-        "loc": 278,
+        "size_bytes": 16722,
+        "loc": 324,
         "todo_count": 0
       }
     },
@@ -305,8 +319,8 @@
       "summary": "Python module for llm gemini",
       "summary_text": "Python module for llm gemini",
       "metrics": {
-        "size_bytes": 15841,
-        "loc": 297,
+        "size_bytes": 18018,
+        "loc": 341,
         "todo_count": 0
       }
     },
@@ -319,8 +333,22 @@
       "summary": "Python module for llm openai",
       "summary_text": "Python module for llm openai",
       "metrics": {
-        "size_bytes": 15588,
-        "loc": 290,
+        "size_bytes": 18260,
+        "loc": 340,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "app/services/metrics.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for metrics",
+      "summary_text": "Python module for metrics",
+      "metrics": {
+        "size_bytes": 10026,
+        "loc": 217,
         "todo_count": 0
       }
     },
@@ -391,6 +419,20 @@
       "metrics": {
         "size_bytes": 578,
         "loc": 0,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "app/utils/logging_helpers.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for logging helpers",
+      "summary_text": "Python module for logging helpers",
+      "metrics": {
+        "size_bytes": 7559,
+        "loc": 196,
         "todo_count": 0
       }
     },
@@ -620,6 +662,20 @@
     },
     {
       "schema_version": "2.0",
+      "path": "tests/test_logging_helpers.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 8731,
+        "loc": 194,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "tests/test_main.py",
       "language": "Python",
       "role": "test",
@@ -629,6 +685,34 @@
       "metrics": {
         "size_bytes": 5731,
         "loc": 115,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_metrics.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 7294,
+        "loc": 124,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_metrics_endpoint.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 3899,
+        "loc": 66,
         "todo_count": 0
       }
     },

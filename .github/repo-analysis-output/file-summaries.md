@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 57
+Total files: 63
 
 ## app/__init__.py
 **Language:** Python  
@@ -38,8 +38,8 @@ Total files: 57
 **Role:** router  
 **Role Justification:** filename contains routing term  
 **Summary:** Python routing configuration (role: router)  
-**Size:** 38.76 KB  
-**LOC:** 869  
+**Size:** 40.33 KB  
+**LOC:** 908  
 **TODOs/FIXMEs:** 0  
 
 ## app/core/__init__.py
@@ -65,8 +65,8 @@ Total files: 57
 **Role:** entry-point  
 **Role Justification:** common entry point name 'main'  
 **Summary:** Python main entry point (role: entry-point)  
-**Size:** 11.00 KB  
-**LOC:** 195  
+**Size:** 11.15 KB  
+**LOC:** 197  
 **TODOs/FIXMEs:** 0  
 
 ## app/middleware/__init__.py
@@ -76,6 +76,15 @@ Total files: 57
 **Summary:** Python module initialization (role: module-init)  
 **Size:** 0.70 KB  
 **LOC:** 3  
+**TODOs/FIXMEs:** 0  
+
+## app/middleware/metrics.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for metrics  
+**Size:** 3.34 KB  
+**LOC:** 63  
 **TODOs/FIXMEs:** 0  
 
 ## app/middleware/request_id.py
@@ -164,8 +173,8 @@ Total files: 57
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for job repository  
-**Size:** 25.16 KB  
-**LOC:** 520  
+**Size:** 27.81 KB  
+**LOC:** 566  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/job_store.py
@@ -182,8 +191,8 @@ Total files: 57
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm claude  
-**Size:** 13.95 KB  
-**LOC:** 278  
+**Size:** 16.33 KB  
+**LOC:** 324  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/llm_client.py
@@ -200,8 +209,8 @@ Total files: 57
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm gemini  
-**Size:** 15.47 KB  
-**LOC:** 297  
+**Size:** 17.60 KB  
+**LOC:** 341  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/llm_openai.py
@@ -209,8 +218,17 @@ Total files: 57
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm openai  
-**Size:** 15.22 KB  
-**LOC:** 290  
+**Size:** 17.83 KB  
+**LOC:** 340  
+**TODOs/FIXMEs:** 0  
+
+## app/services/metrics.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for metrics  
+**Size:** 9.79 KB  
+**LOC:** 217  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/model_registry.py
@@ -256,6 +274,15 @@ Total files: 57
 **Summary:** Python module initialization (role: module-init)  
 **Size:** 0.56 KB  
 **LOC:** 0  
+**TODOs/FIXMEs:** 0  
+
+## app/utils/logging_helpers.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for logging helpers  
+**Size:** 7.38 KB  
+**LOC:** 196  
 **TODOs/FIXMEs:** 0  
 
 ## app/utils/sanitization.py
@@ -402,6 +429,15 @@ Total files: 57
 **LOC:** 499  
 **TODOs/FIXMEs:** 0  
 
+## tests/test_logging_helpers.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 8.53 KB  
+**LOC:** 194  
+**TODOs/FIXMEs:** 0  
+
 ## tests/test_main.py
 **Language:** Python  
 **Role:** test  
@@ -409,6 +445,24 @@ Total files: 57
 **Summary:** Python test file (role: test)  
 **Size:** 5.60 KB  
 **LOC:** 115  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_metrics.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 7.12 KB  
+**LOC:** 124  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_metrics_endpoint.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 3.81 KB  
+**LOC:** 66  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_migrations.py

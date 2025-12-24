@@ -53,6 +53,7 @@
           "fastapi.HTTPException",
           "fastapi.Query",
           "fastapi.Request",
+          "fastapi.Response",
           "fastapi.status"
         ]
       }
@@ -115,6 +116,22 @@
       "external_dependencies": {
         "stdlib": [],
         "third-party": []
+      }
+    },
+    {
+      "id": "app/middleware/metrics.py",
+      "path": "app/middleware/metrics.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "logging",
+          "time"
+        ],
+        "third-party": [
+          "starlette.middleware.base.BaseHTTPMiddleware",
+          "starlette.requests.Request",
+          "starlette.responses.Response"
+        ]
       }
     },
     {
@@ -342,6 +359,26 @@
       }
     },
     {
+      "id": "app/services/metrics.py",
+      "path": "app/services/metrics.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "logging",
+          "threading",
+          "typing.Optional"
+        ],
+        "third-party": [
+          "prometheus_client.CONTENT_TYPE_LATEST",
+          "prometheus_client.CollectorRegistry",
+          "prometheus_client.Counter",
+          "prometheus_client.Gauge",
+          "prometheus_client.Histogram",
+          "prometheus_client.generate_latest"
+        ]
+      }
+    },
+    {
       "id": "app/services/model_registry.py",
       "path": "app/services/model_registry.py",
       "type": "file",
@@ -404,6 +441,21 @@
       "type": "file",
       "external_dependencies": {
         "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "app/utils/logging_helpers.py",
+      "path": "app/utils/logging_helpers.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "hashlib",
+          "logging",
+          "typing.Any",
+          "typing.Dict",
+          "typing.Optional"
+        ],
         "third-party": []
       }
     },
@@ -651,6 +703,19 @@
       }
     },
     {
+      "id": "tests/test_logging_helpers.py",
+      "path": "tests/test_logging_helpers.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "logging"
+        ],
+        "third-party": [
+          "pytest"
+        ]
+      }
+    },
+    {
       "id": "tests/test_main.py",
       "path": "tests/test_main.py",
       "type": "file",
@@ -659,6 +724,33 @@
         "third-party": [
           "fastapi.FastAPI",
           "fastapi.Query",
+          "fastapi.testclient.TestClient",
+          "pytest"
+        ]
+      }
+    },
+    {
+      "id": "tests/test_metrics.py",
+      "path": "tests/test_metrics.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "prometheus_client.CollectorRegistry",
+          "pytest"
+        ]
+      }
+    },
+    {
+      "id": "tests/test_metrics_endpoint.py",
+      "path": "tests/test_metrics_endpoint.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "importlib.reload",
+          "os"
+        ],
+        "third-party": [
           "fastapi.testclient.TestClient",
           "pytest"
         ]
@@ -908,6 +1000,10 @@
       "target": "app/services/model_registry.py"
     },
     {
+      "source": "app/api/routes.py",
+      "target": "app/services/metrics.py"
+    },
+    {
       "source": "app/core/__init__.py",
       "target": "app/core/config.py"
     },
@@ -932,8 +1028,20 @@
       "target": "app/services/store_singleton.py"
     },
     {
+      "source": "app/main.py",
+      "target": "app/middleware/metrics.py"
+    },
+    {
       "source": "app/middleware/__init__.py",
       "target": "app/middleware/request_id.py"
+    },
+    {
+      "source": "app/middleware/metrics.py",
+      "target": "app/services/metrics.py"
+    },
+    {
+      "source": "app/middleware/metrics.py",
+      "target": "app/utils/logging_helpers.py"
     },
     {
       "source": "app/models/request.py",
@@ -972,12 +1080,28 @@
       "target": "app/services/db/connection.py"
     },
     {
+      "source": "app/services/job_repository.py",
+      "target": "app/services/metrics.py"
+    },
+    {
+      "source": "app/services/job_repository.py",
+      "target": "app/utils/logging_helpers.py"
+    },
+    {
       "source": "app/services/job_store.py",
       "target": "app/models/job.py"
     },
     {
       "source": "app/services/llm_claude.py",
       "target": "app/services/llm_client.py"
+    },
+    {
+      "source": "app/services/llm_claude.py",
+      "target": "app/utils/logging_helpers.py"
+    },
+    {
+      "source": "app/services/llm_claude.py",
+      "target": "app/services/metrics.py"
     },
     {
       "source": "app/services/llm_client.py",
@@ -1004,8 +1128,28 @@
       "target": "app/services/llm_client.py"
     },
     {
+      "source": "app/services/llm_gemini.py",
+      "target": "app/utils/logging_helpers.py"
+    },
+    {
+      "source": "app/services/llm_gemini.py",
+      "target": "app/services/metrics.py"
+    },
+    {
       "source": "app/services/llm_openai.py",
       "target": "app/services/llm_client.py"
+    },
+    {
+      "source": "app/services/llm_openai.py",
+      "target": "app/utils/logging_helpers.py"
+    },
+    {
+      "source": "app/services/llm_openai.py",
+      "target": "app/services/metrics.py"
+    },
+    {
+      "source": "app/services/metrics.py",
+      "target": "app/core/config.py"
     },
     {
       "source": "app/services/model_registry.py",
@@ -1160,8 +1304,28 @@
       "target": "app/services/llm_client.py"
     },
     {
+      "source": "tests/test_logging_helpers.py",
+      "target": "app/utils/logging_helpers.py"
+    },
+    {
       "source": "tests/test_main.py",
       "target": "app/main.py"
+    },
+    {
+      "source": "tests/test_metrics.py",
+      "target": "app/services/metrics.py"
+    },
+    {
+      "source": "tests/test_metrics_endpoint.py",
+      "target": "app/main.py"
+    },
+    {
+      "source": "tests/test_metrics_endpoint.py",
+      "target": "app/services/metrics.py"
+    },
+    {
+      "source": "tests/test_metrics_endpoint.py",
+      "target": "app/core/config.py"
     },
     {
       "source": "tests/test_model_registry.py",
@@ -1330,6 +1494,7 @@
       "datetime.timezone",
       "functools.cached_property",
       "hashlib",
+      "importlib.reload",
       "json",
       "logging",
       "logging.config.fileConfig",
@@ -1370,6 +1535,7 @@
       "fastapi.Header",
       "fastapi.Query",
       "fastapi.Request",
+      "fastapi.Response",
       "fastapi.exceptions.RequestValidationError",
       "fastapi.middleware.cors.CORSMiddleware",
       "fastapi.responses.JSONResponse",
@@ -1379,6 +1545,12 @@
       "google.genai.types",
       "openai",
       "openai.OpenAI",
+      "prometheus_client.CONTENT_TYPE_LATEST",
+      "prometheus_client.CollectorRegistry",
+      "prometheus_client.Counter",
+      "prometheus_client.Gauge",
+      "prometheus_client.Histogram",
+      "prometheus_client.generate_latest",
       "pydantic.BaseModel",
       "pydantic.Field",
       "pydantic.ValidationError",
@@ -1404,7 +1576,7 @@
       "starlette.responses.Response",
       "uvicorn"
     ],
-    "stdlib_count": 34,
-    "third-party_count": 45
+    "stdlib_count": 35,
+    "third-party_count": 52
   }
 }

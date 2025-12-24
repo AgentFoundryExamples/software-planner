@@ -25,6 +25,7 @@
     └── config.py
   ├── middleware
     ├── __init__.py
+    ├── metrics.py
     └── request_id.py
   ├── models
     ├── __init__.py
@@ -43,12 +44,14 @@
     ├── llm_client.py
     ├── llm_gemini.py
     ├── llm_openai.py
+    ├── metrics.py
     ├── model_registry.py
     ├── planner.py
     ├── rate_limiter.py
     └── store_singleton.py
   ├── utils
     ├── __init__.py
+    ├── logging_helpers.py
     └── sanitization.py
   ├── __init__.py
   └── main.py
@@ -72,7 +75,10 @@
   ├── test_llm_client.py
   ├── test_llm_gemini.py
   ├── test_llm_openai.py
+  ├── test_logging_helpers.py
   ├── test_main.py
+  ├── test_metrics.py
+  ├── test_metrics_endpoint.py
   ├── test_migrations.py
   ├── test_model_registry.py
   ├── test_models_endpoint.py

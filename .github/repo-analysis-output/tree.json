@@ -116,6 +116,10 @@
             },
             {
               "type": "file",
+              "name": "metrics.py"
+            },
+            {
+              "type": "file",
               "name": "request_id.py"
             }
           ]
@@ -194,6 +198,10 @@
             },
             {
               "type": "file",
+              "name": "metrics.py"
+            },
+            {
+              "type": "file",
               "name": "model_registry.py"
             },
             {
@@ -217,6 +225,10 @@
             {
               "type": "file",
               "name": "__init__.py"
+            },
+            {
+              "type": "file",
+              "name": "logging_helpers.py"
             },
             {
               "type": "file",
@@ -320,7 +332,19 @@
         },
         {
           "type": "file",
+          "name": "test_logging_helpers.py"
+        },
+        {
+          "type": "file",
           "name": "test_main.py"
+        },
+        {
+          "type": "file",
+          "name": "test_metrics.py"
+        },
+        {
+          "type": "file",
+          "name": "test_metrics_endpoint.py"
         },
         {
           "type": "file",
