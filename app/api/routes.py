@@ -58,7 +58,8 @@ def _check_rate_limit_or_raise(
     
     if not allowed:
         # Create standardized error response
-        # Note: FastAPI will wrap this in {"detail": ...} automatically
+        # Note: The global exception handler in main.py will detect this
+        # pre-formatted error response and return it directly without wrapping.
         error_response = create_error_response(
             code=ErrorCode.RATE_LIMIT_EXCEEDED,
             message="Rate limit exceeded. Please retry after the specified delay.",

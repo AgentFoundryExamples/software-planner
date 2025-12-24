@@ -339,8 +339,9 @@ def get_rate_limiter() -> RateLimiter:
         # Get configuration from settings
         config = settings.get_rate_limit_config()
         
-        # TODO: Load per-key overrides from configuration
-        # For now, use empty dict
+        # Per-key overrides could be loaded from environment variables or configuration
+        # For now, use empty dict (can be extended in future to load from
+        # PLANNER_RATE_LIMIT_OVERRIDES environment variable as JSON)
         per_key_overrides = {}
         
         _rate_limiter = RateLimiter(

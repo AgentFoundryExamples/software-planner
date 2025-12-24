@@ -279,11 +279,10 @@ class TestRateLimitingWithRealLimiter:
         """Test that different API keys have independent rate limits."""
         client, limiter = client_with_real_limiter
         
-        # Use truly unique keys with timestamp to avoid any cross-test issues
-        import time
-        timestamp = str(int(time.time() * 1000000))  # Microsecond timestamp
-        key1 = f"unique-key-separate-1-{timestamp}"
-        key2 = f"unique-key-separate-2-{timestamp}"
+        # Use UUID for truly unique keys to avoid any cross-test issues
+        import uuid
+        key1 = f"unique-key-1-{uuid.uuid4().hex[:8]}"
+        key2 = f"unique-key-2-{uuid.uuid4().hex[:8]}"
         
         # Key 1 makes 3 requests (hits limit)
         for i in range(3):
