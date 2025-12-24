@@ -119,8 +119,21 @@ compose-up:
 	@if [ ! -f .env ]; then \
 		echo "⚠ WARNING: .env file not found. Creating from .env.example..."; \
 		cp .env.example .env; \
-		echo "✓ Created .env file. Please edit it to set LLM_API_KEY and other required variables."; \
+		echo "✓ Created .env file."; \
 		echo ""; \
+		echo "⚠ IMPORTANT: You must edit .env and set LLM_API_KEY before services will work!"; \
+		echo "   Example: LLM_API_KEY=sk-your-openai-api-key-here"; \
+		echo ""; \
+		echo "   After editing .env, run 'make compose-up' again."; \
+		exit 1; \
+	fi
+	@if ! grep -q "^LLM_API_KEY=sk-" .env 2>/dev/null; then \
+		echo "⚠ WARNING: LLM_API_KEY appears to be missing or invalid in .env file!"; \
+		echo "   The API will fail to start without a valid OpenAI API key."; \
+		echo "   Please edit .env and set: LLM_API_KEY=sk-your-openai-api-key-here"; \
+		echo ""; \
+		echo "   Press CTRL+C to cancel, or wait 5 seconds to continue anyway..."; \
+		sleep 5; \
 	fi
 	docker compose up -d
 	@echo ""

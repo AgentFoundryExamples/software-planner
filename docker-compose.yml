@@ -64,8 +64,10 @@ services:
       # GOOGLE_API_KEY: ${GOOGLE_API_KEY}
       
       # API Authentication (optional for dev, required for production)
-      # Note: Leave PLANNER_API_KEYS empty or set to JSON array like '["key1","key2"]'
-      # Do not pass environment variable if using default (no authentication)
+      # Note: PLANNER_API_KEYS can be set via .env file as JSON array like '["key1","key2"]'
+      # If not set in .env, authentication is disabled (suitable for local development only)
+      # Uncomment and set in .env for production:
+      # PLANNER_API_KEYS: ${PLANNER_API_KEYS}
       PLANNER_API_KEYS_REQUIRED: ${PLANNER_API_KEYS_REQUIRED:-false}
       PLANNER_API_KEY_MIN_LENGTH: ${PLANNER_API_KEY_MIN_LENGTH:-16}
       
@@ -75,6 +77,9 @@ services:
       PLANNER_TRUST_PROXY_HEADERS: ${PLANNER_TRUST_PROXY_HEADERS:-false}
       
       # CORS configuration
+      # Note: Default settings allow all origins (development only)
+      # For production, set ALLOWED_ORIGINS in .env to specific domains like:
+      # ALLOWED_ORIGINS=["https://app.example.com","https://admin.example.com"]
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-["*"]}
       CORS_WILDCARD_ENABLED: ${CORS_WILDCARD_ENABLED:-true}
       ALLOWED_CREDENTIALS: ${ALLOWED_CREDENTIALS:-false}
@@ -91,7 +96,7 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()\""]
+      test: ["CMD-SHELL", "python -c \"import os, urllib.request; port = os.environ.get('PORT', '8000'); urllib.request.urlopen(f'http://localhost:{port}/health').read()\""]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -102,12 +107,14 @@ services:
     entrypoint: []
     command: >
       sh -c "
-        echo 'Waiting for database to be ready...' &&
-        alembic upgrade head &&
-        echo 'Database migrations completed successfully' &&
+        set -e
+        echo 'Waiting for database to be ready...'
+        alembic upgrade head
+        echo 'Database migrations completed successfully'
         exec uvicorn app.main:app --host 0.0.0.0 --port $${PORT:-8000} --workers $${WORKERS:-1}
       "
     # Note: Double $$ escapes variable so shell expands it at runtime, not Docker Compose
+    # set -e ensures script exits immediately on any error
 
 # Named volumes for data persistence
 volumes:
