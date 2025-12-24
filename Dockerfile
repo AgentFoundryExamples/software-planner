@@ -17,8 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy only requirements files first for better layer caching
-# Use requirements.txt (not requirements-lock.txt) as it contains only PyPI packages
-# requirements-lock.txt includes system packages that aren't available on PyPI
+# Note: Use requirements.txt instead of requirements-lock.txt for Docker builds
+# because requirements-lock.txt includes system-level packages (bcc, cloud-init, etc.)
+# that are not available on PyPI and would cause build failures.
+# requirements.txt contains only PyPI-installable packages with pinned versions.
 COPY requirements.txt .
 
 # Install Python dependencies in a virtual environment
