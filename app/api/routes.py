@@ -468,13 +468,7 @@ def _background_planner_worker(
                 "error": str(e),
                 "type": type(e).__name__
             }
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            
-            loop.run_until_complete(job_repository.mark_failed(job_id, error_dict))
+            asyncio.run(job_repository.mark_failed(job_id, error_dict))
         except Exception as update_exc:
             # If we can't even update the job status, log this critical failure
             # to avoid masking the original exception and losing all trace of the error.

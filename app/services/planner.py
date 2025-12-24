@@ -41,29 +41,17 @@ MAX_STRING_FIELD_LENGTH = 10000  # Maximum length for purpose/vision fields
 MAX_ARRAY_ITEM_LENGTH = 5000     # Maximum length for items in must/dont/nice arrays
 
 
-def _run_async(coro):
-    """Helper to run async code from sync context.
+def _run_async_safe(coro):
+    """Safely run async code from sync context.
     
-    Note: This uses asyncio.get_event_loop() and falls back to creating a new loop.
-    This is necessary because generate_plan is synchronous but needs to call async
-    repository methods. A better long-term solution would be to make generate_plan
-    async, but that requires broader changes to the codebase.
+    This uses asyncio.run() which creates a new event loop, runs the coroutine,
+    and properly cleans up. This is safer than trying to reuse existing event loops
+    which can cause deadlocks or resource leaks in multi-threaded contexts.
+    
+    Note: Each call creates a fresh event loop. For better performance, consider
+    making the calling code async instead of using this wrapper.
     """
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # We're in an async context but called from sync code
-            # Create a new loop for this thread
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            return loop.run_until_complete(coro)
-        else:
-            return loop.run_until_complete(coro)
-    except RuntimeError:
-        # No event loop in current thread - create one
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        return loop.run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 def _normalize_specs(data: dict[str, Any]) -> dict[str, Any]:
@@ -219,16 +207,9 @@ def generate_plan(
     """
     # If job tracking is enabled, validate job exists before updating
     if job_repository and job_id:
-        # Run async operations in event loop
+        # Run async operations safely
         try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            # No event loop in current thread - create one
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        try:
-            job = loop.run_until_complete(job_repository.get_job(job_id))
+            job = _run_async_safe(job_repository.get_job(job_id))
         except Exception as e:
             logger.error(
                 "Failed to get job during planning",
@@ -251,7 +232,7 @@ def generate_plan(
                 extra={"job_id": job_id, "description_length": len(description)}
             )
             try:
-                loop.run_until_complete(job_repository.mark_running(job_id))
+                _run_async_safe(job_repository.mark_running(job_id))
             except Exception as e:
                 logger.error(
                     "Failed to mark job as running",
@@ -332,13 +313,7 @@ def generate_plan(
             # Convert response to dict preserving top-level 'specs'
             result_dict = response.model_dump()
             try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            
-            try:
-                loop.run_until_complete(job_repository.mark_succeeded(job_id, result_dict))
+                _run_async_safe(job_repository.mark_succeeded(job_id, result_dict))
             except Exception as e:
                 logger.error(
                     "Failed to mark job as succeeded",
@@ -370,13 +345,7 @@ def generate_plan(
                     "error": error_msg,
                     "type": error_type_name
                 }
-                try:
-                    loop = asyncio.get_event_loop()
-                except RuntimeError:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                
-                loop.run_until_complete(job_repository.mark_failed(job_id, error_dict))
+                _run_async_safe(job_repository.mark_failed(job_id, error_dict))
             except Exception as update_exc:
                 logger.error(
                     f"Failed to update job status after {error_category} error",
@@ -404,13 +373,7 @@ def generate_plan(
                     "error": error_msg,
                     "type": type(e).__name__
                 }
-                try:
-                    loop = asyncio.get_event_loop()
-                except RuntimeError:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                
-                loop.run_until_complete(job_repository.mark_failed(job_id, error_dict))
+                _run_async_safe(job_repository.mark_failed(job_id, error_dict))
             except Exception as update_exc:
                 logger.error(
                     "Failed to update job status after unexpected error",

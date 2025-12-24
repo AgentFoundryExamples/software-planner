@@ -152,11 +152,32 @@ class JobRepository:
                 return job
                 
             except IntegrityError as e:
-                # Duplicate key - try again with new UUID
-                if "duplicate key" in str(e).lower() or "unique constraint" in str(e).lower():
+                # Check if this is a primary key violation (duplicate job_id)
+                # PostgreSQL error code 23505 is unique_violation
+                # We check both the error code and the constraint name for robustness
+                orig_exception = getattr(e, 'orig', None)
+                is_duplicate = False
+                
+                if orig_exception:
+                    # Check pgcode if available (asyncpg provides this)
+                    pgcode = getattr(orig_exception, 'pgcode', None)
+                    if pgcode == '23505':  # unique_violation
+                        is_duplicate = True
+                    # Also check constraint name if available
+                    constraint = getattr(orig_exception, 'constraint_name', '')
+                    if constraint and 'job_id' in constraint.lower():
+                        is_duplicate = True
+                
+                # Fallback to string matching if error details not available
+                if not is_duplicate:
+                    error_str = str(e).lower()
+                    if ("duplicate key" in error_str or "unique constraint" in error_str) and "job_id" in error_str:
+                        is_duplicate = True
+                
+                if is_duplicate:
                     logger.warning(
                         f"UUID collision detected on attempt {attempt + 1}, retrying",
-                        extra={"job_id": job_id}
+                        extra={"job_id": job_id, "attempt": attempt + 1}
                     )
                     continue
                 else:
@@ -624,57 +645,35 @@ class JobRepository:
         
         try:
             async with self.engine.begin() as conn:
-                # Find all RUNNING jobs
+                # Atomically update all RUNNING jobs to FAILED
                 result = await conn.execute(
                     text("""
-                        SELECT job_id, started_at
-                        FROM jobs
-                        WHERE status = :status
+                        UPDATE jobs
+                        SET status = :status,
+                            error = :error,
+                            started_at = COALESCE(started_at, :now),
+                            finished_at = :now,
+                            updated_at = :now
+                        WHERE status = 'RUNNING'
                     """),
-                    {"status": "RUNNING"}
+                    {
+                        "status": "FAILED",
+                        "error": error_json,
+                        "now": now,
+                    }
                 )
                 
-                stuck_jobs = result.fetchall()
+                recovered_count = result.rowcount
                 
-                if not stuck_jobs:
+                if recovered_count > 0:
+                    logger.warning(
+                        f"Startup recovery completed: {recovered_count} jobs marked as FAILED",
+                        extra={"recovered_count": recovered_count}
+                    )
+                else:
                     logger.info("No stuck jobs found during startup recovery")
-                    return 0
                 
-                # Mark all stuck jobs as FAILED
-                for job in stuck_jobs:
-                    started_at = job.started_at or now
-                    
-                    await conn.execute(
-                        text("""
-                            UPDATE jobs
-                            SET status = :status,
-                                error = :error,
-                                started_at = :started_at,
-                                finished_at = :finished_at,
-                                updated_at = :updated_at
-                            WHERE job_id = :job_id
-                        """),
-                        {
-                            "job_id": job.job_id,
-                            "status": "FAILED",
-                            "error": error_json,
-                            "started_at": started_at,
-                            "finished_at": now,
-                            "updated_at": now
-                        }
-                    )
-                    
-                    logger.info(
-                        "Recovered stuck job from RUNNING to FAILED",
-                        extra={"job_id": job.job_id}
-                    )
-                
-                logger.info(
-                    f"Startup recovery completed: {len(stuck_jobs)} jobs marked as FAILED",
-                    extra={"recovered_count": len(stuck_jobs)}
-                )
-                
-                return len(stuck_jobs)
+                return recovered_count
         
         except Exception as e:
             logger.error(

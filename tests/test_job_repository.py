@@ -426,7 +426,7 @@ class TestJobRepositoryRecoverStuckJobs:
     async def test_recover_stuck_jobs_none_stuck(self, job_repository, mock_engine):
         """Test recovery when no jobs are stuck."""
         mock_result = MagicMock()
-        mock_result.fetchall = MagicMock(return_value=[])
+        mock_result.rowcount = 0  # No rows affected
         
         mock_conn = AsyncMock()
         mock_conn.execute = AsyncMock(return_value=mock_result)
@@ -437,21 +437,14 @@ class TestJobRepositoryRecoverStuckJobs:
         count = await job_repository.recover_stuck_jobs()
         
         assert count == 0
+        # Verify single UPDATE was called
+        assert mock_conn.execute.call_count == 1
     
     @pytest.mark.asyncio
     async def test_recover_stuck_jobs_marks_failed(self, job_repository, mock_engine):
         """Test recovery marks RUNNING jobs as FAILED."""
-        # Mock two stuck jobs
-        mock_job1 = MagicMock()
-        mock_job1.job_id = "job-1"
-        mock_job1.started_at = datetime.now(timezone.utc)
-        
-        mock_job2 = MagicMock()
-        mock_job2.job_id = "job-2"
-        mock_job2.started_at = datetime.now(timezone.utc)
-        
         mock_result = MagicMock()
-        mock_result.fetchall = MagicMock(return_value=[mock_job1, mock_job2])
+        mock_result.rowcount = 2  # Two rows affected
         
         mock_conn = AsyncMock()
         mock_conn.execute = AsyncMock(return_value=mock_result)
@@ -462,5 +455,5 @@ class TestJobRepositoryRecoverStuckJobs:
         count = await job_repository.recover_stuck_jobs()
         
         assert count == 2
-        # Verify UPDATE was called for each job
-        assert mock_conn.execute.call_count == 3  # 1 SELECT + 2 UPDATEs
+        # Verify single UPDATE was called (optimized single query)
+        assert mock_conn.execute.call_count == 1
