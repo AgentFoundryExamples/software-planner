@@ -21,6 +21,15 @@ Key features:
 - Configurable retry logic with exponential backoff for transient errors
 - Structured logging without exposing secrets
 - Proper error classification and handling
+
+TODO:
+- Update to use OpenAI responses api
+- Basic example: 
+    - client = OpenAI()
+      response = client.responses.create(
+        model="gpt-5.1",
+        input="Write a one-sentence bedtime story about a unicorn."
+      )
 """
 
 import logging
