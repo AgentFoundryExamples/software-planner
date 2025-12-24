@@ -603,8 +603,8 @@ def _background_planner_worker(
 async def create_plan_async(
     request: PlanRequest,
     background_tasks: BackgroundTasks,
-    job_repository: JobRepository = Depends(get_job_store),
-    api_key: str = Depends(require_api_key)
+    api_key: str = Depends(require_api_key),
+    job_repository: JobRepository = Depends(get_job_store)
 ) -> dict:
     """Create an async planning job that executes in the background.
     

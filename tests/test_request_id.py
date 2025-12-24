@@ -252,37 +252,57 @@ class TestRequestIDOnWriteEndpoints:
         assert response.status_code == 200
         assert response.headers["X-Request-ID"] == client_request_id
     
-    @pytest.mark.asyncio
-    async def test_request_id_on_post_plans(self, client_no_auth):
+    def test_request_id_on_post_plans(self, client_no_auth):
         """Test that POST /plans includes request ID in response."""
-        response = client_no_auth.post(
-            "/api/v1/plans",
-            json={"description": "Build a REST API"}
-        )
+        from app.services.job_store import JobStore
+        from app.services.store_singleton import get_job_store
         
-        assert response.status_code == 202
-        assert "X-Request-ID" in response.headers
+        # Override job store dependency
+        test_app = client_no_auth.app
+        mock_job_store = JobStore()
+        test_app.dependency_overrides[get_job_store] = lambda: mock_job_store
         
-        # Should be a valid UUID
-        request_id = response.headers["X-Request-ID"]
         try:
-            uuid.UUID(request_id)
-        except ValueError:
-            pytest.fail(f"Invalid request ID on POST /plans: {request_id}")
+            response = client_no_auth.post(
+                "/api/v1/plans",
+                json={"description": "Build a REST API"}
+            )
+            
+            assert response.status_code == 202
+            assert "X-Request-ID" in response.headers
+            
+            # Should be a valid UUID
+            request_id = response.headers["X-Request-ID"]
+            try:
+                uuid.UUID(request_id)
+            except ValueError:
+                pytest.fail(f"Invalid request ID on POST /plans: {request_id}")
+        finally:
+            test_app.dependency_overrides.clear()
     
-    @pytest.mark.asyncio
-    async def test_request_id_on_post_plans_with_client_id(self, client_no_auth):
+    def test_request_id_on_post_plans_with_client_id(self, client_no_auth):
         """Test that POST /plans echoes client-provided request ID."""
+        from app.services.job_store import JobStore
+        from app.services.store_singleton import get_job_store
+        
         client_request_id = str(uuid.uuid4())
         
-        response = client_no_auth.post(
-            "/api/v1/plans",
-            json={"description": "Build a REST API"},
-            headers={"X-Request-ID": client_request_id}
-        )
+        # Override job store dependency
+        test_app = client_no_auth.app
+        mock_job_store = JobStore()
+        test_app.dependency_overrides[get_job_store] = lambda: mock_job_store
         
-        assert response.status_code == 202
-        assert response.headers["X-Request-ID"] == client_request_id
+        try:
+            response = client_no_auth.post(
+                "/api/v1/plans",
+                json={"description": "Build a REST API"},
+                headers={"X-Request-ID": client_request_id}
+            )
+            
+            assert response.status_code == 202
+            assert response.headers["X-Request-ID"] == client_request_id
+        finally:
+            test_app.dependency_overrides.clear()
 
 
 class TestRequestIDOnErrorResponses:

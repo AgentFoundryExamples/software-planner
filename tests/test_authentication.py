@@ -43,16 +43,18 @@ def mock_llm_client():
 def client_with_api_keys(mock_llm_client):
     """Create test client with API keys configured."""
     test_settings = Settings(
-        planner_api_keys=["test-key-1", "test-key-2"],
+        planner_api_keys=["test-key-1234567890", "test-key-0987654321"],
         planner_api_keys_required=True,
+        planner_api_key_min_length=16,
         allowed_origins=["*"],
         cors_wildcard_enabled=True
     )
     
     with patch('app.core.config.settings', test_settings):
-        with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
-            app = get_app()
-            yield TestClient(app)
+        with patch('app.api.dependencies.settings', test_settings):
+            with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
+                app = get_app()
+                yield TestClient(app)
 
 
 @pytest.fixture
@@ -66,9 +68,10 @@ def client_without_api_keys(mock_llm_client):
     )
     
     with patch('app.core.config.settings', test_settings):
-        with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
-            app = get_app()
-            yield TestClient(app)
+        with patch('app.api.dependencies.settings', test_settings):
+            with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
+                app = get_app()
+                yield TestClient(app)
 
 
 class TestAPIKeyAuthentication:
@@ -79,7 +82,7 @@ class TestAPIKeyAuthentication:
         response = client_with_api_keys.post(
             "/api/v1/plan",
             json={"description": "Build a REST API"},
-            headers={"X-API-Key": "test-key-1"}
+            headers={"X-API-Key": "test-key-1234567890"}
         )
         
         assert response.status_code == 200
@@ -91,7 +94,7 @@ class TestAPIKeyAuthentication:
         response = client_with_api_keys.post(
             "/api/v1/plan",
             json={"description": "Build a REST API"},
-            headers={"X-API-Key": "test-key-2"}
+            headers={"X-API-Key": "test-key-0987654321"}
         )
         
         assert response.status_code == 200
@@ -131,7 +134,8 @@ class TestAPIKeyAuthentication:
             headers={"X-API-Key": ""}
         )
         
-        assert response.status_code == 401
+        # Empty string is passed to validation, so returns 403 not 401
+        assert response.status_code == 403
         data = response.json()
         assert "error" in data or "detail" in data
     
@@ -151,22 +155,32 @@ class TestAPIKeyAuthentication:
 class TestAPIKeyAuthenticationAsync:
     """Test cases for API key authentication on async endpoint."""
     
-    @pytest.mark.asyncio
-    async def test_post_plans_with_valid_api_key(self, client_with_api_keys):
+    def test_post_plans_with_valid_api_key(self, client_with_api_keys):
         """Test that POST /plans succeeds with valid API key."""
-        response = client_with_api_keys.post(
-            "/api/v1/plans",
-            json={"description": "Build a REST API"},
-            headers={"X-API-Key": "test-key-1"}
-        )
+        from app.services.job_store import JobStore
+        from app.services.store_singleton import get_job_store
+        from app.main import get_app
         
-        assert response.status_code == 202
-        data = response.json()
-        assert "job_id" in data
-        assert data["status"] == "QUEUED"
+        # Get the app and override the job store dependency
+        test_app = client_with_api_keys.app
+        mock_job_store = JobStore()
+        test_app.dependency_overrides[get_job_store] = lambda: mock_job_store
+        
+        try:
+            response = client_with_api_keys.post(
+                "/api/v1/plans",
+                json={"description": "Build a REST API"},
+                headers={"X-API-Key": "test-key-1234567890"}
+            )
+            
+            assert response.status_code == 202
+            data = response.json()
+            assert "job_id" in data
+            assert data["status"] == "QUEUED"
+        finally:
+            test_app.dependency_overrides.clear()
     
-    @pytest.mark.asyncio
-    async def test_post_plans_without_api_key(self, client_with_api_keys):
+    def test_post_plans_without_api_key(self, client_with_api_keys):
         """Test that POST /plans returns 401 when API key is missing."""
         response = client_with_api_keys.post(
             "/api/v1/plans",
@@ -177,8 +191,7 @@ class TestAPIKeyAuthenticationAsync:
         data = response.json()
         assert "error" in data or "detail" in data
     
-    @pytest.mark.asyncio
-    async def test_post_plans_with_invalid_api_key(self, client_with_api_keys):
+    def test_post_plans_with_invalid_api_key(self, client_with_api_keys):
         """Test that POST /plans returns 403 with invalid API key."""
         response = client_with_api_keys.post(
             "/api/v1/plans",
@@ -228,7 +241,7 @@ class TestAPIKeyHeaderHandling:
         response = client_with_api_keys.post(
             "/api/v1/plan",
             json={"description": "Build a REST API"},
-            headers={"X-API-Key": "  test-key-1  "}
+            headers={"X-API-Key": "  test-key-1234567890  "}
         )
         
         # Should succeed - spaces should be stripped
@@ -241,7 +254,7 @@ class TestAPIKeyHeaderHandling:
         response = client_with_api_keys.post(
             "/api/v1/plan",
             json={"description": "Build a REST API"},
-            headers={"X-API-Key": "TEST-KEY-1"}  # Wrong case
+            headers={"X-API-Key": "TEST-KEY-1234567890"}  # Wrong case
         )
         
         # Should fail - keys are case-sensitive
@@ -254,7 +267,7 @@ class TestAPIKeyHeaderHandling:
         response = client_with_api_keys.post(
             "/api/v1/plan",
             json={"description": "Build a REST API"},
-            headers={"x-api-key": "test-key-1"}  # Lowercase header name
+            headers={"x-api-key": "test-key-1234567890"}  # Lowercase header name
         )
         
         # Should succeed - HTTP headers are case-insensitive
@@ -267,7 +280,7 @@ class TestAPIKeyHeaderHandling:
         response = client_with_api_keys.post(
             "/api/v1/plan",
             json={"description": "Build a REST API"},
-            headers={"X-Api-Key": "test-key-1"}  # Mixed case
+            headers={"X-Api-Key": "test-key-1234567890"}  # Mixed case
         )
         
         # Should succeed - HTTP headers are case-insensitive

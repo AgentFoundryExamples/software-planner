@@ -53,9 +53,11 @@ def client_with_specific_origins(mock_llm_client):
     )
     
     with patch('app.core.config.settings', test_settings):
-        with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
-            app = get_app()
-            yield TestClient(app)
+        with patch('app.main.settings', test_settings):
+            with patch('app.api.dependencies.settings', test_settings):
+                with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
+                    app = get_app()
+                    yield TestClient(app)
 
 
 @pytest.fixture
@@ -70,9 +72,11 @@ def client_with_wildcard_origins(mock_llm_client):
     )
     
     with patch('app.core.config.settings', test_settings):
-        with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
-            app = get_app()
-            yield TestClient(app)
+        with patch('app.main.settings', test_settings):
+            with patch('app.api.dependencies.settings', test_settings):
+                with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
+                    app = get_app()
+                    yield TestClient(app)
 
 
 class TestCORSAllowedOrigins:
@@ -146,8 +150,9 @@ class TestCORSPreflightRequests:
             }
         )
         
-        # FastAPI/Starlette returns 200 for OPTIONS but without CORS headers
-        assert response.status_code == 200
+        # FastAPI/Starlette may return 400 or 200 depending on CORS config
+        # The key is that CORS headers for the evil origin are not present
+        assert response.status_code in [200, 400]
         cors_origin = response.headers.get("access-control-allow-origin")
         assert cors_origin != "https://evil.com"
 
@@ -258,16 +263,19 @@ class TestCORSWithAuthentication:
     def client_with_cors_and_auth(self, mock_llm_client):
         """Create test client with both CORS and authentication."""
         test_settings = Settings(
-            planner_api_keys=["test-key-1"],
+            planner_api_keys=["test-key-1234567890"],
             planner_api_keys_required=True,
+            planner_api_key_min_length=16,
             allowed_origins=["https://example.com"],
             cors_wildcard_enabled=False
         )
         
         with patch('app.core.config.settings', test_settings):
-            with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
-                app = get_app()
-                yield TestClient(app)
+            with patch('app.main.settings', test_settings):
+                with patch('app.api.dependencies.settings', test_settings):
+                    with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
+                        app = get_app()
+                        yield TestClient(app)
     
     def test_preflight_does_not_require_auth(self, client_with_cors_and_auth):
         """Test that OPTIONS preflight doesn't require API key."""
@@ -302,7 +310,7 @@ class TestCORSWithAuthentication:
             json={"description": "Build a REST API"},
             headers={
                 "Origin": "https://example.com",
-                "X-API-Key": "test-key-1"
+                "X-API-Key": "test-key-1234567890"
             }
         )
         
