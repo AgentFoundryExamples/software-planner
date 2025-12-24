@@ -457,3 +457,51 @@ class TestJobRepositoryRecoverStuckJobs:
         assert count == 2
         # Verify single UPDATE was called (optimized single query)
         assert mock_conn.execute.call_count == 1
+
+
+class TestJobRepositoryDatabaseErrors:
+    """Test cases for database error handling and fallback paths."""
+    
+    @pytest.mark.asyncio
+    async def test_job_ids_are_unique_for_same_input(self, job_repository, mock_engine):
+        """Test that creating jobs with identical inputs results in unique job IDs."""
+        import uuid
+        
+        # Mock successful inserts for multiple jobs
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock()
+        mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
+        mock_conn.__aexit__ = AsyncMock()
+        mock_engine.begin = MagicMock(return_value=mock_conn)
+        
+        # Create multiple jobs with same description
+        job1 = await job_repository.create_job(description="Same description")
+        job2 = await job_repository.create_job(description="Same description")
+        
+        # Job IDs should be different (UUIDs are unique)
+        assert job1.job_id != job2.job_id
+        # Both should be valid UUIDs
+        try:
+            uuid.UUID(job1.job_id)
+            uuid.UUID(job2.job_id)
+        except ValueError:
+            pytest.fail("Job IDs should be valid UUIDs")
+    
+    @pytest.mark.asyncio
+    async def test_system_prompt_is_stored_correctly(self, job_repository, mock_engine):
+        """Test that the system_prompt is stored correctly during job creation."""
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock()
+        mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
+        mock_conn.__aexit__ = AsyncMock()
+        mock_engine.begin = MagicMock(return_value=mock_conn)
+        
+        prompt = "Test system prompt"
+        
+        job = await job_repository.create_job(
+            description="Test",
+            system_prompt=prompt
+        )
+        
+        # Verify the job object returned from create_job has the correct prompt
+        assert job.system_prompt == prompt

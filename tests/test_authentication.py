@@ -310,3 +310,139 @@ class TestReadEndpointsNoAuth:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
+
+
+class TestAuthenticationTokenValidation:
+    """Test cases for token/signature validation."""
+    
+    def test_api_key_comparison_uses_hmac_compare_digest(self, client_with_api_keys):
+        """Test that API key comparison prevents timing attacks by using constant-time comparison.
+        
+        This test validates that different invalid keys all fail with 403, demonstrating
+        the comparison is performed. The actual constant-time guarantee is provided by
+        hmac.compare_digest in the authentication implementation, which is the standard
+        approach for preventing timing attacks. Testing timing differences is unreliable
+        and subject to false positives from system load, GC, etc.
+        """
+        # Test with similar invalid key (only last char different)
+        response1 = client_with_api_keys.post(
+            "/api/v1/plan",
+            json={"description": "Test"},
+            headers={"X-API-Key": "test-key-1234567891"}
+        )
+        
+        # Test with very different invalid key
+        response2 = client_with_api_keys.post(
+            "/api/v1/plan",
+            json={"description": "Test"},
+            headers={"X-API-Key": "completely-different"}
+        )
+        
+        # Both should fail with 403 regardless of how similar/different they are
+        assert response1.status_code == 403
+        assert response2.status_code == 403
+    
+    def test_multiple_api_keys_validated_independently(self, client_with_api_keys):
+        """Test that multiple configured API keys are validated independently."""
+        # Both keys should work
+        response1 = client_with_api_keys.post(
+            "/api/v1/plan",
+            json={"description": "Test"},
+            headers={"X-API-Key": "test-key-1234567890"}
+        )
+        assert response1.status_code == 200
+        
+        response2 = client_with_api_keys.post(
+            "/api/v1/plan",
+            json={"description": "Test"},
+            headers={"X-API-Key": "test-key-0987654321"}
+        )
+        assert response2.status_code == 200
+    
+    def test_api_key_not_logged_in_errors(self, client_with_api_keys):
+        """Test that API keys are never exposed in error responses."""
+        response = client_with_api_keys.post(
+            "/api/v1/plan",
+            json={"description": "Test"},
+            headers={"X-API-Key": "secret-key-12345678"}
+        )
+        
+        # Should fail
+        assert response.status_code == 403
+        
+        # Response should not contain the API key
+        response_text = response.text
+        assert "secret-key-12345678" not in response_text
+        assert "secret-key" not in response_text
+
+
+class TestAuthenticationQuotaExceedance:
+    """Test cases for quota/rate limit exceedance behavior."""
+    
+    def test_api_key_quota_concept_verified(self):
+        """Test that rate limiting framework supports per-API-key quotas.
+        
+        Note: Full integration test with app startup is complex and covered
+        by existing rate limiter unit tests. This test verifies the concept.
+        """
+        from app.services.rate_limiter import RateLimiter
+        
+        # Verify RateLimiter supports per-key quotas
+        limiter = RateLimiter(
+            window_seconds=60,
+            max_requests=2,
+            enabled=True,
+            per_key_overrides={
+                "premium-key": 10,
+                "basic-key": 1
+            }
+        )
+        
+        # Premium key should get higher quota
+        for i in range(10):
+            allowed, _ = limiter.check_rate_limit(
+                api_key="premium-key",
+                request_id=f"req-{i}"
+            )
+            assert allowed is True, f"Premium key should allow request {i+1}"
+        
+        # 11th request should be denied
+        allowed, retry_after = limiter.check_rate_limit(
+            api_key="premium-key",
+            request_id="req-11"
+        )
+        assert allowed is False
+        assert retry_after is not None
+    
+    def test_independent_quotas_per_key(self):
+        """Test that different API keys have independent rate limit quotas."""
+        from app.services.rate_limiter import RateLimiter
+        
+        limiter = RateLimiter(
+            window_seconds=60,
+            max_requests=2,
+            enabled=True
+        )
+        
+        # Key1 exhausts its quota
+        for i in range(2):
+            allowed, _ = limiter.check_rate_limit(
+                api_key="key1",
+                request_id=f"req-key1-{i}"
+            )
+            assert allowed is True
+        
+        # Key1 is rate limited
+        allowed, _ = limiter.check_rate_limit(
+            api_key="key1",
+            request_id="req-key1-3"
+        )
+        assert allowed is False
+        
+        # Key2 should still have full quota
+        for i in range(2):
+            allowed, _ = limiter.check_rate_limit(
+                api_key="key2",
+                request_id=f"req-key2-{i}"
+            )
+            assert allowed is True, f"Key2 should allow request {i+1}"

@@ -394,3 +394,202 @@ class TestClientRouter:
         
         assert "not found" in str(exc_info.value).lower()
         assert "nonexistent-model" in str(exc_info.value)
+
+
+class TestProviderAdapters:
+    """Tests for provider-specific adapter implementations."""
+    
+    @patch('app.services.llm_openai.OpenAI')
+    def test_openai_adapter_constructs_request_correctly(self, mock_openai_class):
+        """Test that OpenAI adapter constructs request with correct parameters."""
+        from app.services.llm_openai import OpenAIClient
+        
+        # Mock OpenAI Responses API response structure
+        mock_client_instance = mock_openai_class.return_value
+        mock_response = type('obj', (object,), {
+            'output': [
+                type('obj', (object,), {
+                    'content': json.dumps({
+                        "specs": [{
+                            "purpose": "Test",
+                            "vision": "Vision",
+                            "must": [],
+                            "dont": [],
+                            "nice": []
+                        }]
+                    })
+                })()
+            ],
+            'usage': type('obj', (object,), {
+                'input_tokens': 100,
+                'output_tokens': 150,
+                'total_tokens': 250
+            })()
+        })()
+        mock_client_instance.responses.create.return_value = mock_response
+        
+        client = OpenAIClient(api_key="test-key", model="gpt-4")
+        result = client.generate_specs("Build API", system_prompt="Custom prompt")
+        
+        # Verify API was called with correct parameters
+        assert mock_client_instance.responses.create.called
+        call_kwargs = mock_client_instance.responses.create.call_args[1]
+        assert call_kwargs['model'] == 'gpt-4'
+        assert call_kwargs['input'] == 'Build API'
+        assert call_kwargs['instructions'] == 'Custom prompt'
+    
+    @patch('app.services.llm_openai.OpenAI')
+    def test_openai_adapter_handles_timeout_with_retry(self, mock_openai_class):
+        """Test that OpenAI adapter retries on timeout."""
+        from app.services.llm_openai import OpenAIClient
+        from openai import APITimeoutError
+        
+        mock_client_instance = mock_openai_class.return_value
+        # First two calls timeout, third succeeds
+        mock_response = type('obj', (object,), {
+            'output': [
+                type('obj', (object,), {
+                    'content': json.dumps({
+                        "specs": [{
+                            "purpose": "Test",
+                            "vision": "Vision",
+                            "must": [],
+                            "dont": [],
+                            "nice": []
+                        }]
+                    })
+                })()
+            ],
+            'usage': type('obj', (object,), {
+                'input_tokens': 100,
+                'output_tokens': 150,
+                'total_tokens': 250
+            })()
+        })()
+        mock_client_instance.responses.create.side_effect = [
+            APITimeoutError("Timeout"),
+            APITimeoutError("Timeout"),
+            mock_response
+        ]
+        
+        client = OpenAIClient(
+            api_key="test-key",
+            model="gpt-4",
+            max_retries=3,
+            initial_backoff=0.01  # Very small for testing
+        )
+        
+        # Should succeed after retries
+        with patch('time.sleep'):  # Mock sleep to speed up test
+            result = client.generate_specs("Build API")
+        
+        assert result is not None
+        assert "specs" in result
+        # Verify it was called 3 times (2 failures + 1 success)
+        assert mock_client_instance.responses.create.call_count == 3
+    
+    @patch('app.services.llm_openai.OpenAI')
+    def test_openai_adapter_logs_retry_attempts(self, mock_openai_class):
+        """Test that OpenAI adapter logs retry attempts without exposing secrets."""
+        from app.services.llm_openai import OpenAIClient
+        from openai import APITimeoutError
+        
+        mock_client_instance = mock_openai_class.return_value
+        mock_response = type('obj', (object,), {
+            'output': [
+                type('obj', (object,), {
+                    'content': json.dumps({
+                        "specs": [{
+                            "purpose": "Test",
+                            "vision": "Vision",
+                            "must": [],
+                            "dont": [],
+                            "nice": []
+                        }]
+                    })
+                })()
+            ],
+            'usage': type('obj', (object,), {
+                'input_tokens': 100,
+                'output_tokens': 150,
+                'total_tokens': 250
+            })()
+        })()
+        mock_client_instance.responses.create.side_effect = [
+            APITimeoutError("Timeout"),
+            mock_response
+        ]
+        
+        client = OpenAIClient(
+            api_key="test-key",
+            model="gpt-4",
+            max_retries=2,
+            initial_backoff=0.01
+        )
+        
+        with patch('time.sleep'):
+            with patch('app.services.llm_openai.logger') as mock_logger:
+                result = client.generate_specs("Build API")
+                
+                # Verify retry was logged
+                assert mock_logger.info.called
+                # Verify API key is not in any log call
+                for call in mock_logger.info.call_args_list:
+                    args_str = str(call)
+                    assert "test-key" not in args_str
+    
+    @patch('app.services.llm_openai.OpenAI')
+    def test_openai_adapter_handles_malformed_response(self, mock_openai_class):
+        """Test that OpenAI adapter handles malformed provider payloads."""
+        from app.services.llm_openai import OpenAIClient
+        
+        mock_client_instance = mock_openai_class.return_value
+        # Return response with invalid JSON
+        mock_response = type('obj', (object,), {
+            'output': [
+                type('obj', (object,), {
+                    'content': 'not valid json at all'
+                })()
+            ],
+            'usage': type('obj', (object,), {
+                'input_tokens': 100,
+                'output_tokens': 150,
+                'total_tokens': 250
+            })()
+        })()
+        mock_client_instance.responses.create.return_value = mock_response
+        
+        client = OpenAIClient(api_key="test-key", model="gpt-4")
+        
+        with pytest.raises(LLMResponseError) as exc_info:
+            client.generate_specs("Build API")
+        
+        # Should raise error about JSON parsing
+        assert "json" in str(exc_info.value).lower() or "invalid" in str(exc_info.value).lower()
+    
+    @patch('app.services.llm_openai.OpenAI')
+    def test_openai_adapter_timeout_exhausts_retries(self, mock_openai_class):
+        """Test that OpenAI adapter raises error after exhausting retries."""
+        from app.services.llm_openai import OpenAIClient
+        from openai import APITimeoutError
+        
+        mock_client_instance = mock_openai_class.return_value
+        # All retries timeout
+        mock_client_instance.responses.create.side_effect = APITimeoutError("Timeout")
+        
+        client = OpenAIClient(
+            api_key="test-key",
+            model="gpt-4",
+            max_retries=2,
+            initial_backoff=0.01
+        )
+        
+        with patch('time.sleep'):
+            with pytest.raises(LLMRequestError) as exc_info:
+                client.generate_specs("Build API")
+        
+        # The error message includes "timed out" which contains "timeout"
+        error_msg = str(exc_info.value).lower()
+        assert "timed out" in error_msg or "timeout" in error_msg
+        # Should have tried 3 times (initial + 2 retries)
+        assert mock_client_instance.responses.create.call_count == 3
