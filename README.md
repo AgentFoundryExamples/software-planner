@@ -235,7 +235,7 @@ The Dockerfile follows security best practices:
 4. **No Secrets in Image**: All configuration via environment variables, no hardcoded secrets
 5. **Minimal Dependencies**: Only installs required runtime system packages
 6. **Health Check**: Built-in health check endpoint for container orchestration
-7. **Dependency Pinning**: Uses `requirements-lock.txt` for reproducible builds
+7. **Dependency Pinning**: Uses `requirements.txt` with pinned versions for reproducible builds
 
 ### Health Checks and Readiness
 
