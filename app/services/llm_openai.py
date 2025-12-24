@@ -17,19 +17,10 @@ This module provides a concrete implementation of BaseLLMClient using OpenAI's A
 It uses the official OpenAI Python SDK and implements retry logic for transient failures.
 
 Key features:
-- Uses OpenAI Chat Completions API (recommended over deprecated Completions API)
+- Uses OpenAI Responses API (recommended for GPT-5+ models)
 - Configurable retry logic with exponential backoff for transient errors
 - Structured logging without exposing secrets
 - Proper error classification and handling
-
-TODO:
-- Update to use OpenAI responses api
-- Basic example: 
-    - client = OpenAI()
-      response = client.responses.create(
-        model="gpt-5.1",
-        input="Write a one-sentence bedtime story about a unicorn."
-      )
 """
 
 import logging
@@ -58,7 +49,7 @@ BACKOFF_MULTIPLIER = 2.0
 class OpenAIClient(BaseLLMClient):
     """OpenAI implementation of the LLM client.
     
-    This client uses the OpenAI Chat Completions API to generate specifications.
+    This client uses the OpenAI Responses API to generate specifications.
     It implements retry logic for transient failures and provides structured logging.
     
     **Important**: This client uses synchronous calls with blocking sleep for retry backoff.
@@ -195,11 +186,11 @@ class OpenAIClient(BaseLLMClient):
         """Call OpenAI API with retry logic.
         
         This method implements exponential backoff retry logic for transient failures.
-        It uses OpenAI's Chat Completions API with the configured model.
+        It uses OpenAI's Responses API with the configured model.
         
         Args:
             description: User's project description.
-            system_prompt: System prompt to guide LLM behavior.
+            system_prompt: System prompt to guide LLM behavior (mapped to instructions).
             
         Returns:
             Raw response text from the LLM.
@@ -227,29 +218,55 @@ class OpenAIClient(BaseLLMClient):
                         }
                     )
                 
-                # Make the API call using Chat Completions API
-                response = self.client.chat.completions.create(
+                # Make the API call using Responses API
+                # The Responses API uses 'instructions' for system context
+                # and 'input' for the user message
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": description},
-                    ],
-                    temperature=0.7,  # Balanced creativity
-                    max_tokens=2000,  # Reasonable limit for spec generation
+                    instructions=system_prompt,
+                    input=description,
+                    max_output_tokens=2000,  # Reasonable limit for spec generation
                 )
                 
-                # Extract response content
-                if not response.choices:
-                    logger.error("OpenAI API returned empty choices")
-                    raise LLMResponseError("OpenAI API returned empty choices")
+                # Extract response content from Responses API structure
+                # The response has an 'output' array instead of 'choices'
+                if not response.output:
+                    logger.error("OpenAI API returned empty output")
+                    raise LLMResponseError("OpenAI API returned empty output")
                 
-                content = response.choices[0].message.content
+                # Get the first output item's content
+                output_item = response.output[0]
+                
+                # Content can be a string or an array of content items
+                if isinstance(output_item.content, str):
+                    content = output_item.content
+                elif isinstance(output_item.content, list):
+                    # Extract text from content array
+                    text_parts = []
+                    for content_item in output_item.content:
+                        if hasattr(content_item, 'text'):
+                            text_parts.append(content_item.text)
+                        elif isinstance(content_item, dict) and 'text' in content_item:
+                            text_parts.append(content_item['text'])
+                    content = ''.join(text_parts)
+                else:
+                    content = str(output_item.content) if output_item.content else None
+                
                 if not content:
                     logger.error("OpenAI API returned empty content")
                     raise LLMResponseError("OpenAI API returned empty content")
                 
                 # Log successful response metadata
                 elapsed = time.time() - start_time
+                
+                # Extract token usage - Responses API has similar usage structure
+                total_tokens = None
+                if hasattr(response, 'usage') and response.usage:
+                    if hasattr(response.usage, 'total_tokens'):
+                        total_tokens = response.usage.total_tokens
+                    elif hasattr(response.usage, 'input_tokens') and hasattr(response.usage, 'output_tokens'):
+                        total_tokens = response.usage.input_tokens + response.usage.output_tokens
+                
                 logger.info(
                     "OpenAI API call succeeded",
                     extra={
@@ -257,8 +274,7 @@ class OpenAIClient(BaseLLMClient):
                         "retry_count": retry_count,
                         "latency_ms": int(elapsed * 1000),
                         "response_length": len(content),
-                        "total_tokens": response.usage.total_tokens if response.usage else None,
-                        "finish_reason": response.choices[0].finish_reason,
+                        "total_tokens": total_tokens,
                     }
                 )
                 
