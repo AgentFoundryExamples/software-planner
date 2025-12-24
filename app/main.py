@@ -22,6 +22,7 @@ import asyncio
 
 from app.api.routes import router as plan_router
 from app.core.config import settings
+from app.middleware import RequestIDMiddleware
 from app.services.store_singleton import get_job_store
 import logging
 
@@ -43,15 +44,20 @@ def create_app() -> FastAPI:
         openapi_url=f"{settings.api_prefix}/openapi.json",
     )
     
+    # Add request ID middleware (must be added before other middleware)
+    app.add_middleware(RequestIDMiddleware)
+    
     # Configure CORS
     # Note: allow_credentials should only be True when allowed_origins is not ["*"]
     # This can be configured via environment variables
+    # Expose X-Request-ID header so clients can read it from responses
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
         allow_credentials=settings.allowed_credentials,
         allow_methods=settings.allowed_methods,
         allow_headers=settings.allowed_headers,
+        expose_headers=["X-Request-ID"],
     )
     
     # Global exception handlers for consistent error responses
