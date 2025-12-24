@@ -105,3 +105,45 @@ def get_request_id(request: Request) -> str:
         The request ID string.
     """
     return getattr(request.state, "request_id", "unknown")
+
+
+def get_client_ip(request: Request) -> Optional[str]:
+    """Extract the client IP address from the request.
+    
+    This function attempts to extract the real client IP address,
+    considering proxy headers like X-Forwarded-For and X-Real-IP.
+    
+    Priority order:
+    1. X-Forwarded-For (first IP in chain)
+    2. X-Real-IP
+    3. request.client.host (direct connection)
+    
+    Args:
+        request: The incoming request.
+        
+    Returns:
+        Client IP address as a string, or None if unavailable.
+        
+    Note:
+        For security, be aware that proxy headers can be spoofed by clients.
+        Only trust these headers if your application is behind a trusted proxy.
+    """
+    # Check X-Forwarded-For header (standard for proxies/load balancers)
+    x_forwarded_for = request.headers.get("X-Forwarded-For", "").strip()
+    if x_forwarded_for:
+        # X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
+        # Use the first (leftmost) IP as the original client
+        client_ip = x_forwarded_for.split(",")[0].strip()
+        if client_ip:
+            return client_ip
+    
+    # Check X-Real-IP header (alternative proxy header)
+    x_real_ip = request.headers.get("X-Real-IP", "").strip()
+    if x_real_ip:
+        return x_real_ip
+    
+    # Fall back to direct connection IP
+    if request.client and request.client.host:
+        return request.client.host
+    
+    return None

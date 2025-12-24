@@ -16,9 +16,9 @@
 import hashlib
 import logging
 from typing import Optional
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 
-from app.api.dependencies import require_api_key
+from app.api.dependencies import require_api_key, get_client_ip
 from app.core.config import settings
 from app.models.job import Job
 from app.models.request import PlanRequest
@@ -26,12 +26,53 @@ from app.models.response import PlanResponse
 from app.models.error import create_error_response, ErrorCode
 from app.services.planner import generate_plan
 from app.services.job_repository import JobRepository
-from app.services.store_singleton import get_job_store
+from app.services.store_singleton import get_job_store, get_rate_limiter
 from app.utils.sanitization import sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _check_rate_limit_or_raise(
+    api_key: Optional[str],
+    client_ip: Optional[str],
+    request_id: str
+) -> None:
+    """Check rate limit and raise HTTPException if exceeded.
+    
+    Args:
+        api_key: Optional API key for per-key rate limiting.
+        client_ip: Optional client IP for per-IP rate limiting.
+        request_id: Request ID for logging and response headers.
+        
+    Raises:
+        HTTPException: 429 if rate limit exceeded, with Retry-After header.
+    """
+    rate_limiter = get_rate_limiter()
+    allowed, retry_after = rate_limiter.check_rate_limit(
+        api_key=api_key,
+        client_ip=client_ip,
+        request_id=request_id
+    )
+    
+    if not allowed:
+        # Create standardized error response
+        error_response = create_error_response(
+            code=ErrorCode.RATE_LIMIT_EXCEEDED,
+            message="Rate limit exceeded. Please retry after the specified delay.",
+            details={
+                "retry_after_seconds": retry_after
+            },
+            request_id=request_id
+        )
+        
+        # Raise HTTPException with Retry-After header
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=error_response,
+            headers={"Retry-After": str(retry_after)} if retry_after else {}
+        )
 
 
 @router.get(
@@ -423,19 +464,44 @@ def _format_job_response(job: Job) -> dict:
                     }
                 }
             }
+        },
+        429: {
+            "description": "Rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": {
+                            "code": "rate_limit_exceeded",
+                            "message": "Rate limit exceeded. Please retry after the specified delay.",
+                            "details": {
+                                "retry_after_seconds": 60
+                            },
+                            "request_id": "550e8400-e29b-41d4-a716-446655440000"
+                        }
+                    }
+                }
+            },
+            "headers": {
+                "Retry-After": {
+                    "description": "Seconds to wait before retrying",
+                    "schema": {"type": "integer"}
+                }
+            }
         }
     },
     summary="Generate software plan",
     description="Accepts a project description and returns a structured plan with specifications"
 )
 def create_plan(
-    request: PlanRequest,
+    request_obj: PlanRequest,
+    request: Request,
     api_key: str = Depends(require_api_key)  # Validates auth; unused in body (validation occurs in dependency)
 ) -> PlanResponse:
     """Generate a software plan based on the provided description.
     
     Args:
-        request: PlanRequest containing the project description and optional model/prompt overrides.
+        request_obj: PlanRequest containing the project description and optional model/prompt overrides.
+        request: FastAPI Request object for accessing client IP and request ID.
         api_key: Validated API key from X-API-Key header (injected via dependency).
                  Parameter is unused in function body as validation occurs in the dependency itself.
         
@@ -448,16 +514,28 @@ def create_plan(
         HTTPException: 400 if description is empty, whitespace-only, exceeds byte limit,
                        or if model name is invalid/disabled.
         HTTPException: 422 if JSON is malformed or required fields are missing.
+        HTTPException: 429 if rate limit is exceeded.
     """
+    # Get request ID and client IP for rate limiting
+    request_id = getattr(request.state, "request_id", "unknown")
+    client_ip = get_client_ip(request)
+    
+    # Check rate limit before processing
+    _check_rate_limit_or_raise(
+        api_key=api_key if api_key else None,
+        client_ip=client_ip,
+        request_id=request_id
+    )
+    
     # Validate model if provided
-    if request.model is not None:
-        _validate_model_or_raise(request.model)
+    if request_obj.model is not None:
+        _validate_model_or_raise(request_obj.model)
     
     # Generate plan with optional overrides
     return generate_plan(
-        description=request.description,
-        model=request.model,
-        system_prompt=request.system_prompt
+        description=request_obj.description,
+        model=request_obj.model,
+        system_prompt=request_obj.system_prompt
     )
 
 
@@ -607,6 +685,29 @@ def _background_planner_worker(
                     }
                 }
             }
+        },
+        429: {
+            "description": "Rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": {
+                            "code": "rate_limit_exceeded",
+                            "message": "Rate limit exceeded. Please retry after the specified delay.",
+                            "details": {
+                                "retry_after_seconds": 60
+                            },
+                            "request_id": "550e8400-e29b-41d4-a716-446655440000"
+                        }
+                    }
+                }
+            },
+            "headers": {
+                "Retry-After": {
+                    "description": "Seconds to wait before retrying",
+                    "schema": {"type": "integer"}
+                }
+            }
         }
     },
     summary="Create async software planning job",
@@ -627,7 +728,8 @@ def _background_planner_worker(
 """
 )
 async def create_plan_async(
-    request: PlanRequest,
+    request_obj: PlanRequest,
+    request: Request,
     background_tasks: BackgroundTasks,
     api_key: str = Depends(require_api_key),  # Validates auth; unused in body (validation occurs in dependency)
     job_repository: JobRepository = Depends(get_job_store)
@@ -652,7 +754,8 @@ async def create_plan_async(
     - No cancellation support
     
     Args:
-        request: PlanRequest containing the project description and optional overrides.
+        request_obj: PlanRequest containing the project description and optional overrides.
+        request: FastAPI Request object for accessing client IP and request ID.
         background_tasks: FastAPI background tasks manager.
         api_key: Validated API key from X-API-Key header (injected via dependency).
                  Parameter is unused in function body as validation occurs in the dependency itself.
@@ -667,26 +770,38 @@ async def create_plan_async(
         HTTPException: 400 if description is empty, whitespace-only, exceeds byte limit,
                        or if model name is invalid/disabled.
         HTTPException: 422 if JSON is malformed or required fields are missing.
+        HTTPException: 429 if rate limit is exceeded.
     """
+    # Get request ID and client IP for rate limiting
+    request_id = getattr(request.state, "request_id", "unknown")
+    client_ip = get_client_ip(request)
+    
+    # Check rate limit before processing
+    _check_rate_limit_or_raise(
+        api_key=api_key if api_key else None,
+        client_ip=client_ip,
+        request_id=request_id
+    )
+    
     # Validate model if provided
-    if request.model is not None:
-        _validate_model_or_raise(request.model)
+    if request_obj.model is not None:
+        _validate_model_or_raise(request_obj.model)
     
     # Create job in QUEUED status with metadata
     job = await job_repository.create_job(
-        description=request.description,
-        model=request.model,
-        system_prompt=request.system_prompt
+        description=request_obj.description,
+        model=request_obj.model,
+        system_prompt=request_obj.system_prompt
     )
     
     # Schedule background task with all parameters
     background_tasks.add_task(
         _background_planner_worker,
         job_id=job.job_id,
-        description=request.description,
+        description=request_obj.description,
         job_repository=job_repository,
-        model=request.model,
-        system_prompt=request.system_prompt
+        model=request_obj.model,
+        system_prompt=request_obj.system_prompt
     )
     
     # Return immediately with job info
