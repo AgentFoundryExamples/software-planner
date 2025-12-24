@@ -288,7 +288,7 @@ curl -X POST http://localhost:8000/api/v1/plan \
 
 The asynchronous planning endpoints allow you to submit long-running planning jobs and poll for results without blocking your client. This is the recommended approach over the synchronous endpoint.
 
-> **Note:** Jobs are stored in-memory only and will be lost on server restart. See the "Known Limitations" section below for details.
+> **Note:** Jobs are stored in a PostgreSQL database and persist across server restarts. See the "Database Setup" section for configuration instructions.
 
 #### Step-by-Step Usage
 
@@ -402,13 +402,11 @@ The job progresses through these states:
 
 **⚠️ Important Constraints:**
 
-1. **In-Memory Storage Only**: Jobs are stored in memory and will be **lost on server restart**. Do not rely on job persistence across deployments.
+1. **Database Required**: Jobs require a PostgreSQL database for persistence. See the "Database Setup" section for configuration instructions. Without a database, the application will fail to start.
 
-2. **Process Lifetime**: Jobs exist only for the lifetime of the current server process. There is no database or persistent storage.
+2. **No Cancellation**: Once a job is created, it cannot be cancelled. It will run to completion (succeeded or failed state).
 
-3. **No Cancellation**: Once a job is created, it cannot be cancelled. It will run to completion (succeeded or failed state).
-
-4. **No Durability Guarantees**: The system does not provide durability guarantees beyond the current process.
+3. **Background Processing**: Jobs are processed asynchronously in the background. Long-running jobs may be interrupted if the server is restarted before completion.
 
 #### Polling Strategy
 
@@ -485,6 +483,173 @@ Configuration is managed through environment variables or a `.env` file. All set
 - `ALLOWED_CREDENTIALS`: CORS allow credentials (default: False)
 - `ALLOWED_METHODS`: CORS allowed methods (default: ["*"])
 - `ALLOWED_HEADERS`: CORS allowed headers (default: ["*"])
+
+### Database Setup
+
+The Software Planner API uses PostgreSQL for persistent job storage. Jobs are stored in a database table and survive server restarts.
+
+#### Prerequisites
+
+- PostgreSQL 12 or higher
+- Database user with appropriate permissions
+
+#### Quick Start with Docker (Development)
+
+The easiest way to get started is using Docker:
+
+```bash
+# Start PostgreSQL container
+docker run -d \
+  --name software-planner-db \
+  -p 5432:5432 \
+  -e POSTGRES_USER=planner \
+  -e POSTGRES_PASSWORD=planner_dev_password \
+  -e POSTGRES_DB=software_planner \
+  postgres:17
+
+# Wait a few seconds for PostgreSQL to start
+sleep 5
+```
+
+#### Database Configuration
+
+Configure the database connection using environment variables. You have two options:
+
+**Option 1: Complete Database URL (Recommended for Production)**
+
+Set a single `DATABASE_URL` environment variable:
+
+```bash
+export DATABASE_URL="postgresql+asyncpg://user:password@localhost:5432/software_planner"
+```
+
+**Option 2: Individual Settings (Easier for Development)**
+
+Set individual database settings:
+
+```bash
+export DATABASE_HOST=localhost
+export DATABASE_PORT=5432
+export DATABASE_NAME=software_planner
+export DATABASE_USER=planner
+export DATABASE_PASSWORD=planner_dev_password
+```
+
+Or add these to your `.env` file:
+
+```bash
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_NAME=software_planner
+DATABASE_USER=planner
+DATABASE_PASSWORD=planner_dev_password
+```
+
+#### Running Migrations
+
+After configuring the database connection, run migrations to create the required tables:
+
+```bash
+# Upgrade to the latest schema
+alembic upgrade head
+
+# Check current migration version
+alembic current
+
+# View migration history
+alembic history
+```
+
+The migrations will create:
+- `jobs` table with columns: job_id, status, description, model, system_prompt, result, error, created_at, updated_at, started_at, finished_at
+- Indexes on `status` and `created_at` for efficient queries
+- `alembic_version` table to track applied migrations
+
+**Important**: Migrations are **idempotent** - running `alembic upgrade head` multiple times is safe. Alembic tracks which migrations have been applied and only runs new ones.
+
+#### Production Database Setup
+
+For production deployments:
+
+1. **Create the Database and User:**
+
+```sql
+-- Connect to PostgreSQL as superuser
+psql -U postgres
+
+-- Create database
+CREATE DATABASE software_planner;
+
+-- Create user with password
+CREATE USER planner_app WITH PASSWORD 'secure_production_password';
+
+-- Grant privileges
+GRANT ALL PRIVILEGES ON DATABASE software_planner TO planner_app;
+
+-- Connect to the new database
+\c software_planner
+
+-- Grant schema privileges (PostgreSQL 15+)
+GRANT ALL ON SCHEMA public TO planner_app;
+```
+
+2. **Set Environment Variables:**
+
+```bash
+export DATABASE_URL="postgresql+asyncpg://planner_app:secure_production_password@db.example.com:5432/software_planner"
+```
+
+3. **Run Migrations:**
+
+```bash
+alembic upgrade head
+```
+
+4. **Verify Connection:**
+
+The application will test the database connection on startup and log any errors. If the connection fails, the application will exit with a clear error message.
+
+#### Required Permissions
+
+The database user needs the following permissions:
+
+**For Running the Application:**
+- `SELECT` on `jobs` table
+- `INSERT` on `jobs` table
+- `UPDATE` on `jobs` table
+
+**For Running Migrations:**
+- `CREATE TABLE`
+- `CREATE INDEX`
+- `ALTER TABLE`
+- `DROP TABLE` (for rollbacks)
+
+#### Troubleshooting Database Connection
+
+**Connection Refused:**
+- Verify PostgreSQL is running: `pg_isready -h localhost -p 5432`
+- Check firewall rules allow connections on port 5432
+- Verify host and port in DATABASE_URL or individual settings
+
+**Authentication Failed:**
+- Verify username and password are correct
+- Check PostgreSQL `pg_hba.conf` allows password authentication
+- Ensure user has been created: `psql -U postgres -c "\du"`
+
+**Database Does Not Exist:**
+- Create the database: `createdb -U postgres software_planner`
+- Or use SQL: `CREATE DATABASE software_planner;`
+
+**Permission Denied:**
+- Grant necessary privileges (see Production Database Setup above)
+- Verify user ownership: `psql -U postgres -d software_planner -c "\l"`
+
+**Migration Errors:**
+- Check alembic can connect: `alembic current`
+- View migration history: `alembic history`
+- If migrations are out of sync, downgrade and re-upgrade: `alembic downgrade base && alembic upgrade head`
+
+The application logs detailed error messages on startup if database connection fails, including the specific error type and actionable troubleshooting steps.
 
 ### LLM Integration
 
