@@ -2,6 +2,10 @@
 
 A FastAPI-based software planning service with a modular, extensible architecture.
 
+## 📚 Documentation
+
+- **[Deployment Guide](docs/deployment.md)**: Comprehensive deployment instructions for production environments, scaling guidance, and operational procedures
+
 ## Quick Start
 
 ### Prerequisites
@@ -37,9 +41,23 @@ pip install -r requirements.txt
 
 > **Note:** If you encounter permission errors when activating scripts on Windows PowerShell, you may need to run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
+## Deployment
+
+For comprehensive deployment guidance including production configurations, scaling considerations, and operational procedures, see **[docs/deployment.md](docs/deployment.md)**.
+
+The deployment guide covers:
+- **Environment Variables Reference**: Complete listing of all configuration options with defaults and contexts
+- **Deployment Methods**: Docker, Docker Compose, and container platform deployments (ECS, Heroku, Fly.io, Kubernetes)
+- **Scaling Considerations**: Worker configuration, rate limiter tuning, database pooling, and metrics
+- **Operational Procedures**: API key rotation, database credential rotation, handling failures, zero-downtime deployments
+- **CI/CD Integration**: Workflow overview, artifact promotion, and testing requirements
+- **Troubleshooting**: Common issues and solutions
+
 ## Docker Deployment
 
 The Software Planner API includes a production-ready Dockerfile for containerized deployments. The image is built using a multi-stage process for minimal size and includes a non-root user for security.
+
+> **📖 For detailed deployment instructions, see [docs/deployment.md](docs/deployment.md)**
 
 ### Building the Docker Image
 
