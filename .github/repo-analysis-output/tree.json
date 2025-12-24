@@ -130,6 +130,10 @@
             },
             {
               "type": "file",
+              "name": "error.py"
+            },
+            {
+              "type": "file",
               "name": "job.py"
             },
             {
@@ -199,6 +203,20 @@
             {
               "type": "file",
               "name": "store_singleton.py"
+            }
+          ]
+        },
+        {
+          "type": "directory",
+          "name": "utils",
+          "children": [
+            {
+              "type": "file",
+              "name": "__init__.py"
+            },
+            {
+              "type": "file",
+              "name": "sanitization.py"
             }
           ]
         },

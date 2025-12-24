@@ -142,6 +142,21 @@
       }
     },
     {
+      "id": "app/models/error.py",
+      "path": "app/models/error.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "typing.Any",
+          "typing.Optional"
+        ],
+        "third-party": [
+          "pydantic.BaseModel",
+          "pydantic.Field"
+        ]
+      }
+    },
+    {
       "id": "app/models/job.py",
       "path": "app/models/job.py",
       "type": "file",
@@ -362,6 +377,29 @@
           "logging",
           "threading",
           "typing.Optional"
+        ],
+        "third-party": []
+      }
+    },
+    {
+      "id": "app/utils/__init__.py",
+      "path": "app/utils/__init__.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "app/utils/sanitization.py",
+      "path": "app/utils/sanitization.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "logging",
+          "re",
+          "typing.Optional",
+          "unicodedata"
         ],
         "third-party": []
       }
@@ -781,6 +819,10 @@
     },
     {
       "source": "app/api/routes.py",
+      "target": "app/models/error.py"
+    },
+    {
+      "source": "app/api/routes.py",
       "target": "app/services/planner.py"
     },
     {
@@ -790,6 +832,10 @@
     {
       "source": "app/api/routes.py",
       "target": "app/services/store_singleton.py"
+    },
+    {
+      "source": "app/api/routes.py",
+      "target": "app/utils/sanitization.py"
     },
     {
       "source": "app/api/routes.py",
@@ -813,6 +859,10 @@
     },
     {
       "source": "app/main.py",
+      "target": "app/models/error.py"
+    },
+    {
+      "source": "app/main.py",
       "target": "app/services/store_singleton.py"
     },
     {
@@ -822,6 +872,10 @@
     {
       "source": "app/models/request.py",
       "target": "app/core/config.py"
+    },
+    {
+      "source": "app/models/request.py",
+      "target": "app/utils/sanitization.py"
     },
     {
       "source": "app/services/__init__.py",
@@ -906,6 +960,10 @@
     {
       "source": "app/services/planner.py",
       "target": "app/services/llm_client.py"
+    },
+    {
+      "source": "app/services/planner.py",
+      "target": "app/utils/sanitization.py"
     },
     {
       "source": "app/services/planner.py",
@@ -1169,6 +1227,7 @@
       "typing.Optional",
       "typing.Sequence",
       "typing.Union",
+      "unicodedata",
       "unittest.mock.AsyncMock",
       "unittest.mock.MagicMock",
       "unittest.mock.Mock",
@@ -1222,7 +1281,7 @@
       "starlette.responses.Response",
       "uvicorn"
     ],
-    "stdlib_count": 32,
+    "stdlib_count": 33,
     "third-party_count": 45
   }
 }

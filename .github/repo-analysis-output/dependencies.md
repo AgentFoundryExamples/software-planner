@@ -8,16 +8,16 @@ Includes classification of external dependencies as stdlib vs third-party.
 
 ## Statistics
 
-- **Total files**: 50
-- **Intra-repo dependencies**: 96
-- **External stdlib dependencies**: 32
+- **Total files**: 53
+- **Intra-repo dependencies**: 101
+- **External stdlib dependencies**: 33
 - **External third-party dependencies**: 45
 
 ## External Dependencies
 
 ### Standard Library / Core Modules
 
-Total: 32 unique modules
+Total: 33 unique modules
 
 - `abc.ABC`
 - `abc.abstractmethod`
@@ -39,7 +39,7 @@ Total: 32 unique modules
 - `threading`
 - `threading.Lock`
 - `time`
-- ... and 12 more (see JSON for full list)
+- ... and 13 more (see JSON for full list)
 
 ### Third-Party Packages
 
@@ -82,12 +82,12 @@ Total: 45 unique packages
 
 ## Files with Most Dependencies (Intra-Repo)
 
-- `app/api/routes.py` (9 dependencies)
+- `app/api/routes.py` (11 dependencies)
+- `app/services/planner.py` (6 dependencies)
+- `app/main.py` (5 dependencies)
 - `app/services/llm_client.py` (5 dependencies)
-- `app/services/planner.py` (5 dependencies)
 - `app/services/store_singleton.py` (5 dependencies)
 - `tests/test_plans_async_endpoint.py` (5 dependencies)
-- `app/main.py` (4 dependencies)
 - `tests/test_authentication.py` (4 dependencies)
 - `tests/test_models_endpoint.py` (4 dependencies)
 - `tests/test_plans_polling_endpoints.py` (4 dependencies)

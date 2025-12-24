@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 50
+Total files: 53
 
 ## app/__init__.py
 **Language:** Python  
@@ -38,8 +38,8 @@ Total files: 50
 **Role:** router  
 **Role Justification:** filename contains routing term  
 **Summary:** Python routing configuration (role: router)  
-**Size:** 33.02 KB  
-**LOC:** 745  
+**Size:** 33.99 KB  
+**LOC:** 767  
 **TODOs/FIXMEs:** 0  
 
 ## app/core/__init__.py
@@ -65,8 +65,8 @@ Total files: 50
 **Role:** entry-point  
 **Role Justification:** common entry point name 'main'  
 **Summary:** Python main entry point (role: entry-point)  
-**Size:** 6.98 KB  
-**LOC:** 136  
+**Size:** 10.32 KB  
+**LOC:** 186  
 **TODOs/FIXMEs:** 0  
 
 ## app/middleware/__init__.py
@@ -96,6 +96,15 @@ Total files: 50
 **LOC:** 1  
 **TODOs/FIXMEs:** 0  
 
+## app/models/error.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for error  
+**Size:** 5.02 KB  
+**LOC:** 117  
+**TODOs/FIXMEs:** 0  
+
 ## app/models/job.py
 **Language:** Python  
 **Role:** implementation  
@@ -110,8 +119,8 @@ Total files: 50
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for request  
-**Size:** 4.89 KB  
-**LOC:** 95  
+**Size:** 5.19 KB  
+**LOC:** 102  
 **TODOs/FIXMEs:** 0  
 
 ## app/models/response.py
@@ -218,8 +227,8 @@ Total files: 50
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for planner  
-**Size:** 14.71 KB  
-**LOC:** 276  
+**Size:** 14.94 KB  
+**LOC:** 281  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/store_singleton.py
@@ -229,6 +238,24 @@ Total files: 50
 **Summary:** Python module for store singleton  
 **Size:** 8.01 KB  
 **LOC:** 139  
+**TODOs/FIXMEs:** 0  
+
+## app/utils/__init__.py
+**Language:** Python  
+**Role:** module-init  
+**Role Justification:** module initialization file '__init__'  
+**Summary:** Python module initialization (role: module-init)  
+**Size:** 0.56 KB  
+**LOC:** 0  
+**TODOs/FIXMEs:** 0  
+
+## app/utils/sanitization.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for sanitization  
+**Size:** 4.88 KB  
+**LOC:** 91  
 **TODOs/FIXMEs:** 0  
 
 ## migrations/env.py
@@ -371,8 +398,8 @@ Total files: 50
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 5.20 KB  
-**LOC:** 105  
+**Size:** 5.60 KB  
+**LOC:** 115  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_migrations.py
@@ -407,8 +434,8 @@ Total files: 50
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 20.48 KB  
-**LOC:** 434  
+**Size:** 29.40 KB  
+**LOC:** 600  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_planner_integration.py
@@ -434,8 +461,8 @@ Total files: 50
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 30.47 KB  
-**LOC:** 519  
+**Size:** 30.79 KB  
+**LOC:** 526  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_request_id.py
