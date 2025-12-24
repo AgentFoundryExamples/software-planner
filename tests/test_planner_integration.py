@@ -13,6 +13,7 @@
 # limitations under the License.
 """Tests for planner service integration with JobStore and LLM client."""
 
+import asyncio
 from unittest.mock import Mock
 
 import pytest
@@ -227,24 +228,24 @@ class TestPlannerWithJobStore:
     def test_generate_plan_updates_job_to_running(self, mock_llm_client):
         """Test that generate_plan updates job status to running."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         assert job.status == "QUEUED"
         
         generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client)
         
-        updated_job = store.get_job(job.job_id)
+        updated_job = asyncio.run(store.get_job(job.job_id))
         assert updated_job is not None
         assert updated_job.status == "SUCCEEDED"  # Will be succeeded after completion
     
     def test_generate_plan_records_success_status(self, mock_llm_client):
         """Test that successful plan generation updates status to succeeded."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         response = generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client)
         
-        updated_job = store.get_job(job.job_id)
+        updated_job = asyncio.run(store.get_job(job.job_id))
         assert updated_job is not None
         assert updated_job.status == "SUCCEEDED"
         assert response is not None
@@ -252,11 +253,11 @@ class TestPlannerWithJobStore:
     def test_generate_plan_stores_result_with_specs(self, mock_llm_client):
         """Test that plan result is stored with top-level 'specs' field."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         response = generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client)
         
-        updated_job = store.get_job(job.job_id)
+        updated_job = asyncio.run(store.get_job(job.job_id))
         assert updated_job is not None
         assert updated_job.result is not None
         assert "specs" in updated_job.result
@@ -266,11 +267,11 @@ class TestPlannerWithJobStore:
     def test_generate_plan_result_matches_response(self, mock_llm_client):
         """Test that stored result matches the returned response."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         response = generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client)
         
-        updated_job = store.get_job(job.job_id)
+        updated_job = asyncio.run(store.get_job(job.job_id))
         assert updated_job is not None
         assert updated_job.result is not None
         
@@ -281,12 +282,12 @@ class TestPlannerWithJobStore:
     def test_generate_plan_updates_timestamp(self, mock_llm_client):
         """Test that generate_plan updates the job timestamp."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         original_updated_at = job.updated_at
         
         generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client)
         
-        updated_job = store.get_job(job.job_id)
+        updated_job = asyncio.run(store.get_job(job.job_id))
         assert updated_job is not None
         assert updated_job.updated_at >= original_updated_at
     
@@ -303,11 +304,11 @@ class TestPlannerWithJobStore:
     def test_generate_plan_preserves_json_serializability(self, mock_llm_client):
         """Test that stored result remains JSON-serializable."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client)
         
-        updated_job = store.get_job(job.job_id)
+        updated_job = asyncio.run(store.get_job(job.job_id))
         assert updated_job is not None
         
         # Should be able to serialize to JSON
@@ -336,14 +337,14 @@ class TestPlannerWithJobStore:
     def test_generate_plan_multiple_jobs(self, mock_llm_client):
         """Test that multiple jobs can be tracked independently."""
         store = JobStore()
-        job1 = store.create_job()
-        job2 = store.create_job()
+        job1 = asyncio.run(store.create_job(description="Test description"))
+        job2 = asyncio.run(store.create_job(description="Test description"))
         
         generate_plan("Build a REST API", job_repository=store, job_id=job1.job_id, llm_client=mock_llm_client)
         generate_plan("Create a web service", job_repository=store, job_id=job2.job_id, llm_client=mock_llm_client)
         
-        updated_job1 = store.get_job(job1.job_id)
-        updated_job2 = store.get_job(job2.job_id)
+        updated_job1 = asyncio.run(store.get_job(job1.job_id))
+        updated_job2 = asyncio.run(store.get_job(job2.job_id))
         
         assert updated_job1 is not None
         assert updated_job2 is not None
@@ -364,7 +365,7 @@ class TestPlannerWithJobStore:
         assert len(response.specs) > 0
         
         # Job should not exist in store
-        job = store.get_job("non-existent-id")
+        job = asyncio.run(store.get_job("non-existent-id"))
         assert job is None
 
 
@@ -374,7 +375,7 @@ class TestPlannerErrorHandling:
     def test_generate_plan_handles_llm_configuration_error(self):
         """Test that LLMConfigurationError is handled and job is marked failed."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         mock_client = Mock()
         mock_client.generate_specs.side_effect = LLMConfigurationError("Missing API key")
@@ -382,7 +383,7 @@ class TestPlannerErrorHandling:
         with pytest.raises(LLMConfigurationError):
             generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client)
         
-        updated_job = store.get_job(job.job_id)
+        updated_job = asyncio.run(store.get_job(job.job_id))
         assert updated_job is not None
         assert updated_job.status == "FAILED"
         assert updated_job.error is not None
@@ -391,7 +392,7 @@ class TestPlannerErrorHandling:
     def test_generate_plan_handles_llm_request_error(self):
         """Test that LLMRequestError is handled and job is marked failed."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         mock_client = Mock()
         mock_client.generate_specs.side_effect = LLMRequestError("API timeout")
@@ -399,7 +400,7 @@ class TestPlannerErrorHandling:
         with pytest.raises(LLMRequestError):
             generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client)
         
-        updated_job = store.get_job(job.job_id)
+        updated_job = asyncio.run(store.get_job(job.job_id))
         assert updated_job is not None
         assert updated_job.status == "FAILED"
         assert updated_job.error is not None
@@ -408,7 +409,7 @@ class TestPlannerErrorHandling:
     def test_generate_plan_handles_llm_response_error(self):
         """Test that LLMResponseError is handled and job is marked failed."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         mock_client = Mock()
         mock_client.generate_specs.side_effect = LLMResponseError("Invalid JSON")
@@ -416,7 +417,7 @@ class TestPlannerErrorHandling:
         with pytest.raises(LLMResponseError):
             generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client)
         
-        updated_job = store.get_job(job.job_id)
+        updated_job = asyncio.run(store.get_job(job.job_id))
         assert updated_job is not None
         assert updated_job.status == "FAILED"
         assert updated_job.error is not None
@@ -425,7 +426,7 @@ class TestPlannerErrorHandling:
     def test_generate_plan_handles_empty_specs(self):
         """Test that empty specs from LLM is handled as error."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         mock_client = Mock()
         mock_client.generate_specs.return_value = {"specs": []}
@@ -433,14 +434,14 @@ class TestPlannerErrorHandling:
         with pytest.raises(LLMResponseError, match="empty specs list"):
             generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client)
         
-        updated_job = store.get_job(job.job_id)
+        updated_job = asyncio.run(store.get_job(job.job_id))
         assert updated_job is not None
         assert updated_job.status == "FAILED"
     
     def test_generate_plan_handles_unexpected_error(self):
         """Test that unexpected errors are handled and job is marked failed."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         mock_client = Mock()
         mock_client.generate_specs.side_effect = ValueError("Unexpected error")
@@ -448,7 +449,7 @@ class TestPlannerErrorHandling:
         with pytest.raises(ValueError):
             generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client)
         
-        updated_job = store.get_job(job.job_id)
+        updated_job = asyncio.run(store.get_job(job.job_id))
         assert updated_job is not None
         assert updated_job.status == "FAILED"
         assert updated_job.error is not None
@@ -457,7 +458,7 @@ class TestPlannerErrorHandling:
     def test_generate_plan_error_preserves_error_type(self):
         """Test that error type is preserved in job error."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         mock_client = Mock()
         mock_client.generate_specs.side_effect = LLMRequestError("Timeout")
@@ -465,7 +466,7 @@ class TestPlannerErrorHandling:
         with pytest.raises(LLMRequestError):
             generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client)
         
-        updated_job = store.get_job(job.job_id)
+        updated_job = asyncio.run(store.get_job(job.job_id))
         assert updated_job is not None
         assert updated_job.error is not None
         assert updated_job.error["type"] == "LLMRequestError"
