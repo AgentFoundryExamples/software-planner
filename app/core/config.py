@@ -82,6 +82,34 @@ class Settings(BaseSettings):
     default_jobs_list_limit: int = 100
     max_jobs_list_limit: int = 1000
     
+    # Database settings
+    database_host: str = Field(
+        default="localhost",
+        description="PostgreSQL database host"
+    )
+    database_port: int = Field(
+        default=5432,
+        ge=1,
+        le=65535,
+        description="PostgreSQL database port"
+    )
+    database_name: str = Field(
+        default="software_planner",
+        description="PostgreSQL database name"
+    )
+    database_user: str = Field(
+        default="",
+        description="PostgreSQL database user"
+    )
+    database_password: str = Field(
+        default="",
+        description="PostgreSQL database password"
+    )
+    database_url: Optional[str] = Field(
+        default=None,
+        description="Complete PostgreSQL connection URL (overrides individual settings if provided)"
+    )
+    
     # CORS settings
     # For security, allow_credentials should only be True when allowed_origins is not ["*"]
     # WARNING: Default configuration is for development only. In production, set
@@ -124,6 +152,62 @@ class Settings(BaseSettings):
         description="Logical name of the default model to use"
     )
 
+    @model_validator(mode="after")
+    def _validate_database_settings(self) -> "Settings":
+        """Validate database configuration and construct DATABASE_URL if needed.
+        
+        This validator ensures that database configuration is complete and valid when provided.
+        If no database configuration is provided at all (both user and password empty),
+        the validator allows it to pass - the application will fail at runtime when
+        database operations are attempted.
+        
+        Ensures:
+        - If database_url is provided, it has the correct format
+        - If individual settings are provided, they are complete and valid
+        - If no database configuration is provided at all, validation passes
+          (fail-fast will happen when database operations are attempted)
+        """
+        # If database_url is explicitly provided, validate and use it
+        if self.database_url:
+            # Basic validation that it looks like a PostgreSQL URL
+            if not self.database_url.startswith(("postgresql://", "postgresql+asyncpg://")):
+                raise ValueError(
+                    "database_url must start with 'postgresql://' or 'postgresql+asyncpg://'"
+                )
+            return self
+        
+        # Check if any database configuration was provided
+        user_provided = self.database_user and self.database_user.strip()
+        pass_provided = self.database_password and self.database_password.strip()
+        
+        # If neither user nor password provided, skip validation
+        # This allows tests and development without database
+        # The application will fail at runtime when DB operations are attempted
+        if not user_provided and not pass_provided:
+            return self
+        
+        # If partial configuration provided, validate it's complete
+        if not user_provided:
+            raise ValueError(
+                "Database configuration error: database_user is required when database_password is set. "
+                "Either set DATABASE_USER or provide a complete DATABASE_URL."
+            )
+        
+        if not pass_provided:
+            raise ValueError(
+                "Database configuration error: database_password is required when database_user is set. "
+                "Either set DATABASE_PASSWORD or provide a complete DATABASE_URL."
+            )
+        
+        # Construct database URL from individual settings
+        # Use asyncpg dialect for async operations
+        self.database_url = (
+            f"postgresql+asyncpg://{self.database_user}:{self.database_password}"
+            f"@{self.database_host}:{self.database_port}/{self.database_name}"
+        )
+        
+        return self
+    
     @model_validator(mode="after")
     def _validate_cors_settings(self) -> "Settings":
         """Validate that CORS credentials are not enabled with wildcard origins."""
