@@ -97,7 +97,7 @@ If `DATABASE_URL` is not set, provide these individual settings:
 
 **Example**: With `PLANNER_RATE_LIMIT_MAX_REQUESTS=10` and 3 instances, the system allows approximately 30 requests/minute total (10 per instance).
 
-**Important**: If exact per-key rate limiting across instances is required, consider implementing distributed rate limiting using Redis or deploying a centralized API gateway. See the "Scaling Considerations" section for detailed strategies.
+**Important**: If exact per-key rate limiting across instances is required, consider implementing distributed rate limiting using Redis or deploying a centralized API gateway. See the [Rate Limiter Tuning](#rate-limiter-tuning) section under "Scaling Considerations" for detailed strategies.
 
 ### CORS Configuration
 
@@ -150,10 +150,7 @@ docker build -t software-planner:v1.0.0 .
 docker buildx build --platform linux/amd64,linux/arm64 \
   -t software-planner:latest .
 
-# Build with SSL certificate bypass (⚠️ CI ENVIRONMENTS ONLY ⚠️)
-# SECURITY WARNING: This disables SSL certificate verification for PyPI
-# ONLY use in CI/CD pipelines with corporate SSL interception proxies
-# NEVER use in production or for building production images
+# Build with SSL certificate bypass (⚠️ CI ENVIRONMENTS ONLY - see security note below)
 docker build --build-arg TRUST_PYPI=true -t software-planner:latest .
 ```
 
@@ -1409,16 +1406,15 @@ software-planner:staging         # Staging environment
     
 - name: Tag image
   run: |
-    # Tag with semantic version on release (PRODUCTION USE ONLY)
+    # Tag with semantic version on release (for production use)
     if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
       VERSION=${GITHUB_REF#refs/tags/}
       docker tag software-planner:${{ github.sha }} software-planner:${VERSION}
-      # Note: 'latest' tag is for convenience in development/testing
-      # DO NOT USE 'latest' tag in production deployments
+      # Create 'latest' tag for convenience (see warning below)
       docker tag software-planner:${{ github.sha }} software-planner:latest
     fi
     
-    # Tag with branch name (development/staging use)
+    # Tag with branch name (for development/staging)
     if [[ "${{ github.ref }}" == refs/heads/main ]]; then
       docker tag software-planner:${{ github.sha }} software-planner:main
     fi
