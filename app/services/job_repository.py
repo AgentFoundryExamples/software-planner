@@ -13,6 +13,7 @@
 # limitations under the License.
 """Database-backed job repository with lifecycle management."""
 
+import hashlib
 import json
 import logging
 import uuid
@@ -532,7 +533,7 @@ class JobRepository:
         """
         try:
             async with self.engine.connect() as conn:
-                # Build query with optional limit
+                # Build query with parameterized limit
                 query = """
                     SELECT job_id, status, description, model, system_prompt,
                            result, error, created_at, updated_at, started_at, finished_at
@@ -540,10 +541,12 @@ class JobRepository:
                     ORDER BY updated_at DESC
                 """
                 
+                params = {}
                 if limit is not None and limit > 0:
-                    query += f" LIMIT {int(limit)}"
+                    query += " LIMIT :limit"
+                    params["limit"] = limit
                 
-                result = await conn.execute(text(query))
+                result = await conn.execute(text(query), params)
                 
                 jobs = []
                 for row in result:

@@ -41,6 +41,31 @@ MAX_STRING_FIELD_LENGTH = 10000  # Maximum length for purpose/vision fields
 MAX_ARRAY_ITEM_LENGTH = 5000     # Maximum length for items in must/dont/nice arrays
 
 
+def _run_async(coro):
+    """Helper to run async code from sync context.
+    
+    Note: This uses asyncio.get_event_loop() and falls back to creating a new loop.
+    This is necessary because generate_plan is synchronous but needs to call async
+    repository methods. A better long-term solution would be to make generate_plan
+    async, but that requires broader changes to the codebase.
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # We're in an async context but called from sync code
+            # Create a new loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            return loop.run_until_complete(coro)
+        else:
+            return loop.run_until_complete(coro)
+    except RuntimeError:
+        # No event loop in current thread - create one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop.run_until_complete(coro)
+
+
 def _normalize_specs(data: dict[str, Any]) -> dict[str, Any]:
     """Normalize LLM response to ensure specs is a list with valid structure.
     

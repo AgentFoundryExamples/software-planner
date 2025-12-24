@@ -13,6 +13,7 @@
 # limitations under the License.
 """API route handlers for the planning service."""
 
+import hashlib
 import logging
 from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
@@ -324,7 +325,6 @@ def _format_job_response(job: Job) -> dict:
         response["model"] = job.model
     
     if job.system_prompt is not None and len(job.system_prompt) > 0:
-        import hashlib
         response["system_prompt_hash"] = hashlib.sha256(job.system_prompt.encode('utf-8')).hexdigest()
     
     # Include result for succeeded jobs, otherwise null
