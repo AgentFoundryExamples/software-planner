@@ -29,7 +29,8 @@ class TestJobModel:
         now = datetime.now(timezone.utc)
         job = Job(
             job_id="test-uuid-123",
-            status="pending",
+            status="QUEUED",
+            description="Test project",
             created_at=now,
             updated_at=now,
             result=None,
@@ -37,7 +38,7 @@ class TestJobModel:
         )
         
         assert job.job_id == "test-uuid-123"
-        assert job.status == "pending"
+        assert job.status == "QUEUED"
         assert job.created_at == now
         assert job.updated_at == now
         assert job.result is None
@@ -46,12 +47,13 @@ class TestJobModel:
     def test_job_status_enum_values(self):
         """Test that only valid status values are accepted."""
         now = datetime.now(timezone.utc)
-        valid_statuses: list[JobStatus] = ["pending", "running", "succeeded", "failed"]
+        valid_statuses: list[JobStatus] = ["QUEUED", "RUNNING", "SUCCEEDED", "FAILED"]
         
         for status in valid_statuses:
             job = Job(
                 job_id=f"test-{status}",
                 status=status,
+                description="Test",
                 created_at=now,
                 updated_at=now
             )
@@ -74,7 +76,8 @@ class TestJobModel:
         
         job = Job(
             job_id="test-with-result",
-            status="succeeded",
+            status="SUCCEEDED",
+            description="Test",
             created_at=now,
             updated_at=now,
             result=result,
@@ -94,7 +97,8 @@ class TestJobModel:
         
         job = Job(
             job_id="test-with-error",
-            status="failed",
+            status="FAILED",
+            description="Test",
             created_at=now,
             updated_at=now,
             result=None,
@@ -110,7 +114,8 @@ class TestJobModel:
         now = datetime.now(timezone.utc)
         job = Job(
             job_id="test-serialization",
-            status="pending",
+            status="QUEUED",
+            description="Test",
             created_at=now,
             updated_at=now,
             result=None,
@@ -124,7 +129,7 @@ class TestJobModel:
         # Parse back to verify structure
         data = json.loads(json_str)
         assert data["job_id"] == "test-serialization"
-        assert data["status"] == "pending"
+        assert data["status"] == "QUEUED"
         assert "created_at" in data
         assert "updated_at" in data
     
@@ -135,7 +140,8 @@ class TestJobModel:
         
         job = Job(
             job_id="test-dump",
-            status="succeeded",
+            status="SUCCEEDED",
+            description="Test",
             created_at=now,
             updated_at=now,
             result=result,
@@ -145,7 +151,7 @@ class TestJobModel:
         data = job.model_dump()
         assert isinstance(data, dict)
         assert data["job_id"] == "test-dump"
-        assert data["status"] == "succeeded"
+        assert data["status"] == "SUCCEEDED"
         assert data["result"] == result
         assert data["error"] is None
     
@@ -169,7 +175,8 @@ class TestJobModel:
         
         job = Job(
             job_id="test-large-result",
-            status="succeeded",
+            status="SUCCEEDED",
+            description="Test",
             created_at=now,
             updated_at=now,
             result=large_result,
@@ -189,7 +196,8 @@ class TestJobModel:
         now = datetime.now(timezone.utc)
         job = Job(
             job_id="test-timestamps",
-            status="pending",
+            status="QUEUED",
+            description="Test",
             created_at=now,
             updated_at=now
         )
@@ -202,7 +210,8 @@ class TestJobModel:
         now = datetime.now(timezone.utc)
         job = Job(
             job_id="test-defaults",
-            status="pending",
+            status="QUEUED",
+            description="Test",
             created_at=now,
             updated_at=now
         )
