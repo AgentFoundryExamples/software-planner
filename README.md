@@ -163,70 +163,347 @@ The container is configured entirely through environment variables. **No secrets
 
 See `.env.example` for a complete list of configuration options with detailed descriptions.
 
-### Docker Compose Example
+## Docker Compose Setup (Recommended for Local Development)
 
-For local development or testing with a database, use Docker Compose:
+The Software Planner includes a production-ready `docker-compose.yml` configuration that provides:
+- **PostgreSQL 17 database** with persistent storage and health checks
+- **API service** with automatic database migrations
+- **Proper networking** and service dependencies
+- **Volume persistence** for database data across restarts
+- **Configurable ports** to avoid conflicts
 
-```yaml
-# docker-compose.yml
-version: '3.8'
+### Quick Start with Docker Compose
 
-services:
-  db:
-    image: postgres:17
-    environment:
-      POSTGRES_USER: planner
-      POSTGRES_PASSWORD: planner_dev_password
-      POSTGRES_DB: software_planner
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U planner"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+**1. Prerequisites:**
+- Docker Engine 20.10+ and Docker Compose 2.0+
+- At least 2GB RAM available for containers
+- OpenAI API key (or other LLM provider key)
 
-  app:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      PORT: 8000
-      WORKERS: 2
-      DATABASE_URL: postgresql+asyncpg://planner:planner_dev_password@db:5432/software_planner
-      LLM_API_KEY: ${LLM_API_KEY}  # Set in your .env file
-      LLM_MODEL: gpt-4
-      PLANNER_API_KEYS: '["dev-key-123"]'
-      DEBUG: false
-    depends_on:
-      db:
-        condition: service_healthy
-    command: >
-      sh -c "
-        alembic upgrade head &&
-        exec uvicorn app.main:app --host 0.0.0.0 --port $${PORT:-8000} --workers $${WORKERS:-1}
-      "
+**2. Setup:**
 
-volumes:
-  postgres_data:
+```bash
+# Clone the repository (if not already done)
+git clone https://github.com/your-org/software-planner.git
+cd software-planner
+
+# Copy environment file and configure
+cp .env.example .env
+
+# Edit .env and set required variables (at minimum):
+# - LLM_API_KEY=sk-your-openai-api-key
+# Optional: Customize DATABASE_PASSWORD, PORT, etc.
 ```
 
-Run with Docker Compose:
+**3. Start Services:**
+
+```bash
+# Start all services (API + database)
+make compose-up
+
+# Or use docker-compose directly:
+docker-compose up -d
+```
+
+The `compose-up` command will:
+1. Create a `.env` file from `.env.example` if it doesn't exist
+2. Pull/build the required Docker images
+3. Start PostgreSQL database with health checks
+4. Wait for database to be ready
+5. Run database migrations automatically
+6. Start the API service
+7. Display access URLs and helpful commands
+
+**4. Verify Services:**
+
+```bash
+# Check health endpoint
+curl http://localhost:8000/health
+# Expected: {"status":"ok"}
+
+# View service logs
+make compose-logs
+
+# Or view specific service logs:
+docker-compose logs -f app
+docker-compose logs -f db
+```
+
+**5. Access the API:**
+
+- **API Base URL**: http://localhost:8000
+- **Interactive Docs**: http://localhost:8000/api/v1/docs
+- **Health Check**: http://localhost:8000/health
+- **Planning Endpoint**: http://localhost:8000/api/v1/plans
+
+### Docker Compose Commands Reference
+
+The Makefile provides convenient commands for managing the Docker Compose stack:
 
 ```bash
 # Start services
-docker-compose up -d
+make compose-up              # Start all services in detached mode
 
 # View logs
-docker-compose logs -f app
+make compose-logs            # Follow logs from all services (CTRL+C to exit)
 
 # Stop services
-docker-compose down
+make compose-down            # Stop all services (preserves data)
 
-# Stop and remove volumes (careful - deletes data!)
+# Restart services
+make compose-restart         # Restart all services without rebuilding
+
+# Rebuild containers
+make compose-build           # Rebuild images from scratch (no cache)
+
+# Run migrations
+make compose-migrate         # Run database migrations in running container
+
+# Clean up (WARNING: deletes data!)
+make compose-clean           # Stop services and remove volumes
+```
+
+### Configuration via .env File
+
+Docker Compose reads configuration from `.env` file in the project root. Key variables:
+
+```bash
+# Required - LLM Configuration
+LLM_API_KEY=sk-your-openai-api-key-here
+LLM_MODEL=gpt-4
+
+# Database Configuration (defaults are fine for development)
+DATABASE_USER=planner
+DATABASE_PASSWORD=planner_dev_password
+DATABASE_NAME=software_planner
+DATABASE_PORT=5432              # Host port (change if 5432 is in use)
+
+# API Configuration
+PORT=8000                       # Host port (change if 8000 is in use)
+WORKERS=1                       # Number of API workers
+DEBUG=false                     # Enable debug mode (development only)
+
+# Optional - API Authentication
+PLANNER_API_KEYS=["dev-key-123"]
+PLANNER_API_KEYS_REQUIRED=false
+
+# Optional - Rate Limiting
+PLANNER_RATE_LIMIT_MAX_REQUESTS=10
+PLANNER_RATE_LIMIT_WINDOW_SECONDS=60
+
+# Optional - CORS (development defaults)
+ALLOWED_ORIGINS=["*"]
+CORS_WILDCARD_ENABLED=true
+```
+
+**Security Note for Production:**
+- Set strong `DATABASE_PASSWORD`
+- Configure `PLANNER_API_KEYS` with secure random keys
+- Set `PLANNER_API_KEYS_REQUIRED=true`
+- Set `CORS_WILDCARD_ENABLED=false`
+- Specify exact domains in `ALLOWED_ORIGINS`
+
+### Running Database Migrations
+
+Migrations are run automatically when starting the API service. To run migrations manually:
+
+```bash
+# Run migrations in the running container
+make compose-migrate
+
+# Or use docker-compose directly:
+docker-compose exec app alembic upgrade head
+
+# Check migration status
+docker-compose exec app alembic current
+
+# View migration history
+docker-compose exec app alembic history
+```
+
+### Seeding Test Jobs
+
+You can create test planning jobs using the API:
+
+```bash
+# Create a test job (no API key required in default dev setup)
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -d '{"description": "Build a REST API for managing tasks"}'
+
+# Response will include job_id:
+# {"job_id":"550e8400-e29b-41d4-a716-446655440000","status":"pending"}
+
+# Check job status
+curl http://localhost:8000/api/v1/plans/550e8400-e29b-41d4-a716-446655440000
+
+# List all jobs
+curl http://localhost:8000/api/v1/plans
+```
+
+### Port Conflicts and Customization
+
+If default ports are already in use, customize via `.env`:
+
+```bash
+# Use different database port
+DATABASE_PORT=5433
+
+# Use different API port  
+PORT=8080
+
+# Restart services to apply changes
+make compose-down
+make compose-up
+```
+
+Services will be available at:
+- API: http://localhost:8080
+- Database: localhost:5433
+
+### Volume Management and Data Persistence
+
+Docker Compose uses named volumes for data persistence:
+
+- **postgres_data**: PostgreSQL database files
+- Volume name: `software-planner-db-data`
+- Location: Managed by Docker (typically `/var/lib/docker/volumes/`)
+
+**View volumes:**
+```bash
+docker volume ls | grep software-planner
+```
+
+**Inspect volume:**
+```bash
+docker volume inspect software-planner-db-data
+```
+
+**Backup database data:**
+```bash
+# Backup to SQL dump
+docker-compose exec db pg_dump -U planner software_planner > backup.sql
+
+# Restore from backup
+docker-compose exec -T db psql -U planner software_planner < backup.sql
+```
+
+**Clean up volumes (WARNING: deletes all data!):**
+```bash
+# Stop services and remove volumes
+make compose-clean
+
+# Or use docker-compose directly:
 docker-compose down -v
+
+# Remove named volume manually if needed:
+docker volume rm software-planner-db-data
+```
+
+**Reset state for migration changes:**
+If you need to reset the database after schema changes:
+```bash
+# Stop services and remove volumes
+make compose-clean
+
+# Start fresh (will run migrations on empty database)
+make compose-up
+```
+
+### Troubleshooting Docker Compose
+
+**Issue: Services won't start**
+
+Check logs for errors:
+```bash
+make compose-logs
+
+# Or check specific service:
+docker-compose logs db
+docker-compose logs app
+```
+
+**Issue: Database connection failed**
+
+1. Verify database is healthy:
+```bash
+docker-compose ps
+# Status should show "healthy" for db service
+```
+
+2. Check database logs:
+```bash
+docker-compose logs db
+```
+
+3. Test database connection:
+```bash
+docker-compose exec db pg_isready -U planner
+```
+
+**Issue: Port already in use**
+
+Change ports in `.env`:
+```bash
+PORT=8080
+DATABASE_PORT=5433
+```
+
+Then restart:
+```bash
+make compose-down
+make compose-up
+```
+
+**Issue: Migrations fail**
+
+1. Check migration status:
+```bash
+docker-compose exec app alembic current
+```
+
+2. View database tables:
+```bash
+docker-compose exec db psql -U planner -d software_planner -c "\dt"
+```
+
+3. Reset database if needed:
+```bash
+make compose-clean
+make compose-up
+```
+
+**Issue: API service keeps restarting**
+
+1. Check for missing LLM_API_KEY:
+```bash
+docker-compose logs app | grep "LLM_API_KEY"
+```
+
+2. Verify .env file exists and is valid:
+```bash
+cat .env | grep LLM_API_KEY
+```
+
+3. Check container health:
+```bash
+docker-compose ps
+# Health should transition from "starting" to "healthy"
+```
+
+**Issue: Changes to code not reflected**
+
+Rebuild containers:
+```bash
+make compose-build
+make compose-up
+```
+
+**Issue: Database data not persisting**
+
+Verify volume is being used:
+```bash
+docker volume ls | grep software-planner
+docker volume inspect software-planner-db-data
 ```
 
 ### Container Security Best Practices
