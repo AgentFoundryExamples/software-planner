@@ -261,6 +261,71 @@ class TestPlanEndpointValidationErrors:
         error = data["error"]
         assert "code" in error
         assert error["code"] == "payload_too_large"
+    
+    def test_plan_endpoint_utf8_multibyte_counting(self, client):
+        """Test that multi-byte UTF-8 characters are counted correctly toward byte limit.
+        
+        Verifies acceptance criteria: UTF-8 multi-byte input counts toward the character limit.
+        Tests with various multi-byte Unicode characters (emoji, CJK) to ensure byte-based
+        length enforcement rather than character-based.
+        """
+        max_bytes = settings.max_description_bytes
+        
+        # Test 1: Emoji (4 bytes each in UTF-8)
+        emoji = "🚀"
+        emoji_bytes = len(emoji.encode('utf-8'))
+        assert emoji_bytes == 4, "Emoji should be 4 bytes"
+        
+        # Create description with emojis that fits exactly at limit
+        num_emojis_at_limit = max_bytes // emoji_bytes
+        at_limit_description = emoji * num_emojis_at_limit
+        
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": at_limit_description}
+        )
+        assert response.status_code == 200, "Should accept description at exact byte limit"
+        
+        # Create description with emojis that exceeds limit by one emoji
+        over_limit_description = emoji * (num_emojis_at_limit + 1)
+        
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": over_limit_description}
+        )
+        assert response.status_code == 400, "Should reject description over byte limit"
+        assert response.json()["error"]["code"] == "payload_too_large"
+        
+        # Test 2: CJK characters (3 bytes each in UTF-8)
+        cjk_char = "漢"  # Chinese character
+        cjk_bytes = len(cjk_char.encode('utf-8'))
+        assert cjk_bytes == 3, "CJK character should be 3 bytes"
+        
+        # Create description with CJK that fits at limit
+        num_cjk_at_limit = max_bytes // cjk_bytes
+        cjk_at_limit = cjk_char * num_cjk_at_limit
+        
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": cjk_at_limit}
+        )
+        assert response.status_code == 200, "Should accept CJK description at byte limit"
+        
+        # Test 3: Mixed ASCII and multi-byte (verify byte counting, not character counting)
+        # Create a string with ASCII (1 byte) + emoji (4 bytes) that would fit if counted
+        # by characters but exceeds if counted by bytes
+        ascii_part = "a" * (max_bytes - 3)  # Leave 3 bytes
+        mixed_description = ascii_part + "🚀"  # Add 4-byte emoji (exceeds by 1 byte)
+        
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": mixed_description}
+        )
+        assert response.status_code == 400, "Should reject based on bytes, not character count"
+        
+        # Verify the character count would be under limit if counted incorrectly
+        char_count = len(mixed_description)
+        assert char_count < max_bytes, "Character count is under limit (proving byte-based validation)"
 
 
 class TestPlanEndpointMalformedRequests:

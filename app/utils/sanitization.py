@@ -48,8 +48,8 @@ def sanitize_for_logging(
 ) -> str:
     """Sanitize text for safe logging.
     
-    Truncates text to a reasonable length and optionally redacts content
-    to avoid logging sensitive information.
+    Truncates text to a reasonable length, optionally redacts content,
+    and strips control characters that could cause issues in log parsing.
     
     Args:
         text: The text to sanitize.
@@ -62,10 +62,17 @@ def sanitize_for_logging(
     if redact:
         return f"<redacted length={len(text)} chars>"
     
-    if len(text) <= max_length:
-        return text
+    # Strip control characters for safe logging (keep spaces)
+    # Replace tab, newline, and CR with spaces to preserve readability
+    sanitized = text.replace('\t', ' ').replace('\n', ' ').replace('\r', ' ')
     
-    return f"{text[:max_length]}... (truncated, total length: {len(text)} chars)"
+    # Remove any other control characters
+    sanitized = ''.join(char if ord(char) >= 0x20 or char == ' ' else ' ' for char in sanitized)
+    
+    if len(sanitized) <= max_length:
+        return sanitized
+    
+    return f"{sanitized[:max_length]}... (truncated, total length: {len(text)} chars)"
 
 
 def validate_description_content(description: str) -> tuple[bool, Optional[str]]:

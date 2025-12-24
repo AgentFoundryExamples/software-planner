@@ -137,14 +137,15 @@ def create_app() -> FastAPI:
         # context) would require more invasive changes to Pydantic's validation flow.
         # If validation messages change significantly, these mappings may need updates.
         if is_custom_validation:
-            # Check specific error messages to assign specific codes
-            first_error_msg = errors[0].get("msg", "").lower()
+            # Check all error messages to find the most specific error code.
+            # The order of checks determines priority.
+            all_error_msgs = " ".join(err.get("msg", "").lower() for err in errors)
             
-            if "exceeds" in first_error_msg or "too large" in first_error_msg or "maximum length" in first_error_msg:
+            if "exceeds" in all_error_msgs or "too large" in all_error_msgs or "maximum length" in all_error_msgs:
                 code = ErrorCode.PAYLOAD_TOO_LARGE
-            elif "control character" in first_error_msg or "null byte" in first_error_msg:
+            elif "control character" in all_error_msgs or "null byte" in all_error_msgs:
                 code = ErrorCode.INVALID_DESCRIPTION
-            elif "empty" in first_error_msg or "whitespace" in first_error_msg:
+            elif "empty" in all_error_msgs or "whitespace" in all_error_msgs:
                 code = ErrorCode.INVALID_DESCRIPTION
             else:
                 code = ErrorCode.VALIDATION_ERROR
