@@ -289,13 +289,11 @@ class OpenAIClient(BaseLLMClient):
                     if hasattr(response.usage, 'output_tokens'):
                         completion_tokens = response.usage.output_tokens
                     
-                    # Calculate total if individual tokens available
-                    if total_tokens is None and prompt_tokens and completion_tokens:
+                    # Calculate total if individual tokens available but total is not
+                    if total_tokens is None and prompt_tokens is not None and completion_tokens is not None:
                         total_tokens = prompt_tokens + completion_tokens
                     
-                    if total_tokens is None and hasattr(response.usage, 'input_tokens') and hasattr(response.usage, 'output_tokens'):
-                        total_tokens = response.usage.input_tokens + response.usage.output_tokens
-                    elif total_tokens is None:
+                    if total_tokens is None:
                         logger.debug(
                             "Token usage information unavailable or in unexpected format",
                             extra={"usage_attrs": dir(response.usage) if response.usage else None}
