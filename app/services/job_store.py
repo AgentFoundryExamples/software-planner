@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Thread-safe in-memory job storage."""
+"""Thread-safe in-memory job storage for testing."""
 
 import uuid
 from datetime import datetime, timezone
@@ -22,12 +22,17 @@ from app.models.job import Job, JobStatus
 
 
 class JobStore:
-    """Thread-safe in-memory storage for job metadata.
+    """Thread-safe in-memory storage for job metadata (test double).
     
-    This class provides atomic operations for creating, reading, updating,
-    and listing jobs. All operations are protected by a threading lock to
-    ensure thread safety when accessed from background workers and request
-    handlers concurrently.
+    This class is used as a test double for JobRepository in unit tests.
+    It provides atomic operations for creating, reading, updating, and listing jobs.
+    
+    Note: Uses threading.Lock instead of asyncio.Lock because:
+    - Tests call async methods via asyncio.run(), creating new event loops
+    - Some tests use ThreadPoolExecutor to test concurrent access
+    - asyncio.Lock requires a single event loop and doesn't work across threads
+    
+    In production, use JobRepository with database-backed persistence instead.
     
     Attributes:
         _jobs: Internal dictionary mapping job_id to Job instances.
