@@ -127,10 +127,14 @@ compose-up:
 		echo "   After editing .env, run 'make compose-up' again."; \
 		exit 1; \
 	fi
-	@if ! grep -q "^LLM_API_KEY=sk-" .env 2>/dev/null; then \
-		echo "⚠ WARNING: LLM_API_KEY appears to be missing or invalid in .env file!"; \
-		echo "   The API will fail to start without a valid OpenAI API key."; \
-		echo "   Please edit .env and set: LLM_API_KEY=sk-your-openai-api-key-here"; \
+	@if ! grep -q "^LLM_API_KEY=.\\+" .env 2>/dev/null; then \
+		echo "⚠ WARNING: LLM_API_KEY appears to be missing or empty in .env file!"; \
+		echo "   The API will fail to start without a valid LLM provider API key."; \
+		echo "   Please edit .env and set LLM_API_KEY to your OpenAI, Anthropic, or Google API key."; \
+		echo "   Examples:"; \
+		echo "     LLM_API_KEY=sk-...           (OpenAI)"; \
+		echo "     LLM_API_KEY=sk-ant-...       (Anthropic)"; \
+		echo "     LLM_API_KEY=...              (Google)"; \
 		echo ""; \
 		echo "   Press CTRL+C to cancel, or wait 5 seconds to continue anyway..."; \
 		sleep 5; \
