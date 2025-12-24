@@ -1,0 +1,109 @@
+# .dockerignore - Exclude unnecessary files from Docker build context
+
+# Git metadata
+.git
+.gitignore
+.gitattributes
+
+# GitHub workflows and metadata
+.github
+
+# Python cache and compiled files
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+env.bak/
+venv.bak/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Development and build artifacts
+dist/
+build/
+*.egg-info/
+.eggs/
+*.egg
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Environment files (contain secrets, should never be in image)
+.env
+.env.*
+!.env.example
+
+# Test files
+tests/
+pytest.ini
+
+# Database files (should be external)
+*.db
+*.sqlite3
+*.sqlite3-journal
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Development tools configuration
+.flake8
+.pylintrc
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+pyproject.toml
+setup.py
+setup.cfg
+Makefile
+
+# Lock files
+# Note: requirements-lock.txt contains system packages and is not used in Docker build
+# requirements.txt contains only PyPI packages and is copied explicitly in Dockerfile
+requirements-lock.txt
+
+# CI/CD files
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
