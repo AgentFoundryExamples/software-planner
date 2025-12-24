@@ -402,6 +402,10 @@
     },
     {
       "type": "file",
+      "name": ".flake8"
+    },
+    {
+      "type": "file",
       "name": ".gitignore"
     },
     {
@@ -415,6 +419,14 @@
     {
       "type": "file",
       "name": "LLMs.md"
+    },
+    {
+      "type": "file",
+      "name": "Makefile"
+    },
+    {
+      "type": "file",
+      "name": "pyproject.toml"
     },
     {
       "type": "file",

@@ -47,6 +47,7 @@
           "typing.Optional"
         ],
         "third-party": [
+          "fastapi.",
           "fastapi.APIRouter",
           "fastapi.BackgroundTasks",
           "fastapi.Depends",
@@ -81,7 +82,6 @@
         ],
         "third-party": [
           "pydantic.Field",
-          "pydantic.field_validator",
           "pydantic.model_validator",
           "pydantic_settings.BaseSettings",
           "pydantic_settings.SettingsConfigDict"
@@ -94,7 +94,6 @@
       "type": "file",
       "external_dependencies": {
         "stdlib": [
-          "asyncio",
           "logging"
         ],
         "third-party": [
@@ -129,8 +128,7 @@
         ],
         "third-party": [
           "starlette.middleware.base.BaseHTTPMiddleware",
-          "starlette.requests.Request",
-          "starlette.responses.Response"
+          "starlette.requests.Request"
         ]
       }
     },
@@ -181,7 +179,6 @@
       "external_dependencies": {
         "stdlib": [
           "datetime.datetime",
-          "datetime.timezone",
           "typing.Literal"
         ],
         "third-party": [
@@ -243,10 +240,8 @@
           "typing.Optional"
         ],
         "third-party": [
-          "sqlalchemy.ext.asyncio.AsyncConnection",
           "sqlalchemy.ext.asyncio.AsyncEngine",
           "sqlalchemy.ext.asyncio.create_async_engine",
-          "sqlalchemy.pool.NullPool",
           "sqlalchemy.text"
         ]
       }
@@ -259,7 +254,6 @@
         "stdlib": [
           "datetime.datetime",
           "datetime.timezone",
-          "hashlib",
           "json",
           "logging",
           "typing.List",
@@ -267,7 +261,6 @@
           "uuid"
         ],
         "third-party": [
-          "sqlalchemy.exc.DBAPIError",
           "sqlalchemy.exc.IntegrityError",
           "sqlalchemy.ext.asyncio.AsyncEngine",
           "sqlalchemy.text"
@@ -369,6 +362,7 @@
           "typing.Optional"
         ],
         "third-party": [
+          "prometheus_client.",
           "prometheus_client.CONTENT_TYPE_LATEST",
           "prometheus_client.CollectorRegistry",
           "prometheus_client.Counter",
@@ -427,7 +421,6 @@
       "type": "file",
       "external_dependencies": {
         "stdlib": [
-          "asyncio",
           "logging",
           "threading",
           "typing.Optional"
@@ -466,7 +459,6 @@
       "external_dependencies": {
         "stdlib": [
           "logging",
-          "re",
           "typing.Optional",
           "unicodedata"
         ],
@@ -967,6 +959,10 @@
     },
     {
       "source": "app/api/routes.py",
+      "target": "app/models/error.py"
+    },
+    {
+      "source": "app/api/routes.py",
       "target": "app/models/job.py"
     },
     {
@@ -979,15 +975,11 @@
     },
     {
       "source": "app/api/routes.py",
-      "target": "app/models/error.py"
+      "target": "app/services/job_repository.py"
     },
     {
       "source": "app/api/routes.py",
       "target": "app/services/planner.py"
-    },
-    {
-      "source": "app/api/routes.py",
-      "target": "app/services/job_repository.py"
     },
     {
       "source": "app/api/routes.py",
@@ -1059,11 +1051,11 @@
     },
     {
       "source": "app/services/__init__.py",
-      "target": "app/services/planner.py"
+      "target": "app/services/llm_client.py"
     },
     {
       "source": "app/services/__init__.py",
-      "target": "app/services/llm_client.py"
+      "target": "app/services/planner.py"
     },
     {
       "source": "app/services/db/__init__.py",
@@ -1215,11 +1207,11 @@
     },
     {
       "source": "tests/test_authentication.py",
-      "target": "app/main.py"
+      "target": "app/core/config.py"
     },
     {
       "source": "tests/test_authentication.py",
-      "target": "app/core/config.py"
+      "target": "app/main.py"
     },
     {
       "source": "tests/test_authentication.py",
@@ -1239,11 +1231,11 @@
     },
     {
       "source": "tests/test_cors.py",
-      "target": "app/main.py"
+      "target": "app/core/config.py"
     },
     {
       "source": "tests/test_cors.py",
-      "target": "app/core/config.py"
+      "target": "app/main.py"
     },
     {
       "source": "tests/test_database.py",
@@ -1263,11 +1255,11 @@
     },
     {
       "source": "tests/test_job_repository.py",
-      "target": "app/services/job_repository.py"
+      "target": "app/models/job.py"
     },
     {
       "source": "tests/test_job_repository.py",
-      "target": "app/models/job.py"
+      "target": "app/services/job_repository.py"
     },
     {
       "source": "tests/test_job_store.py",
@@ -1295,19 +1287,19 @@
     },
     {
       "source": "tests/test_llm_gemini.py",
-      "target": "app/services/llm_gemini.py"
+      "target": "app/services/llm_client.py"
     },
     {
       "source": "tests/test_llm_gemini.py",
+      "target": "app/services/llm_gemini.py"
+    },
+    {
+      "source": "tests/test_llm_openai.py",
       "target": "app/services/llm_client.py"
     },
     {
       "source": "tests/test_llm_openai.py",
       "target": "app/services/llm_openai.py"
-    },
-    {
-      "source": "tests/test_llm_openai.py",
-      "target": "app/services/llm_client.py"
     },
     {
       "source": "tests/test_logging_helpers.py",
@@ -1343,11 +1335,11 @@
     },
     {
       "source": "tests/test_models_endpoint.py",
-      "target": "app/main.py"
+      "target": "app/core/config.py"
     },
     {
       "source": "tests/test_models_endpoint.py",
-      "target": "app/core/config.py"
+      "target": "app/main.py"
     },
     {
       "source": "tests/test_models_endpoint.py",
@@ -1359,11 +1351,11 @@
     },
     {
       "source": "tests/test_plan_endpoint.py",
-      "target": "app/main.py"
+      "target": "app/core/config.py"
     },
     {
       "source": "tests/test_plan_endpoint.py",
-      "target": "app/core/config.py"
+      "target": "app/main.py"
     },
     {
       "source": "tests/test_plan_endpoint.py",
@@ -1375,11 +1367,11 @@
     },
     {
       "source": "tests/test_planner_integration.py",
-      "target": "app/services/planner.py"
+      "target": "app/services/llm_client.py"
     },
     {
       "source": "tests/test_planner_integration.py",
-      "target": "app/services/llm_client.py"
+      "target": "app/services/planner.py"
     },
     {
       "source": "tests/test_plans_async_endpoint.py",
@@ -1388,10 +1380,6 @@
     {
       "source": "tests/test_plans_async_endpoint.py",
       "target": "app/services/job_store.py"
-    },
-    {
-      "source": "tests/test_plans_async_endpoint.py",
-      "target": "app/services/planner.py"
     },
     {
       "source": "tests/test_plans_async_endpoint.py",
@@ -1435,11 +1423,15 @@
     },
     {
       "source": "tests/test_rate_limiting_endpoints.py",
-      "target": "app/services/job_repository.py"
+      "target": "app/models/job.py"
     },
     {
       "source": "tests/test_rate_limiting_endpoints.py",
-      "target": "app/models/job.py"
+      "target": "app/services/job_repository.py"
+    },
+    {
+      "source": "tests/test_rate_limiting_security.py",
+      "target": "app/api/dependencies.py"
     },
     {
       "source": "tests/test_rate_limiting_security.py",
@@ -1451,23 +1443,19 @@
     },
     {
       "source": "tests/test_rate_limiting_security.py",
-      "target": "app/api/dependencies.py"
+      "target": "app/models/job.py"
     },
     {
       "source": "tests/test_rate_limiting_security.py",
       "target": "app/services/job_repository.py"
     },
     {
-      "source": "tests/test_rate_limiting_security.py",
-      "target": "app/models/job.py"
+      "source": "tests/test_request_id.py",
+      "target": "app/core/config.py"
     },
     {
       "source": "tests/test_request_id.py",
       "target": "app/main.py"
-    },
-    {
-      "source": "tests/test_request_id.py",
-      "target": "app/core/config.py"
     },
     {
       "source": "tests/test_request_id.py",
@@ -1479,15 +1467,15 @@
     },
     {
       "source": "tests/test_store_singleton.py",
-      "target": "app/services/store_singleton.py"
-    },
-    {
-      "source": "tests/test_store_singleton.py",
       "target": "app/services/llm_client.py"
     },
     {
       "source": "tests/test_store_singleton.py",
       "target": "app/services/llm_openai.py"
+    },
+    {
+      "source": "tests/test_store_singleton.py",
+      "target": "app/services/store_singleton.py"
     }
   ],
   "external_dependencies_summary": {
@@ -1533,6 +1521,7 @@
       "alembic.op",
       "anthropic",
       "anthropic.Anthropic",
+      "fastapi.",
       "fastapi.APIRouter",
       "fastapi.BackgroundTasks",
       "fastapi.Depends",
@@ -1552,6 +1541,7 @@
       "openai",
       "openai.APITimeoutError",
       "openai.OpenAI",
+      "prometheus_client.",
       "prometheus_client.CONTENT_TYPE_LATEST",
       "prometheus_client.CollectorRegistry",
       "prometheus_client.Counter",
@@ -1568,14 +1558,11 @@
       "pytest",
       "sqlalchemy",
       "sqlalchemy.engine.Connection",
-      "sqlalchemy.exc.DBAPIError",
       "sqlalchemy.exc.IntegrityError",
-      "sqlalchemy.ext.asyncio.AsyncConnection",
       "sqlalchemy.ext.asyncio.AsyncEngine",
       "sqlalchemy.ext.asyncio.async_engine_from_config",
       "sqlalchemy.ext.asyncio.create_async_engine",
       "sqlalchemy.pool",
-      "sqlalchemy.pool.NullPool",
       "sqlalchemy.text",
       "starlette.exceptions.HTTPException",
       "starlette.middleware.base.BaseHTTPMiddleware",
@@ -1584,6 +1571,6 @@
       "uvicorn"
     ],
     "stdlib_count": 35,
-    "third-party_count": 53
+    "third-party_count": 52
   }
 }

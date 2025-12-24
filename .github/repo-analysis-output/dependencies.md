@@ -9,9 +9,9 @@ Includes classification of external dependencies as stdlib vs third-party.
 ## Statistics
 
 - **Total files**: 63
-- **Intra-repo dependencies**: 134
+- **Intra-repo dependencies**: 133
 - **External stdlib dependencies**: 35
-- **External third-party dependencies**: 53
+- **External third-party dependencies**: 52
 
 ## External Dependencies
 
@@ -43,12 +43,13 @@ Total: 35 unique modules
 
 ### Third-Party Packages
 
-Total: 53 unique packages
+Total: 52 unique packages
 
 - `alembic.context`
 - `alembic.op`
 - `anthropic`
 - `anthropic.Anthropic`
+- `fastapi.`
 - `fastapi.APIRouter`
 - `fastapi.BackgroundTasks`
 - `fastapi.Depends`
@@ -64,8 +65,7 @@ Total: 53 unique packages
 - `fastapi.status`
 - `fastapi.testclient.TestClient`
 - `google.genai`
-- `google.genai.types`
-- ... and 33 more (see JSON for full list)
+- ... and 32 more (see JSON for full list)
 
 ## Most Depended Upon Files (Intra-Repo)
 
@@ -86,9 +86,9 @@ Total: 53 unique packages
 - `app/main.py` (6 dependencies)
 - `app/services/planner.py` (6 dependencies)
 - `app/services/store_singleton.py` (6 dependencies)
-- `tests/test_plans_async_endpoint.py` (6 dependencies)
 - `app/services/llm_client.py` (5 dependencies)
 - `tests/test_authentication.py` (5 dependencies)
+- `tests/test_plans_async_endpoint.py` (5 dependencies)
 - `tests/test_rate_limiting_security.py` (5 dependencies)
 - `app/services/job_repository.py` (4 dependencies)
 - `tests/test_models_endpoint.py` (4 dependencies)

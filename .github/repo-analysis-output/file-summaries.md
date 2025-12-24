@@ -29,8 +29,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for dependencies  
-**Size:** 6.44 KB  
-**LOC:** 106  
+**Size:** 6.18 KB  
+**LOC:** 94  
 **TODOs/FIXMEs:** 0  
 
 ## app/api/routes.py
@@ -38,8 +38,8 @@ Total files: 63
 **Role:** router  
 **Role Justification:** filename contains routing term  
 **Summary:** Python routing configuration (role: router)  
-**Size:** 40.33 KB  
-**LOC:** 908  
+**Size:** 39.22 KB  
+**LOC:** 868  
 **TODOs/FIXMEs:** 0  
 
 ## app/core/__init__.py
@@ -56,8 +56,8 @@ Total files: 63
 **Role:** configuration  
 **Role Justification:** configuration file name 'config'  
 **Summary:** Python configuration file (role: configuration)  
-**Size:** 21.41 KB  
-**LOC:** 384  
+**Size:** 20.65 KB  
+**LOC:** 347  
 **TODOs/FIXMEs:** 0  
 
 ## app/main.py
@@ -65,8 +65,8 @@ Total files: 63
 **Role:** entry-point  
 **Role Justification:** common entry point name 'main'  
 **Summary:** Python main entry point (role: entry-point)  
-**Size:** 11.15 KB  
-**LOC:** 197  
+**Size:** 10.93 KB  
+**LOC:** 199  
 **TODOs/FIXMEs:** 0  
 
 ## app/middleware/__init__.py
@@ -83,8 +83,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for metrics  
-**Size:** 3.34 KB  
-**LOC:** 63  
+**Size:** 3.17 KB  
+**LOC:** 59  
 **TODOs/FIXMEs:** 0  
 
 ## app/middleware/request_id.py
@@ -92,8 +92,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for request id  
-**Size:** 3.69 KB  
-**LOC:** 55  
+**Size:** 3.63 KB  
+**LOC:** 56  
 **TODOs/FIXMEs:** 0  
 
 ## app/models/__init__.py
@@ -110,8 +110,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for error  
-**Size:** 5.02 KB  
-**LOC:** 117  
+**Size:** 4.88 KB  
+**LOC:** 111  
 **TODOs/FIXMEs:** 0  
 
 ## app/models/job.py
@@ -119,8 +119,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for job  
-**Size:** 2.44 KB  
-**LOC:** 30  
+**Size:** 2.43 KB  
+**LOC:** 32  
 **TODOs/FIXMEs:** 0  
 
 ## app/models/request.py
@@ -128,8 +128,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for request  
-**Size:** 5.19 KB  
-**LOC:** 102  
+**Size:** 4.98 KB  
+**LOC:** 101  
 **TODOs/FIXMEs:** 0  
 
 ## app/models/response.py
@@ -137,8 +137,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for response  
-**Size:** 1.90 KB  
-**LOC:** 29  
+**Size:** 1.86 KB  
+**LOC:** 27  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/__init__.py
@@ -164,8 +164,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for connection  
-**Size:** 4.14 KB  
-**LOC:** 84  
+**Size:** 3.99 KB  
+**LOC:** 82  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/job_repository.py
@@ -173,8 +173,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for job repository  
-**Size:** 27.81 KB  
-**LOC:** 566  
+**Size:** 26.44 KB  
+**LOC:** 555  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/job_store.py
@@ -182,8 +182,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for job store  
-**Size:** 10.04 KB  
-**LOC:** 210  
+**Size:** 9.56 KB  
+**LOC:** 208  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/llm_claude.py
@@ -191,8 +191,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm claude  
-**Size:** 16.33 KB  
-**LOC:** 324  
+**Size:** 15.55 KB  
+**LOC:** 315  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/llm_client.py
@@ -200,8 +200,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm client  
-**Size:** 18.82 KB  
-**LOC:** 393  
+**Size:** 18.08 KB  
+**LOC:** 369  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/llm_gemini.py
@@ -209,8 +209,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm gemini  
-**Size:** 17.60 KB  
-**LOC:** 341  
+**Size:** 16.77 KB  
+**LOC:** 333  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/llm_openai.py
@@ -218,8 +218,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm openai  
-**Size:** 17.83 KB  
-**LOC:** 340  
+**Size:** 17.06 KB  
+**LOC:** 333  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/metrics.py
@@ -227,8 +227,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for metrics  
-**Size:** 9.79 KB  
-**LOC:** 217  
+**Size:** 9.58 KB  
+**LOC:** 223  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/model_registry.py
@@ -236,8 +236,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for model registry  
-**Size:** 7.51 KB  
-**LOC:** 154  
+**Size:** 7.20 KB  
+**LOC:** 146  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/planner.py
@@ -245,8 +245,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for planner  
-**Size:** 14.94 KB  
-**LOC:** 281  
+**Size:** 14.41 KB  
+**LOC:** 268  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/rate_limiter.py
@@ -254,8 +254,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for rate limiter  
-**Size:** 13.38 KB  
-**LOC:** 269  
+**Size:** 12.82 KB  
+**LOC:** 260  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/store_singleton.py
@@ -263,8 +263,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for store singleton  
-**Size:** 8.12 KB  
-**LOC:** 140  
+**Size:** 7.88 KB  
+**LOC:** 138  
 **TODOs/FIXMEs:** 0  
 
 ## app/utils/__init__.py
@@ -281,8 +281,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for logging helpers  
-**Size:** 7.38 KB  
-**LOC:** 196  
+**Size:** 7.23 KB  
+**LOC:** 189  
 **TODOs/FIXMEs:** 0  
 
 ## app/utils/sanitization.py
@@ -290,8 +290,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for sanitization  
-**Size:** 4.88 KB  
-**LOC:** 91  
+**Size:** 4.73 KB  
+**LOC:** 85  
 **TODOs/FIXMEs:** 0  
 
 ## migrations/env.py
@@ -326,8 +326,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 16.52 KB  
-**LOC:** 333  
+**Size:** 15.81 KB  
+**LOC:** 304  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_config.py
@@ -335,8 +335,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 19.68 KB  
-**LOC:** 338  
+**Size:** 19.50 KB  
+**LOC:** 327  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_cors.py
@@ -344,8 +344,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 13.25 KB  
-**LOC:** 255  
+**Size:** 12.98 KB  
+**LOC:** 246  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_database.py
@@ -353,8 +353,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 8.58 KB  
-**LOC:** 164  
+**Size:** 7.97 KB  
+**LOC:** 131  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_health_endpoint.py
@@ -362,8 +362,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 2.95 KB  
-**LOC:** 47  
+**Size:** 2.84 KB  
+**LOC:** 44  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_job_model.py
@@ -371,8 +371,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 6.60 KB  
-**LOC:** 172  
+**Size:** 6.42 KB  
+**LOC:** 169  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_job_repository.py
@@ -380,8 +380,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 19.03 KB  
-**LOC:** 362  
+**Size:** 18.38 KB  
+**LOC:** 357  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_job_store.py
@@ -389,8 +389,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 19.30 KB  
-**LOC:** 365  
+**Size:** 18.69 KB  
+**LOC:** 369  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_llm_claude.py
@@ -398,8 +398,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 10.87 KB  
-**LOC:** 215  
+**Size:** 10.32 KB  
+**LOC:** 191  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_llm_client.py
@@ -407,8 +407,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 20.13 KB  
-**LOC:** 441  
+**Size:** 20.80 KB  
+**LOC:** 429  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_llm_gemini.py
@@ -416,8 +416,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 11.04 KB  
-**LOC:** 200  
+**Size:** 10.63 KB  
+**LOC:** 190  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_llm_openai.py
@@ -425,8 +425,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 25.87 KB  
-**LOC:** 499  
+**Size:** 24.46 KB  
+**LOC:** 444  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_logging_helpers.py
@@ -434,8 +434,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 8.53 KB  
-**LOC:** 194  
+**Size:** 8.00 KB  
+**LOC:** 177  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_main.py
@@ -443,7 +443,7 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 5.60 KB  
+**Size:** 5.51 KB  
 **LOC:** 115  
 **TODOs/FIXMEs:** 0  
 
@@ -452,8 +452,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 7.12 KB  
-**LOC:** 124  
+**Size:** 6.82 KB  
+**LOC:** 121  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_metrics_endpoint.py
@@ -461,7 +461,7 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 3.81 KB  
+**Size:** 3.72 KB  
 **LOC:** 66  
 **TODOs/FIXMEs:** 0  
 
@@ -470,8 +470,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 7.27 KB  
-**LOC:** 118  
+**Size:** 7.22 KB  
+**LOC:** 125  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_model_registry.py
@@ -479,8 +479,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 17.07 KB  
-**LOC:** 438  
+**Size:** 16.58 KB  
+**LOC:** 430  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_models_endpoint.py
@@ -488,8 +488,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 17.92 KB  
-**LOC:** 302  
+**Size:** 17.38 KB  
+**LOC:** 304  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_plan_endpoint.py
@@ -497,8 +497,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 29.71 KB  
-**LOC:** 607  
+**Size:** 27.29 KB  
+**LOC:** 485  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_planner_integration.py
@@ -506,8 +506,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 18.80 KB  
-**LOC:** 361  
+**Size:** 18.73 KB  
+**LOC:** 396  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_plans_async_endpoint.py
@@ -515,8 +515,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 24.87 KB  
-**LOC:** 492  
+**Size:** 23.00 KB  
+**LOC:** 415  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_plans_polling_endpoints.py
@@ -524,8 +524,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 30.79 KB  
-**LOC:** 526  
+**Size:** 29.77 KB  
+**LOC:** 536  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_rate_limiter.py
@@ -533,8 +533,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 25.41 KB  
-**LOC:** 546  
+**Size:** 22.46 KB  
+**LOC:** 376  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_rate_limiting_endpoints.py
@@ -542,8 +542,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 20.06 KB  
-**LOC:** 323  
+**Size:** 19.15 KB  
+**LOC:** 296  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_rate_limiting_security.py
@@ -551,8 +551,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 8.43 KB  
-**LOC:** 149  
+**Size:** 8.06 KB  
+**LOC:** 139  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_request_id.py
@@ -560,8 +560,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 13.18 KB  
-**LOC:** 272  
+**Size:** 12.36 KB  
+**LOC:** 238  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_store_singleton.py
@@ -569,6 +569,6 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 5.12 KB  
+**Size:** 4.98 KB  
 **LOC:** 77  
 **TODOs/FIXMEs:** 0  

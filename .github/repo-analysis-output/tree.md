@@ -92,10 +92,13 @@
   ├── test_request_id.py
   └── test_store_singleton.py
 ├── .env.example
+├── .flake8
 ├── .gitignore
 ├── alembic.ini
 ├── LICENSE
 ├── LLMs.md
+├── Makefile
+├── pyproject.toml
 ├── pytest.ini
 ├── README.md
 ├── requirements-lock.txt
