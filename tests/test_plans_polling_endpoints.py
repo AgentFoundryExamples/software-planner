@@ -160,7 +160,14 @@ class TestGetJobStatusEndpoint:
         data = response.json()
         
         assert "error" in data
-        assert data["error"] == "Job not found"
+        
+        # Verify new error format
+        error = data["error"]
+        assert "code" in error
+        assert "message" in error
+        assert "request_id" in error
+        assert error["code"] == "not_found"
+        assert error["message"] == "Job not found"
     
     def test_get_job_status_no_stack_trace_in_404(self, client, override_job_store):
         """Test that 404 error doesn't include stack traces."""
@@ -169,9 +176,13 @@ class TestGetJobStatusEndpoint:
         assert response.status_code == 404
         data = response.json()
         
-        # Should only have error and status_code fields
+        # Should have error object with proper structure
         assert "error" in data
-        assert "status_code" in data
+        error = data["error"]
+        assert "code" in error
+        assert "message" in error
+        
+        # Should not have stack traces
         assert "traceback" not in data
         assert "stack" not in str(data).lower()
     

@@ -32,6 +32,7 @@ from app.services.llm_client import (
     LLMResponseError,
     get_default_system_prompt,
 )
+from app.utils.sanitization import sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 
@@ -229,7 +230,10 @@ def generate_plan(
         else:
             logger.info(
                 "Starting plan generation",
-                extra={"job_id": job_id, "description_length": len(description)}
+                extra={
+                    "job_id": job_id,
+                    "description_preview": sanitize_for_logging(description, max_length=100)
+                }
             )
             try:
                 _run_async_safe(job_repository.mark_running(job_id))
@@ -279,6 +283,7 @@ def generate_plan(
             "Calling LLM to generate specs",
             extra={
                 "description_length": len(description),
+                "description_preview": sanitize_for_logging(description, max_length=100),
                 "has_custom_prompt": bool(system_prompt != get_default_system_prompt()),
                 "job_id": job_id or "none",
                 "model_override": model or "none",

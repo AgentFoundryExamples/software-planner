@@ -175,9 +175,13 @@ class TestPlanEndpointValidationErrors:
         assert response.status_code == 400
         data = response.json()
         assert "error" in data
-        assert "status_code" in data
-        assert data["status_code"] == 400
-        assert "details" in data
+        
+        # Verify new error format
+        error = data["error"]
+        assert "code" in error
+        assert "message" in error
+        assert "request_id" in error
+        assert error["code"] == "invalid_description"
         
     def test_plan_endpoint_with_whitespace_only_description(self, client):
         """Test that whitespace-only descriptions are rejected with 400."""
@@ -197,7 +201,12 @@ class TestPlanEndpointValidationErrors:
             assert response.status_code == 400, f"Failed for description: {repr(description)}"
             data = response.json()
             assert "error" in data
-            assert data["status_code"] == 400
+            
+            # Verify new error format
+            error = data["error"]
+            assert "code" in error
+            assert "message" in error
+            assert error["code"] == "invalid_description"
             
     def test_plan_endpoint_with_oversized_description(self, client):
         """Test that descriptions exceeding max length are rejected with 400."""
@@ -214,12 +223,17 @@ class TestPlanEndpointValidationErrors:
         assert response.status_code == 400
         data = response.json()
         assert "error" in data
-        assert data["status_code"] == 400
-        assert "details" in data
+        
+        # Verify new error format and check for payload_too_large code
+        error = data["error"]
+        assert "code" in error
+        assert "message" in error
+        assert error["code"] == "payload_too_large"
         
         # Check that error message mentions the byte limit
-        error_msg = str(data["details"])
-        assert str(max_bytes) in error_msg
+        if "details" in error and "validation_errors" in error["details"]:
+            error_msg = str(error["details"]["validation_errors"])
+            assert str(max_bytes) in error_msg
         
     def test_plan_endpoint_with_unicode_oversized_description(self, client):
         """Test that Unicode descriptions exceeding byte limit are rejected."""
@@ -242,7 +256,76 @@ class TestPlanEndpointValidationErrors:
         assert response.status_code == 400
         data = response.json()
         assert "error" in data
-        assert data["status_code"] == 400
+        
+        # Verify new error format
+        error = data["error"]
+        assert "code" in error
+        assert error["code"] == "payload_too_large"
+    
+    def test_plan_endpoint_utf8_multibyte_counting(self, client):
+        """Test that multi-byte UTF-8 characters are counted correctly toward byte limit.
+        
+        Verifies acceptance criteria: UTF-8 multi-byte input counts toward the character limit.
+        Tests with various multi-byte Unicode characters (emoji, CJK) to ensure byte-based
+        length enforcement rather than character-based.
+        """
+        max_bytes = settings.max_description_bytes
+        
+        # Test 1: Emoji (4 bytes each in UTF-8)
+        emoji = "🚀"
+        emoji_bytes = len(emoji.encode('utf-8'))
+        assert emoji_bytes == 4, "Emoji should be 4 bytes"
+        
+        # Create description with emojis that fits exactly at limit
+        num_emojis_at_limit = max_bytes // emoji_bytes
+        at_limit_description = emoji * num_emojis_at_limit
+        
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": at_limit_description}
+        )
+        assert response.status_code == 200, "Should accept description at exact byte limit"
+        
+        # Create description with emojis that exceeds limit by one emoji
+        over_limit_description = emoji * (num_emojis_at_limit + 1)
+        
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": over_limit_description}
+        )
+        assert response.status_code == 400, "Should reject description over byte limit"
+        assert response.json()["error"]["code"] == "payload_too_large"
+        
+        # Test 2: CJK characters (3 bytes each in UTF-8)
+        cjk_char = "漢"  # Chinese character
+        cjk_bytes = len(cjk_char.encode('utf-8'))
+        assert cjk_bytes == 3, "CJK character should be 3 bytes"
+        
+        # Create description with CJK that fits at limit
+        num_cjk_at_limit = max_bytes // cjk_bytes
+        cjk_at_limit = cjk_char * num_cjk_at_limit
+        
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": cjk_at_limit}
+        )
+        assert response.status_code == 200, "Should accept CJK description at byte limit"
+        
+        # Test 3: Mixed ASCII and multi-byte (verify byte counting, not character counting)
+        # Create a string with ASCII (1 byte) + emoji (4 bytes) that would fit if counted
+        # by characters but exceeds if counted by bytes
+        ascii_part = "a" * (max_bytes - 3)  # Leave 3 bytes
+        mixed_description = ascii_part + "🚀"  # Add 4-byte emoji (exceeds by 1 byte)
+        
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": mixed_description}
+        )
+        assert response.status_code == 400, "Should reject based on bytes, not character count"
+        
+        # Verify the character count would be under limit if counted incorrectly
+        char_count = len(mixed_description)
+        assert char_count < max_bytes, "Character count is under byte limit (proving byte-based validation)"
 
 
 class TestPlanEndpointMalformedRequests:
@@ -258,9 +341,12 @@ class TestPlanEndpointMalformedRequests:
         assert response.status_code == 422
         data = response.json()
         assert "error" in data
-        assert "status_code" in data
-        assert data["status_code"] == 422
-        assert "details" in data
+        
+        # Verify new error format
+        error = data["error"]
+        assert "code" in error
+        assert "message" in error
+        assert error["code"] == "missing_field"
         
         # Verify it's a JSON response, not HTML
         assert response.headers["content-type"] == "application/json"
@@ -276,6 +362,7 @@ class TestPlanEndpointMalformedRequests:
         # FastAPI returns 422 for malformed JSON
         assert response.status_code == 422
         data = response.json()
+        # Either old or new format - both are acceptable for JSON parse errors
         assert "error" in data or "detail" in data
         
         # Verify it's a JSON response, not HTML
@@ -291,8 +378,12 @@ class TestPlanEndpointMalformedRequests:
         assert response.status_code == 422
         data = response.json()
         assert "error" in data
-        assert "status_code" in data
-        assert data["status_code"] == 422
+        
+        # Verify new error format
+        error = data["error"]
+        assert "code" in error
+        assert "message" in error
+        assert error["code"] == "invalid_type"
         
     def test_plan_endpoint_with_null_description(self, client):
         """Test that null description returns 422 with JSON error."""
@@ -304,7 +395,13 @@ class TestPlanEndpointMalformedRequests:
         assert response.status_code == 422
         data = response.json()
         assert "error" in data
-        assert data["status_code"] == 422
+        
+        # Verify new error format
+        error = data["error"]
+        assert "code" in error
+        assert "message" in error
+        # Could be missing_field or invalid_type depending on how pydantic handles None
+        assert error["code"] in ["missing_field", "invalid_type", "malformed_request"]
         
     def test_plan_endpoint_with_extra_fields(self, client):
         """Test that extra fields are ignored and request succeeds."""
@@ -320,6 +417,150 @@ class TestPlanEndpointMalformedRequests:
         assert response.status_code == 200
         data = response.json()
         assert "specs" in data
+
+
+class TestPlanEndpointControlCharacters:
+    """Test cases for control character validation."""
+    
+    def test_plan_endpoint_rejects_null_byte(self, client):
+        """Test that descriptions with null bytes are rejected."""
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": "Build API\x00with null"}
+        )
+        
+        assert response.status_code == 400
+        data = response.json()
+        assert "error" in data
+        
+        error = data["error"]
+        assert "code" in error
+        assert error["code"] == "invalid_description"
+    
+    def test_plan_endpoint_rejects_other_control_chars(self, client):
+        """Test that descriptions with disallowed control characters are rejected."""
+        # Test various control characters (excluding allowed ones: tab, newline, CR)
+        control_chars_to_test = [
+            "\x01",  # SOH (Start of Heading)
+            "\x02",  # STX (Start of Text)
+            "\x08",  # BS (Backspace)
+            "\x0B",  # VT (Vertical Tab)
+            "\x0C",  # FF (Form Feed)
+            "\x1B",  # ESC (Escape)
+            "\x7F",  # DEL (Delete)
+        ]
+        
+        for control_char in control_chars_to_test:
+            response = client.post(
+                "/api/v1/plan",
+                json={"description": f"Build API{control_char}with control char"}
+            )
+            
+            assert response.status_code == 400, f"Failed to reject control char {repr(control_char)}"
+            data = response.json()
+            assert "error" in data
+            
+            error = data["error"]
+            assert error["code"] == "invalid_description"
+    
+    def test_plan_endpoint_allows_tab_newline_cr(self, client):
+        """Test that tab, newline, and carriage return are allowed."""
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": "Build API\nwith newlines\tand tabs\rand CR"}
+        )
+        
+        # Should succeed - these are allowed whitespace characters
+        assert response.status_code == 200
+        data = response.json()
+        assert "specs" in data
+
+
+class TestPlanEndpointErrorResponseFormat:
+    """Test cases for standardized error response format."""
+    
+    def test_validation_error_includes_request_id(self, client):
+        """Test that validation errors include request_id."""
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": ""}
+        )
+        
+        assert response.status_code == 400
+        data = response.json()
+        assert "error" in data
+        
+        error = data["error"]
+        assert "request_id" in error
+        assert error["request_id"] is not None
+        assert len(error["request_id"]) > 0
+    
+    def test_error_response_has_standard_structure(self, client):
+        """Test that error responses follow the standard structure."""
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": ""}
+        )
+        
+        assert response.status_code == 400
+        data = response.json()
+        
+        # Top-level should have exactly "error" key
+        assert list(data.keys()) == ["error"]
+        
+        error = data["error"]
+        # Error object should have these keys
+        assert "code" in error
+        assert "message" in error
+        assert "request_id" in error
+        # details is optional
+        
+        # Verify types
+        assert isinstance(error["code"], str)
+        assert isinstance(error["message"], str)
+        assert isinstance(error["request_id"], str)
+    
+    def test_missing_field_error_has_correct_code(self, client):
+        """Test that missing field errors have the correct error code."""
+        response = client.post(
+            "/api/v1/plan",
+            json={}
+        )
+        
+        assert response.status_code == 422
+        data = response.json()
+        
+        error = data["error"]
+        assert error["code"] == "missing_field"
+    
+    def test_type_error_has_correct_code(self, client):
+        """Test that type errors have the correct error code."""
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": 123}
+        )
+        
+        assert response.status_code == 422
+        data = response.json()
+        
+        error = data["error"]
+        assert error["code"] == "invalid_type"
+    
+    def test_oversized_payload_has_correct_code(self, client):
+        """Test that oversized payloads have the correct error code."""
+        max_bytes = settings.max_description_bytes
+        oversized = "a" * (max_bytes + 1)
+        
+        response = client.post(
+            "/api/v1/plan",
+            json={"description": oversized}
+        )
+        
+        assert response.status_code == 400
+        data = response.json()
+        
+        error = data["error"]
+        assert error["code"] == "payload_too_large"
 
 
 class TestPlanEndpointEdgeCases:

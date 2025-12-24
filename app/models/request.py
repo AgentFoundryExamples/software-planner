@@ -16,6 +16,12 @@
 from pydantic import BaseModel, Field, field_validator
 
 from app.core.config import settings
+from app.utils.sanitization import (
+    has_control_characters,
+    validate_description_content,
+    validate_description_length,
+    validate_string_not_empty
+)
 
 
 class PlanRequest(BaseModel):
@@ -58,7 +64,7 @@ class PlanRequest(BaseModel):
     @field_validator('description')
     @classmethod
     def validate_description(cls, v: str) -> str:
-        """Validate description is not whitespace-only and within byte limit.
+        """Validate description is not whitespace-only, within byte limit, and has no control chars.
         
         Args:
             v: The description string to validate.
@@ -67,21 +73,23 @@ class PlanRequest(BaseModel):
             The validated description string.
             
         Raises:
-            ValueError: If description is whitespace-only or exceeds byte limit.
+            ValueError: If description is whitespace-only, exceeds byte limit, or contains control chars.
         """
-        # Check if whitespace-only
-        if not v or not v.strip():
-            raise ValueError("Description cannot be empty or whitespace-only")
+        # Check if empty or whitespace-only
+        is_valid, error_msg = validate_string_not_empty(v, "Description")
+        if not is_valid:
+            raise ValueError(error_msg)
+        
+        # Check for control characters
+        is_valid, error_msg = validate_description_content(v)
+        if not is_valid:
+            raise ValueError(error_msg)
         
         # Check byte length (UTF-8 encoding)
-        byte_length = len(v.encode('utf-8'))
         max_bytes = settings.max_description_bytes
-        
-        if byte_length > max_bytes:
-            raise ValueError(
-                f"Description exceeds maximum length of {max_bytes} bytes "
-                f"(current: {byte_length} bytes)"
-            )
+        is_valid, error_msg = validate_description_length(v, max_bytes)
+        if not is_valid:
+            raise ValueError(error_msg)
         
         return v
     

@@ -124,8 +124,13 @@ def test_http_exception_handler(client):
     assert response.status_code == 404
     data = response.json()
     assert "error" in data
-    assert "status_code" in data
-    assert data["status_code"] == 404
+    
+    # Verify new error format
+    error = data["error"]
+    assert "code" in error
+    assert "message" in error
+    assert "request_id" in error
+    assert error["code"] == "not_found"
 
 
 def test_validation_error_handler():
@@ -148,9 +153,14 @@ def test_validation_error_handler():
     assert response.status_code == 422
     data = response.json()
     assert "error" in data
-    assert "status_code" in data
-    assert "details" in data
-    assert data["status_code"] == 422
+    
+    # Verify new error format
+    error = data["error"]
+    assert "code" in error
+    assert "message" in error
+    assert "details" in error
+    assert "request_id" in error
+    assert error["code"] == "missing_field"
 
 
 def test_general_exception_handler():
@@ -170,5 +180,11 @@ def test_general_exception_handler():
     assert response.status_code == 500
     data = response.json()
     assert "error" in data
-    assert data["error"] == "Internal server error"
-    assert data["status_code"] == 500
+    
+    # Verify new error format
+    error = data["error"]
+    assert "code" in error
+    assert "message" in error
+    assert "request_id" in error
+    assert error["code"] == "internal_error"
+    assert error["message"] == "Internal server error"
