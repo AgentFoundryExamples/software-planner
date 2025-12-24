@@ -47,9 +47,19 @@ def mock_llm_client():
 @pytest.fixture
 def client(mock_llm_client):
     """Create a test client for the FastAPI app with mocked LLM client."""
-    # Patch the get_llm_client at the source to return our mock
+    from app.services.rate_limiter import RateLimiter
+    
+    # Create a disabled rate limiter for these tests
+    disabled_limiter = RateLimiter(
+        window_seconds=60,
+        max_requests=10,
+        enabled=False  # Disabled
+    )
+    
+    # Patch both the LLM client and rate limiter
     with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
-        yield TestClient(app)
+        with patch('app.api.routes.get_rate_limiter', return_value=disabled_limiter):
+            yield TestClient(app)
 
 
 @pytest.fixture
@@ -59,15 +69,24 @@ def mock_job_store():
 
 
 @pytest.fixture
-def override_job_store(mock_job_store, mock_llm_client):
+def override_job_store(mock_llm_client, mock_job_store):
     """Override the job store dependency for testing."""
     from app.services.store_singleton import get_job_store
+    from app.services.rate_limiter import RateLimiter
     
-    # Patch both job store and LLM client
+    # Create a disabled rate limiter for these tests
+    disabled_limiter = RateLimiter(
+        window_seconds=60,
+        max_requests=10,
+        enabled=False  # Disabled
+    )
+    
+    # Patch both job store, LLM client, and rate limiter
     with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
-        app.dependency_overrides[get_job_store] = lambda: mock_job_store
-        yield mock_job_store
-        app.dependency_overrides.clear()
+        with patch('app.api.routes.get_rate_limiter', return_value=disabled_limiter):
+            app.dependency_overrides[get_job_store] = lambda: mock_job_store
+            yield mock_job_store
+            app.dependency_overrides.clear()
 
 
 class TestPlansEndpointJobCreation:
