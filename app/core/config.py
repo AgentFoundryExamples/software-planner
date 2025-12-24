@@ -498,18 +498,21 @@ class Settings(BaseSettings):
             
         Note:
             Uses secrets.compare_digest for constant-time comparison to prevent
-            timing attacks. This is important when validating authentication tokens.
+            timing attacks. Checks all keys to avoid leaking information about
+            the number of keys or early match success.
         """
         if not api_key or not api_key.strip():
             return False
         
         stripped_key = api_key.strip()
         # Use constant-time comparison to prevent timing attacks
-        # Check against each key in the set
+        # Check against all keys to avoid timing information leakage
+        found = False
         for valid_key in self.normalized_api_keys:
             if secrets.compare_digest(stripped_key, valid_key):
-                return True
-        return False
+                found = True
+                # Continue checking remaining keys to maintain constant time
+        return found
 
 
 # Global settings instance
