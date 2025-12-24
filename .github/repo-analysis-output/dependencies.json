@@ -52,6 +52,7 @@
           "fastapi.Depends",
           "fastapi.HTTPException",
           "fastapi.Query",
+          "fastapi.Request",
           "fastapi.status"
         ]
       }
@@ -362,6 +363,22 @@
           "asyncio",
           "logging",
           "typing.Any",
+          "typing.Optional"
+        ],
+        "third-party": []
+      }
+    },
+    {
+      "id": "app/services/rate_limiter.py",
+      "path": "app/services/rate_limiter.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "hashlib",
+          "logging",
+          "math",
+          "threading",
+          "time",
           "typing.Optional"
         ],
         "third-party": []
@@ -762,6 +779,55 @@
       }
     },
     {
+      "id": "tests/test_rate_limiter.py",
+      "path": "tests/test_rate_limiter.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "threading",
+          "time",
+          "unittest.mock.patch"
+        ],
+        "third-party": [
+          "pytest"
+        ]
+      }
+    },
+    {
+      "id": "tests/test_rate_limiting_endpoints.py",
+      "path": "tests/test_rate_limiting_endpoints.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "datetime.datetime",
+          "datetime.timezone",
+          "unittest.mock.Mock",
+          "unittest.mock.patch",
+          "uuid"
+        ],
+        "third-party": [
+          "fastapi.testclient.TestClient",
+          "pytest"
+        ]
+      }
+    },
+    {
+      "id": "tests/test_rate_limiting_security.py",
+      "path": "tests/test_rate_limiting_security.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "threading",
+          "unittest.mock.Mock",
+          "unittest.mock.patch"
+        ],
+        "third-party": [
+          "fastapi.testclient.TestClient",
+          "pytest"
+        ]
+      }
+    },
+    {
       "id": "tests/test_request_id.py",
       "path": "tests/test_request_id.py",
       "type": "file",
@@ -970,6 +1036,10 @@
       "target": "app/services/store_singleton.py"
     },
     {
+      "source": "app/services/rate_limiter.py",
+      "target": "app/core/config.py"
+    },
+    {
       "source": "app/services/store_singleton.py",
       "target": "app/core/config.py"
     },
@@ -988,6 +1058,10 @@
     {
       "source": "app/services/store_singleton.py",
       "target": "app/services/model_registry.py"
+    },
+    {
+      "source": "app/services/store_singleton.py",
+      "target": "app/services/rate_limiter.py"
     },
     {
       "source": "migrations/env.py",
@@ -1122,6 +1196,10 @@
       "target": "app/core/config.py"
     },
     {
+      "source": "tests/test_plan_endpoint.py",
+      "target": "app/services/rate_limiter.py"
+    },
+    {
       "source": "tests/test_planner_integration.py",
       "target": "app/services/job_store.py"
     },
@@ -1147,6 +1225,10 @@
     },
     {
       "source": "tests/test_plans_async_endpoint.py",
+      "target": "app/services/rate_limiter.py"
+    },
+    {
+      "source": "tests/test_plans_async_endpoint.py",
       "target": "app/services/store_singleton.py"
     },
     {
@@ -1168,6 +1250,46 @@
     {
       "source": "tests/test_plans_polling_endpoints.py",
       "target": "app/core/config.py"
+    },
+    {
+      "source": "tests/test_rate_limiter.py",
+      "target": "app/services/rate_limiter.py"
+    },
+    {
+      "source": "tests/test_rate_limiting_endpoints.py",
+      "target": "app/main.py"
+    },
+    {
+      "source": "tests/test_rate_limiting_endpoints.py",
+      "target": "app/services/rate_limiter.py"
+    },
+    {
+      "source": "tests/test_rate_limiting_endpoints.py",
+      "target": "app/services/job_repository.py"
+    },
+    {
+      "source": "tests/test_rate_limiting_endpoints.py",
+      "target": "app/models/job.py"
+    },
+    {
+      "source": "tests/test_rate_limiting_security.py",
+      "target": "app/main.py"
+    },
+    {
+      "source": "tests/test_rate_limiting_security.py",
+      "target": "app/services/rate_limiter.py"
+    },
+    {
+      "source": "tests/test_rate_limiting_security.py",
+      "target": "app/api/dependencies.py"
+    },
+    {
+      "source": "tests/test_rate_limiting_security.py",
+      "target": "app/services/job_repository.py"
+    },
+    {
+      "source": "tests/test_rate_limiting_security.py",
+      "target": "app/models/job.py"
     },
     {
       "source": "tests/test_request_id.py",
@@ -1211,6 +1333,7 @@
       "json",
       "logging",
       "logging.config.fileConfig",
+      "math",
       "os",
       "pathlib.Path",
       "random",
@@ -1281,7 +1404,7 @@
       "starlette.responses.Response",
       "uvicorn"
     ],
-    "stdlib_count": 33,
+    "stdlib_count": 34,
     "third-party_count": 45
   }
 }

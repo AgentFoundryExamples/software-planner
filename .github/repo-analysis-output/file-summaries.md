@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 53
+Total files: 57
 
 ## app/__init__.py
 **Language:** Python  
@@ -29,8 +29,8 @@ Total files: 53
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for dependencies  
-**Size:** 3.61 KB  
-**LOC:** 67  
+**Size:** 6.44 KB  
+**LOC:** 106  
 **TODOs/FIXMEs:** 0  
 
 ## app/api/routes.py
@@ -38,8 +38,8 @@ Total files: 53
 **Role:** router  
 **Role Justification:** filename contains routing term  
 **Summary:** Python routing configuration (role: router)  
-**Size:** 33.99 KB  
-**LOC:** 767  
+**Size:** 38.76 KB  
+**LOC:** 869  
 **TODOs/FIXMEs:** 0  
 
 ## app/core/__init__.py
@@ -56,8 +56,8 @@ Total files: 53
 **Role:** configuration  
 **Role Justification:** configuration file name 'config'  
 **Summary:** Python configuration file (role: configuration)  
-**Size:** 21.08 KB  
-**LOC:** 378  
+**Size:** 21.41 KB  
+**LOC:** 384  
 **TODOs/FIXMEs:** 0  
 
 ## app/main.py
@@ -65,8 +65,8 @@ Total files: 53
 **Role:** entry-point  
 **Role Justification:** common entry point name 'main'  
 **Summary:** Python main entry point (role: entry-point)  
-**Size:** 10.32 KB  
-**LOC:** 186  
+**Size:** 11.00 KB  
+**LOC:** 195  
 **TODOs/FIXMEs:** 0  
 
 ## app/middleware/__init__.py
@@ -231,13 +231,22 @@ Total files: 53
 **LOC:** 281  
 **TODOs/FIXMEs:** 0  
 
+## app/services/rate_limiter.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for rate limiter  
+**Size:** 13.38 KB  
+**LOC:** 269  
+**TODOs/FIXMEs:** 0  
+
 ## app/services/store_singleton.py
 **Language:** Python  
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for store singleton  
-**Size:** 8.01 KB  
-**LOC:** 139  
+**Size:** 8.12 KB  
+**LOC:** 140  
 **TODOs/FIXMEs:** 0  
 
 ## app/utils/__init__.py
@@ -434,8 +443,8 @@ Total files: 53
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 29.40 KB  
-**LOC:** 600  
+**Size:** 29.71 KB  
+**LOC:** 607  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_planner_integration.py
@@ -452,8 +461,8 @@ Total files: 53
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 24.21 KB  
-**LOC:** 478  
+**Size:** 24.87 KB  
+**LOC:** 492  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_plans_polling_endpoints.py
@@ -463,6 +472,33 @@ Total files: 53
 **Summary:** Python test file (role: test)  
 **Size:** 30.79 KB  
 **LOC:** 526  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_rate_limiter.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 16.43 KB  
+**LOC:** 352  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_rate_limiting_endpoints.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 20.06 KB  
+**LOC:** 323  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_rate_limiting_security.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 8.43 KB  
+**LOC:** 149  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_request_id.py

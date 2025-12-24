@@ -202,6 +202,10 @@
             },
             {
               "type": "file",
+              "name": "rate_limiter.py"
+            },
+            {
+              "type": "file",
               "name": "store_singleton.py"
             }
           ]
@@ -345,6 +349,18 @@
         {
           "type": "file",
           "name": "test_plans_polling_endpoints.py"
+        },
+        {
+          "type": "file",
+          "name": "test_rate_limiter.py"
+        },
+        {
+          "type": "file",
+          "name": "test_rate_limiting_endpoints.py"
+        },
+        {
+          "type": "file",
+          "name": "test_rate_limiting_security.py"
         },
         {
           "type": "file",

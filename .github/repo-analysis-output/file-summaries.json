@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 53,
+  "total_files": 57,
   "files": [
     {
       "schema_version": "2.0",
@@ -39,8 +39,8 @@
       "summary": "Python module for dependencies",
       "summary_text": "Python module for dependencies",
       "metrics": {
-        "size_bytes": 3692,
-        "loc": 67,
+        "size_bytes": 6592,
+        "loc": 106,
         "todo_count": 0
       }
     },
@@ -53,8 +53,8 @@
       "summary": "Python routing configuration (role: router)",
       "summary_text": "Python routing configuration (role: router)",
       "metrics": {
-        "size_bytes": 34810,
-        "loc": 767,
+        "size_bytes": 39689,
+        "loc": 869,
         "todo_count": 0
       }
     },
@@ -81,8 +81,8 @@
       "summary": "Python configuration file (role: configuration)",
       "summary_text": "Python configuration file (role: configuration)",
       "metrics": {
-        "size_bytes": 21585,
-        "loc": 378,
+        "size_bytes": 21926,
+        "loc": 384,
         "todo_count": 0
       }
     },
@@ -95,8 +95,8 @@
       "summary": "Python main entry point (role: entry-point)",
       "summary_text": "Python main entry point (role: entry-point)",
       "metrics": {
-        "size_bytes": 10568,
-        "loc": 186,
+        "size_bytes": 11262,
+        "loc": 195,
         "todo_count": 0
       }
     },
@@ -354,6 +354,20 @@
     },
     {
       "schema_version": "2.0",
+      "path": "app/services/rate_limiter.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for rate limiter",
+      "summary_text": "Python module for rate limiter",
+      "metrics": {
+        "size_bytes": 13704,
+        "loc": 269,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "app/services/store_singleton.py",
       "language": "Python",
       "role": "implementation",
@@ -361,8 +375,8 @@
       "summary": "Python module for store singleton",
       "summary_text": "Python module for store singleton",
       "metrics": {
-        "size_bytes": 8199,
-        "loc": 139,
+        "size_bytes": 8312,
+        "loc": 140,
         "todo_count": 0
       }
     },
@@ -669,8 +683,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 30107,
-        "loc": 600,
+        "size_bytes": 30427,
+        "loc": 607,
         "todo_count": 0
       }
     },
@@ -697,8 +711,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 24795,
-        "loc": 478,
+        "size_bytes": 25468,
+        "loc": 492,
         "todo_count": 0
       }
     },
@@ -713,6 +727,48 @@
       "metrics": {
         "size_bytes": 31531,
         "loc": 526,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_rate_limiter.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 16820,
+        "loc": 352,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_rate_limiting_endpoints.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 20539,
+        "loc": 323,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_rate_limiting_security.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 8636,
+        "loc": 149,
         "todo_count": 0
       }
     },
