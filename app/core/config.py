@@ -15,6 +15,8 @@
 
 import logging
 import os
+import secrets
+from functools import cached_property
 from typing import Optional
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -78,6 +80,46 @@ class Settings(BaseSettings):
     max_description_bytes: int = 8192
     max_system_prompt_bytes: int = 32768  # Maximum length for custom system prompts
     
+    # Security: API key authentication
+    planner_api_keys: list[str] = Field(
+        default_factory=list,
+        description="List of valid API keys for planner authentication. Required for production use."
+    )
+    planner_api_keys_required: bool = Field(
+        default=False,
+        description="If True, requires at least one API key to be configured at startup"
+    )
+    planner_api_key_min_length: int = Field(
+        default=16,
+        ge=8,
+        description="Minimum length for API keys (default: 16 characters for security)"
+    )
+    
+    # Security: Request bounds
+    planner_request_description_max_chars: int = Field(
+        default=50000,
+        ge=1,
+        description="Maximum characters allowed in request descriptions"
+    )
+    
+    # Security: Rate limiting
+    planner_rate_limit_window_seconds: int = Field(
+        default=60,
+        ge=1,
+        description="Rate limit time window in seconds"
+    )
+    planner_rate_limit_max_requests: int = Field(
+        default=10,
+        ge=1,
+        description="Maximum requests allowed per rate limit window"
+    )
+    
+    # Observability: Metrics and logging
+    planner_metrics_enabled: bool = Field(
+        default=False,
+        description="Enable metrics collection and exposure"
+    )
+    
     # Job listing settings
     default_jobs_list_limit: int = 100
     max_jobs_list_limit: int = 1000
@@ -119,6 +161,12 @@ class Settings(BaseSettings):
     allowed_methods: list[str] = ["*"]
     allowed_headers: list[str] = ["*"]
     
+    # Security: Explicit wildcard control for CORS
+    cors_wildcard_enabled: bool = Field(
+        default=True,  # Default to True for backward compatibility with existing ["*"] default
+        description="Explicitly enable wildcard (*) in allowed_origins. Set to False in production."
+    )
+    
     # LLM settings (legacy, kept for backward compatibility)
     llm_api_key: str = Field(
         default="",
@@ -152,6 +200,97 @@ class Settings(BaseSettings):
         description="Logical name of the default model to use"
     )
 
+    @model_validator(mode="after")
+    def _validate_planner_api_keys(self) -> "Settings":
+        """Validate API keys for planner authentication.
+        
+        Ensures:
+        - API keys are not empty strings or whitespace-only
+        - No duplicate keys
+        - Keys meet minimum length requirements
+        - At least one key exists if required
+        """
+        # Check if API keys are required but none provided
+        if self.planner_api_keys_required and not self.planner_api_keys:
+            raise ValueError(
+                "Planner API key validation failed: planner_api_keys_required is True but no API keys configured. "
+                "Set PLANNER_API_KEYS environment variable with at least one secure API key. "
+                "Generate keys using: openssl rand -hex 32"
+            )
+        
+        # If no keys provided and not required, skip validation
+        if not self.planner_api_keys:
+            return self
+        
+        # Single-pass validation with set for deduplication
+        seen_keys = set()
+        for idx, key in enumerate(self.planner_api_keys):
+            stripped_key = key.strip() if key else ""
+            
+            # Check for empty or whitespace-only keys
+            if not stripped_key:
+                raise ValueError(
+                    f"Planner API key validation failed: Key at index {idx} is empty or contains only whitespace. "
+                    "All API keys must be non-empty strings."
+                )
+            
+            # Check minimum length
+            if len(stripped_key) < self.planner_api_key_min_length:
+                raise ValueError(
+                    f"Planner API key validation failed: Key at index {idx} is too short ({len(stripped_key)} chars). "
+                    f"Minimum length is {self.planner_api_key_min_length} characters for security. "
+                    "Generate secure keys using: openssl rand -hex 32"
+                )
+            
+            # Check for duplicates
+            if stripped_key in seen_keys:
+                raise ValueError(
+                    "Planner API key validation failed: Duplicate API keys detected. "
+                    f"Duplicate value: '{stripped_key[:8]}...' (showing first 8 chars). "
+                    "Each API key must be unique."
+                )
+            seen_keys.add(stripped_key)
+        
+        return self
+    
+    @model_validator(mode="after")
+    def _validate_planner_request_limits(self) -> "Settings":
+        """Validate request description character limits.
+        
+        Ensures:
+        - Max chars is within reasonable bounds for LLM processing
+        - Value doesn't exceed typical LLM context window constraints
+        """
+        # Most LLMs have context windows of ~200K tokens, roughly 800K chars
+        # Set a conservative upper limit of 500K characters
+        MAX_REASONABLE_CHARS = 500000
+        
+        if self.planner_request_description_max_chars > MAX_REASONABLE_CHARS:
+            raise ValueError(
+                f"Planner request description max_chars validation failed: "
+                f"Value {self.planner_request_description_max_chars} exceeds reasonable limit of {MAX_REASONABLE_CHARS} characters. "
+                "This limit prevents exceeding LLM context window constraints."
+            )
+        
+        return self
+    
+    @model_validator(mode="after")
+    def _validate_cors_wildcard(self) -> "Settings":
+        """Validate CORS wildcard configuration.
+        
+        Ensures:
+        - Wildcard '*' in origins is only allowed when explicitly enabled
+        - Provides clear security guidance
+        """
+        if "*" in self.allowed_origins and not self.cors_wildcard_enabled:
+            raise ValueError(
+                "CORS wildcard validation failed: allowed_origins contains '*' but cors_wildcard_enabled is False. "
+                "To use wildcard origins, you must explicitly set cors_wildcard_enabled=True. "
+                "WARNING: Wildcard CORS origins are insecure for production. Use specific domains instead."
+            )
+        
+        return self
+    
     @model_validator(mode="after")
     def _validate_database_settings(self) -> "Settings":
         """Validate database configuration and construct DATABASE_URL if needed.
@@ -321,6 +460,59 @@ class Settings(BaseSettings):
         # and does not need to be checked here.
         
         return self
+    
+    # Helper methods for downstream dependencies
+    
+    @cached_property
+    def normalized_api_keys(self) -> set[str]:
+        """Get a cached, normalized set of API keys with whitespace stripped.
+        
+        Returns:
+            Set of normalized (stripped) API keys.
+            
+        Note:
+            This property is cached for performance. The Settings object is
+            typically immutable after initialization, so caching is safe.
+        """
+        return {key.strip() for key in self.planner_api_keys if key and key.strip()}
+    
+    def get_rate_limit_config(self) -> dict[str, int]:
+        """Get rate limit configuration as a dictionary.
+        
+        Returns:
+            Dictionary with 'window_seconds' and 'max_requests' keys.
+        """
+        return {
+            "window_seconds": self.planner_rate_limit_window_seconds,
+            "max_requests": self.planner_rate_limit_max_requests
+        }
+    
+    def is_api_key_valid(self, api_key: str) -> bool:
+        """Check if an API key is valid using constant-time comparison.
+        
+        Args:
+            api_key: The API key to validate.
+            
+        Returns:
+            True if the key is valid, False otherwise.
+            
+        Note:
+            Uses secrets.compare_digest for constant-time comparison to prevent
+            timing attacks. Checks all keys to avoid leaking information about
+            the number of keys or early match success.
+        """
+        if not api_key or not api_key.strip():
+            return False
+        
+        stripped_key = api_key.strip()
+        # Use constant-time comparison to prevent timing attacks
+        # Check against all keys to avoid timing information leakage
+        found = False
+        for valid_key in self.normalized_api_keys:
+            if secrets.compare_digest(stripped_key, valid_key):
+                found = True
+                # Continue checking remaining keys to maintain constant time
+        return found
 
 
 # Global settings instance
