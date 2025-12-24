@@ -11,26 +11,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Global job store singleton for dependency injection.
+"""Global job repository singleton for dependency injection.
 
-This module provides a centralized location for the global job store instance,
+This module provides a centralized location for the global job repository instance,
 avoiding circular import issues between main.py and routes.py.
 """
 
+import asyncio
 import logging
 import threading
 from typing import Optional
 
 from app.core.config import settings
-from app.services.job_store import JobStore
+from app.services.job_repository import JobRepository
 from app.services.llm_client import BaseLLMClient, LLMConfigurationError
 from app.services.llm_openai import OpenAIClient
 from app.services.model_registry import get_model_registry
 
 logger = logging.getLogger(__name__)
 
-# Global job store instance
-_job_store = JobStore()
+# Global job repository instance (lazily initialized)
+_job_repository: Optional[JobRepository] = None
+_job_repository_lock = threading.Lock()
 
 # Global LLM client instance (lazily initialized)
 _llm_client: Optional[BaseLLMClient] = None
@@ -41,17 +43,32 @@ _registry_logged = False
 _registry_log_lock = threading.Lock()
 
 
-def get_job_store() -> JobStore:
-    """Get the global job store instance for dependency injection.
+def get_job_store() -> JobRepository:
+    """Get the global job repository instance for dependency injection.
     
     This function is used as a FastAPI dependency to provide the global
-    job store instance. Tests can override this dependency to provide
-    a mock job store.
+    job repository instance. Uses thread-safe lazy initialization.
     
     Returns:
-        JobStore: The global job store instance.
+        JobRepository: The global job repository instance.
     """
-    return _job_store
+    global _job_repository
+    
+    # Fast path: return existing repository without acquiring lock
+    if _job_repository is not None:
+        return _job_repository
+    
+    # Slow path: acquire lock and initialize repository
+    with _job_repository_lock:
+        # Check again after acquiring lock (double-checked locking)
+        if _job_repository is not None:
+            return _job_repository
+        
+        logger.info("Initializing job repository")
+        _job_repository = JobRepository()
+        logger.info("Job repository initialized successfully")
+        
+        return _job_repository
 
 
 def get_llm_client() -> BaseLLMClient:

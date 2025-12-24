@@ -19,7 +19,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-JobStatus = Literal["pending", "running", "succeeded", "failed"]
+JobStatus = Literal["QUEUED", "RUNNING", "SUCCEEDED", "FAILED"]
 
 
 class Job(BaseModel):
@@ -41,9 +41,12 @@ class Job(BaseModel):
     
     job_id: str = Field(..., description="Unique job identifier (UUID string)")
     status: JobStatus = Field(..., description="Current job status")
+    description: str | None = Field(None, description="Project description for planning")
     created_at: datetime = Field(..., description="Job creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
+    started_at: datetime | None = Field(None, description="Timestamp when job started execution")
+    finished_at: datetime | None = Field(None, description="Timestamp when job finished (succeeded or failed)")
     result: dict | None = Field(None, description="Job result with top-level 'specs' field")
     error: dict | None = Field(None, description="Error details if job failed")
     model: str | None = Field(None, description="Logical model name used for this job")
-    system_prompt_hash: str | None = Field(None, description="Hash of the system prompt used")
+    system_prompt: str | None = Field(None, description="System prompt used for this job")

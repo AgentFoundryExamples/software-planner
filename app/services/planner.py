@@ -17,12 +17,13 @@ This module provides the main planning function that uses an LLM client
 to generate software specifications based on project descriptions.
 """
 
+import asyncio
 import logging
 from typing import Any, Optional
 
 from app.core.config import settings
 from app.models.response import PlanResponse, SpecItem
-from app.services.job_store import JobStore
+from app.services.job_repository import JobRepository
 from app.services.llm_client import (
     BaseLLMClient,
     LLMConfigurationError,
@@ -159,7 +160,7 @@ def _normalize_specs(data: dict[str, Any]) -> dict[str, Any]:
 
 def generate_plan(
     description: str, 
-    job_store: Optional[JobStore] = None, 
+    job_repository: Optional[JobRepository] = None, 
     job_id: Optional[str] = None, 
     llm_client: Optional[BaseLLMClient] = None,
     model: Optional[str] = None,
@@ -171,12 +172,12 @@ def generate_plan(
     a project description. Implements robust error handling, response
     normalization, and job lifecycle management.
     
-    When called from background workers, job_store and job_id should be provided
+    When called from background workers, job_repository and job_id should be provided
     to record status transitions and results.
     
     Args:
         description: Project description string.
-        job_store: Optional JobStore instance for recording status updates.
+        job_repository: Optional JobRepository instance for recording status updates.
         job_id: Optional job ID for status tracking.
         llm_client: Optional LLM client instance. If not provided, will use
             the global singleton from store_singleton.
@@ -192,8 +193,25 @@ def generate_plan(
         LLMResponseError: If LLM response is invalid or cannot be parsed.
     """
     # If job tracking is enabled, validate job exists before updating
-    if job_store and job_id:
-        job = job_store.get_job(job_id)
+    if job_repository and job_id:
+        # Run async operations in event loop
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            # No event loop in current thread - create one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        try:
+            job = loop.run_until_complete(job_repository.get_job(job_id))
+        except Exception as e:
+            logger.error(
+                "Failed to get job during planning",
+                extra={"job_id": job_id, "error": str(e)},
+                exc_info=True
+            )
+            job = None
+        
         if not job:
             # Job not found - cannot track status for non-existent job
             # Clear job_id to prevent further update attempts
@@ -207,7 +225,15 @@ def generate_plan(
                 "Starting plan generation",
                 extra={"job_id": job_id, "description_length": len(description)}
             )
-            job_store.update_job(job_id, status="running")
+            try:
+                loop.run_until_complete(job_repository.mark_running(job_id))
+            except Exception as e:
+                logger.error(
+                    "Failed to mark job as running",
+                    extra={"job_id": job_id, "error": str(e)},
+                    exc_info=True
+                )
+                # Continue with planning even if status update fails
     
     try:
         # Get LLM client - if model is specified, get a client for that model
@@ -277,10 +303,23 @@ def generate_plan(
         )
         
         # Update job with successful result if job tracking is enabled
-        if job_store and job_id:
+        if job_repository and job_id:
             # Convert response to dict preserving top-level 'specs'
             result_dict = response.model_dump()
-            job_store.update_job(job_id, status="succeeded", result=result_dict)
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
+            try:
+                loop.run_until_complete(job_repository.mark_succeeded(job_id, result_dict))
+            except Exception as e:
+                logger.error(
+                    "Failed to mark job as succeeded",
+                    extra={"job_id": job_id, "error": str(e)},
+                    exc_info=True
+                )
         
         return response
         
@@ -300,13 +339,19 @@ def generate_plan(
         )
         
         # Update job with error if job tracking is enabled
-        if job_store and job_id:
+        if job_repository and job_id:
             try:
                 error_dict = {
                     "error": error_msg,
                     "type": error_type_name
                 }
-                job_store.update_job(job_id, status="failed", error=error_dict)
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                
+                loop.run_until_complete(job_repository.mark_failed(job_id, error_dict))
             except Exception as update_exc:
                 logger.error(
                     f"Failed to update job status after {error_category} error",
@@ -328,13 +373,19 @@ def generate_plan(
         )
         
         # Update job with error if job tracking is enabled
-        if job_store and job_id:
+        if job_repository and job_id:
             try:
                 error_dict = {
                     "error": error_msg,
                     "type": type(e).__name__
                 }
-                job_store.update_job(job_id, status="failed", error=error_dict)
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                
+                loop.run_until_complete(job_repository.mark_failed(job_id, error_dict))
             except Exception as update_exc:
                 logger.error(
                     "Failed to update job status after unexpected error",
