@@ -18,6 +18,7 @@ import logging
 from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 
+from app.api.dependencies import require_api_key
 from app.core.config import settings
 from app.models.job import Job
 from app.models.request import PlanRequest
@@ -381,6 +382,28 @@ def _format_job_response(job: Job) -> dict:
                 }
             }
         },
+        401: {
+            "description": "Missing authentication - X-API-Key header required",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": "Missing X-API-Key header",
+                        "status_code": 401
+                    }
+                }
+            }
+        },
+        403: {
+            "description": "Invalid authentication - API key not recognized",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": "Invalid API key",
+                        "status_code": 403
+                    }
+                }
+            }
+        },
         422: {
             "description": "Malformed JSON or missing required fields",
             "content": {
@@ -403,16 +426,22 @@ def _format_job_response(job: Job) -> dict:
     summary="Generate software plan",
     description="Accepts a project description and returns a structured plan with specifications"
 )
-def create_plan(request: PlanRequest) -> PlanResponse:
+def create_plan(
+    request: PlanRequest,
+    api_key: str = Depends(require_api_key)
+) -> PlanResponse:
     """Generate a software plan based on the provided description.
     
     Args:
         request: PlanRequest containing the project description and optional model/prompt overrides.
+        api_key: Validated API key from X-API-Key header (injected via dependency).
         
     Returns:
         PlanResponse with structured specifications.
         
     Raises:
+        HTTPException: 401 if X-API-Key header is missing.
+        HTTPException: 403 if X-API-Key value is invalid.
         HTTPException: 400 if description is empty, whitespace-only, exceeds byte limit,
                        or if model name is invalid/disabled.
         HTTPException: 422 if JSON is malformed or required fields are missing.
@@ -513,6 +542,28 @@ def _background_planner_worker(
                 }
             }
         },
+        401: {
+            "description": "Missing authentication - X-API-Key header required",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": "Missing X-API-Key header",
+                        "status_code": 401
+                    }
+                }
+            }
+        },
+        403: {
+            "description": "Invalid authentication - API key not recognized",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": "Invalid API key",
+                        "status_code": 403
+                    }
+                }
+            }
+        },
         422: {
             "description": "Malformed JSON or missing required fields",
             "content": {
@@ -552,7 +603,8 @@ def _background_planner_worker(
 async def create_plan_async(
     request: PlanRequest,
     background_tasks: BackgroundTasks,
-    job_repository: JobRepository = Depends(get_job_store)
+    job_repository: JobRepository = Depends(get_job_store),
+    api_key: str = Depends(require_api_key)
 ) -> dict:
     """Create an async planning job that executes in the background.
     
@@ -577,11 +629,14 @@ async def create_plan_async(
         request: PlanRequest containing the project description and optional overrides.
         background_tasks: FastAPI background tasks manager.
         job_repository: JobRepository instance (injected via dependency).
+        api_key: Validated API key from X-API-Key header (injected via dependency).
         
     Returns:
         Dict with job_id and status "QUEUED".
         
     Raises:
+        HTTPException: 401 if X-API-Key header is missing.
+        HTTPException: 403 if X-API-Key value is invalid.
         HTTPException: 400 if description is empty, whitespace-only, exceeds byte limit,
                        or if model name is invalid/disabled.
         HTTPException: 422 if JSON is malformed or required fields are missing.
