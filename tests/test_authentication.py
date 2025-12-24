@@ -159,7 +159,6 @@ class TestAPIKeyAuthenticationAsync:
         """Test that POST /plans succeeds with valid API key."""
         from app.services.job_store import JobStore
         from app.services.store_singleton import get_job_store
-        from app.main import get_app
         
         # Get the app and override the job store dependency
         test_app = client_with_api_keys.app
