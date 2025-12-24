@@ -830,6 +830,897 @@ Configuration is managed through environment variables or a `.env` file. All set
 - `ALLOWED_METHODS`: CORS allowed methods (default: ["*"])
 - `ALLOWED_HEADERS`: CORS allowed headers (default: ["*"])
 
+See `.env.example` for a complete list of configuration options with detailed descriptions and security guidance.
+
+### API Authentication
+
+The Software Planner API supports optional API key authentication via the `X-API-Key` header. When API keys are configured, all planning endpoints require authentication to prevent unauthorized access and enable per-key rate limiting.
+
+#### Configuration
+
+**Environment Variables:**
+
+Configure API keys using the `PLANNER_API_KEYS` environment variable in your `.env` file:
+
+```bash
+# Option 1: JSON array format (recommended for multiple keys)
+PLANNER_API_KEYS=["key-prod-abc123def456","key-stage-xyz789","key-dev-test001"]
+
+# Option 2: Comma-separated format
+PLANNER_API_KEYS=key-prod-abc123def456,key-stage-xyz789,key-dev-test001
+```
+
+**Additional Security Settings:**
+
+```bash
+# Require API keys to be configured at startup (production: set to true)
+PLANNER_API_KEYS_REQUIRED=false
+
+# Minimum API key length (default: 16, recommended: 32+)
+PLANNER_API_KEY_MIN_LENGTH=16
+```
+
+**⚠️ Security Best Practices:**
+
+1. **Generate Strong Keys**: Use cryptographically secure random keys
+   ```bash
+   # Generate a secure API key
+   openssl rand -hex 32
+   python -c "import secrets; print(secrets.token_urlsafe(32))"
+   ```
+
+2. **Never Commit Keys**: Add `.env` to `.gitignore` and never commit actual keys to version control
+
+3. **Use Separate Keys**: Issue separate keys for different environments (dev, staging, production) and clients
+
+4. **Rotate Regularly**: Implement a key rotation schedule (recommended: every 90 days)
+
+5. **Minimum Length**: Use keys with at least 32 characters for production deployments
+
+6. **Monitor Usage**: Track API key usage via logging (keys are logged as hashed identifiers only)
+
+#### Using API Keys
+
+**Making Authenticated Requests:**
+
+Include the `X-API-Key` header in all API requests:
+
+```bash
+# Example: Create a planning job with authentication
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key-here" \
+  -d '{"description": "Build a REST API for managing tasks"}'
+```
+
+**Header Requirements:**
+
+- **Header Name**: `X-API-Key` (case-insensitive)
+- **Value**: Your API key exactly as configured (no whitespace stripping)
+- **Authentication**: Uses constant-time comparison to prevent timing attacks
+
+#### Authentication Behavior
+
+**When API Keys Are Configured:**
+
+- All planning endpoints (`POST /api/v1/plan`, `POST /api/v1/plans`, `GET /api/v1/plans/{job_id}`) require authentication
+- Missing `X-API-Key` header returns `401 Unauthorized`
+- Invalid API key returns `403 Forbidden`
+- Valid key allows request to proceed (subject to rate limiting)
+
+**When No API Keys Are Configured:**
+
+- Authentication is skipped for backward compatibility
+- Requests proceed without the `X-API-Key` header
+- **⚠️ Warning**: This mode is only suitable for development or trusted internal networks
+
+**Backward Compatibility:**
+
+- Existing deployments without API keys continue to work unchanged
+- Set `PLANNER_API_KEYS_REQUIRED=false` (default) to allow starting without keys
+- For production, set `PLANNER_API_KEYS_REQUIRED=true` to enforce key configuration
+
+#### Key Rotation and Revocation
+
+**Rotating API Keys Without Downtime:**
+
+1. **Generate New Keys**: Create new API keys using secure random generation
+   ```bash
+   openssl rand -hex 32
+   ```
+
+2. **Add to Configuration**: Add new keys to `PLANNER_API_KEYS` alongside existing keys
+   ```bash
+   # Both old and new keys are valid during rotation
+   PLANNER_API_KEYS=["old-key-123","new-key-456"]
+   ```
+
+3. **Deploy Updated Configuration**: Restart application with updated environment variables
+
+4. **Distribute New Keys**: Provide new keys to API clients
+
+5. **Monitor Migration**: Track usage of old vs new keys via logs (keys logged as hashed identifiers)
+
+6. **Remove Old Keys**: After all clients migrated, remove old keys from configuration
+   ```bash
+   # Only new key remains
+   PLANNER_API_KEYS=["new-key-456"]
+   ```
+
+7. **Deploy Final Configuration**: Restart application to revoke old keys
+
+**Emergency Revocation:**
+
+To immediately revoke a compromised key:
+1. Remove the key from `PLANNER_API_KEYS` in `.env`
+2. Restart the application
+3. All requests using the revoked key will immediately receive `403 Forbidden`
+
+**Key Management Tips:**
+
+- Store keys in a secure secrets management system (HashiCorp Vault, AWS Secrets Manager, Kubernetes Secrets)
+- Document which keys are issued to which clients/environments
+- Implement automated key rotation using infrastructure-as-code
+- Set up alerts for authentication failures that may indicate compromised keys
+
+#### Logging and Privacy
+
+**What Gets Logged:**
+
+- Authentication success/failure events (with request IDs)
+- Hashed API key identifiers for correlation (first 16 characters of SHA-256 hash)
+- Request IDs for tracing authenticated requests
+
+**What Is NOT Logged:**
+
+- Full API key values (never logged in plaintext)
+- API key material in error messages or stack traces
+- Prompt content or user data
+
+**Example Log Entries:**
+
+```json
+{
+  "level": "INFO",
+  "message": "Authentication successful",
+  "request_id": "req-a1b2c3d4",
+  "api_key_hash": "a7b9f3e1c2d4e5f6"
+}
+
+{
+  "level": "WARNING",
+  "message": "Authentication failed: Invalid API key",
+  "request_id": "req-x9y8z7w6"
+}
+```
+
+**Security Note**: API keys are never included in logs, error responses, or exposed to clients. Only hashed identifiers appear in logs for debugging and correlation purposes.
+
+### Rate Limiting
+
+The Software Planner API implements token bucket rate limiting to prevent abuse and ensure fair resource allocation. Rate limits can be applied per API key or per client IP address.
+
+#### How Rate Limiting Works
+
+**Token Bucket Algorithm:**
+
+- Each client (identified by API key or IP) has a token bucket
+- Bucket starts full with a maximum capacity of tokens
+- Each request consumes one token from the bucket
+- Tokens refill at a constant rate over time
+- Requests are denied when insufficient tokens are available
+
+**Example**: With a limit of 10 requests per 60 seconds:
+- Bucket capacity: 10 tokens
+- Refill rate: 10 tokens / 60 seconds = 0.167 tokens/second
+- Burst: Can make 10 requests immediately, then must wait for refill
+
+#### Configuration
+
+**Environment Variables:**
+
+Configure rate limiting in your `.env` file:
+
+```bash
+# Time window for rate limit tracking (seconds)
+PLANNER_RATE_LIMIT_WINDOW_SECONDS=60
+
+# Maximum requests allowed per window
+PLANNER_RATE_LIMIT_MAX_REQUESTS=10
+```
+
+**Rate Limit Modes:**
+
+1. **Per-API-Key Rate Limiting** (Recommended)
+   - When `X-API-Key` header is present and valid
+   - Each API key gets its own independent rate limit
+   - Most accurate for tracking specific clients
+
+2. **Per-IP Rate Limiting** (Fallback)
+   - When no API key is provided or API keys are not configured
+   - Uses client IP address for identification
+   - Less accurate due to NAT, proxies, and IP sharing
+
+#### Client IP Extraction
+
+**Default Behavior (Secure):**
+
+By default, only the direct connection IP is used to prevent IP spoofing attacks:
+
+```bash
+# Default: Do not trust proxy headers (most secure)
+PLANNER_TRUST_PROXY_HEADERS=false
+```
+
+**Behind a Trusted Proxy:**
+
+If your application is behind a trusted reverse proxy or load balancer, enable proxy header trust:
+
+```bash
+# Enable X-Forwarded-For and X-Real-IP header processing
+PLANNER_TRUST_PROXY_HEADERS=true
+```
+
+**⚠️ Security Warning**: Only enable `PLANNER_TRUST_PROXY_HEADERS` if your application is behind a trusted proxy/load balancer that sanitizes these headers. Untrusted proxy headers can be spoofed by clients to bypass rate limiting.
+
+**Priority Order** (when proxy headers are trusted):
+1. `X-Forwarded-For` (rightmost IP in the chain)
+2. `X-Real-IP`
+3. Direct connection IP (fallback)
+
+#### Rate Limit Responses
+
+**When Rate Limit Is Exceeded:**
+
+HTTP `429 Too Many Requests` response with standardized error format:
+
+```json
+{
+  "error": {
+    "code": "rate_limit_exceeded",
+    "message": "Rate limit exceeded. Please retry after 5 seconds.",
+    "details": {
+      "retry_after_seconds": 5,
+      "window_seconds": 60,
+      "max_requests": 10
+    },
+    "request_id": "req-a1b2c3d4"
+  }
+}
+```
+
+**Response Headers:**
+
+```
+HTTP/1.1 429 Too Many Requests
+Retry-After: 5
+X-Request-ID: req-a1b2c3d4
+```
+
+**Retry-After Guidance:**
+
+- `Retry-After` header indicates seconds to wait before retrying
+- Calculated based on token refill rate
+- Always rounded up to the next whole second
+- Clients should implement exponential backoff for repeated 429 errors
+
+#### Multi-Instance Deployments
+
+**⚠️ Important Limitation**: Rate limiting in the current implementation is **per-instance** and uses in-memory storage. This has important implications for multi-instance deployments:
+
+**Single Instance:**
+- Rate limits work as expected
+- All requests to the same instance share the same rate limiter state
+- Perfect tracking of per-key and per-IP limits
+
+**Multiple Instances (Load Balanced):**
+- Each instance maintains its own independent rate limit state
+- Total effective rate limit is `configured_limit × number_of_instances`
+- Example: With 10 req/min configured and 3 instances, actual limit is ~30 req/min
+- Client requests are distributed across instances by load balancer
+- Rate limiting is **not synchronized** between instances
+
+**Workarounds for Multi-Instance:**
+
+1. **Reduce Per-Instance Limits**: Divide desired rate limit by expected instance count
+   ```bash
+   # For 3 instances with desired 30 req/min total:
+   PLANNER_RATE_LIMIT_MAX_REQUESTS=10  # 10 req/min × 3 instances = 30 req/min
+   ```
+
+2. **Use Sticky Sessions**: Configure load balancer for session affinity based on API key
+   - Routes requests from the same API key to the same instance
+   - More accurate rate limiting per key
+   - Uneven load distribution
+
+3. **Implement Distributed Rate Limiting** (Future Enhancement)
+   - Use Redis or similar shared storage for rate limit state
+   - Synchronize token buckets across all instances
+   - Requires code changes (not currently implemented)
+
+**Recommendation**: For production deployments with multiple instances, use approach #1 (reduce per-instance limits) or deploy a dedicated rate limiting layer (e.g., API Gateway, Nginx rate limiting module).
+
+#### Per-Key Rate Limit Overrides
+
+**Future Feature**: The rate limiter supports per-API-key custom rate limits, but this is not yet exposed via configuration. Future versions may add:
+
+```bash
+# Example future configuration (not yet implemented)
+PLANNER_RATE_LIMIT_OVERRIDES={"premium-key-abc": 100, "free-tier-xyz": 5}
+```
+
+This would allow different rate limits for different clients (e.g., premium vs free tier).
+
+#### Monitoring Rate Limiting
+
+**Observability:**
+
+Rate limiting decisions are logged with structured fields for monitoring:
+
+```json
+{
+  "level": "INFO",
+  "message": "Rate limit check: denied",
+  "request_id": "req-a1b2c3d4",
+  "identifier_type": "api_key",
+  "allowed": false,
+  "retry_after_seconds": 5
+}
+```
+
+**Metrics** (when `PLANNER_METRICS_ENABLED=true`):
+
+Available at `/api/v1/metrics` endpoint:
+- `planner_rate_limit_allowed_total` - Total requests allowed
+- `planner_rate_limit_denied_total` - Total requests denied
+- Rate by identifier type (API key vs IP)
+
+**Tracking Specific Keys:**
+
+- API keys are logged as hashed identifiers (first 16 chars of SHA-256)
+- Allows correlating rate limit events without exposing key material
+- Search logs for `api_key_hash` to track specific key usage patterns
+
+#### Edge Cases and Behavior
+
+**Clock Skew:**
+- Token bucket gracefully handles system time going backwards
+- Logs warning when clock skew is detected
+- Resets to current time to continue operation
+
+**Server Restart:**
+- Rate limit state is **not persisted** across restarts
+- All token buckets reset to full capacity on startup
+- Clients may see temporary increase in allowed requests after restart
+
+**Concurrent Requests:**
+- Token bucket operations are thread-safe
+- Concurrent requests from same client may race for tokens
+- Last request to consume remaining tokens wins
+
+**No Identifier Available:**
+- If both API key and client IP are unavailable, request is denied
+- This is a rare edge case (malformed requests or proxy misconfigurations)
+
+### Standardized Error Responses
+
+All API errors follow a consistent, structured format to enable reliable error handling and debugging. Each error includes a machine-readable code, human-readable message, optional context details, and a request ID for tracing.
+
+#### Error Response Structure
+
+**Standard Format:**
+
+```json
+{
+  "error": {
+    "code": "error_code",
+    "message": "Human-readable error description",
+    "details": {
+      "field": "optional_field_name",
+      "additional_context": "..."
+    },
+    "request_id": "req-a1b2c3d4e5f6"
+  }
+}
+```
+
+**Fields:**
+
+- `code` (string, required): Machine-readable error code for programmatic handling
+- `message` (string, required): Human-readable description of the error
+- `details` (object, optional): Additional context like field names, validation errors, or retry guidance
+- `request_id` (string, optional): Unique identifier for tracing the request (also in `X-Request-ID` response header)
+
+#### Error Codes and Status Codes
+
+**Authentication Errors:**
+
+| HTTP Status | Error Code | Description |
+|-------------|------------|-------------|
+| `401 Unauthorized` | `missing_authentication` | `X-API-Key` header is missing when API keys are configured |
+| `403 Forbidden` | `invalid_authentication` | `X-API-Key` header contains an invalid or revoked key |
+
+**Validation Errors:**
+
+| HTTP Status | Error Code | Description |
+|-------------|------------|-------------|
+| `400 Bad Request` | `validation_error` | Request validation failed (empty description, oversized payload, etc.) |
+| `400 Bad Request` | `payload_too_large` | Request body exceeds size limits |
+| `400 Bad Request` | `invalid_description` | Description is empty, whitespace-only, or exceeds character limit |
+| `400 Bad Request` | `invalid_model` | Specified model is unknown, disabled, or not available |
+| `400 Bad Request` | `invalid_system_prompt` | System prompt exceeds maximum length |
+
+**Request Format Errors:**
+
+| HTTP Status | Error Code | Description |
+|-------------|------------|-------------|
+| `422 Unprocessable Entity` | `invalid_json` | Request body is not valid JSON |
+| `422 Unprocessable Entity` | `missing_field` | Required field is missing from request |
+| `422 Unprocessable Entity` | `invalid_type` | Field has wrong type (e.g., string instead of integer) |
+| `422 Unprocessable Entity` | `malformed_request` | Request structure doesn't match expected schema |
+
+**Rate Limiting:**
+
+| HTTP Status | Error Code | Description |
+|-------------|------------|-------------|
+| `429 Too Many Requests` | `rate_limit_exceeded` | Rate limit exceeded for API key or client IP |
+
+**Resource Errors:**
+
+| HTTP Status | Error Code | Description |
+|-------------|------------|-------------|
+| `404 Not Found` | `not_found` | Requested job ID does not exist or has expired |
+
+**Server Errors:**
+
+| HTTP Status | Error Code | Description |
+|-------------|------------|-------------|
+| `500 Internal Server Error` | `internal_error` | Unexpected server error occurred |
+| `500 Internal Server Error` | `planner_error` | Planning service encountered an error |
+| `500 Internal Server Error` | `timeout_error` | LLM request timed out after retries |
+
+#### Error Examples
+
+**401 Unauthorized - Missing Authentication:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -d '{"description": "Build a REST API"}'
+```
+
+Response:
+```json
+{
+  "error": {
+    "code": "missing_authentication",
+    "message": "Missing X-API-Key header",
+    "request_id": "req-a1b2c3d4e5f6"
+  }
+}
+```
+
+**403 Forbidden - Invalid API Key:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: invalid-key" \
+  -d '{"description": "Build a REST API"}'
+```
+
+Response:
+```json
+{
+  "error": {
+    "code": "invalid_authentication",
+    "message": "Invalid API key",
+    "request_id": "req-a1b2c3d4e5f6"
+  }
+}
+```
+
+**429 Too Many Requests - Rate Limit Exceeded:**
+
+```bash
+# After exceeding rate limit
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{"description": "Build a REST API"}'
+```
+
+Response:
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: 5
+X-Request-ID: req-a1b2c3d4e5f6
+
+{
+  "error": {
+    "code": "rate_limit_exceeded",
+    "message": "Rate limit exceeded. Please retry after 5 seconds.",
+    "details": {
+      "retry_after_seconds": 5,
+      "window_seconds": 60,
+      "max_requests": 10
+    },
+    "request_id": "req-a1b2c3d4e5f6"
+  }
+}
+```
+
+**400 Bad Request - Validation Error:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{"description": ""}'
+```
+
+Response:
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Description cannot be empty or whitespace-only",
+    "details": {
+      "field": "description"
+    },
+    "request_id": "req-a1b2c3d4e5f6"
+  }
+}
+```
+
+**400 Bad Request - Invalid Model:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{"description": "Build a REST API", "model": "nonexistent-model"}'
+```
+
+Response:
+```json
+{
+  "error": {
+    "code": "invalid_model",
+    "message": "Unknown model 'nonexistent-model'. Available models: my-gpt-model, my-claude-model",
+    "details": {
+      "field": "model",
+      "available_models": ["my-gpt-model", "my-claude-model"]
+    },
+    "request_id": "req-a1b2c3d4e5f6"
+  }
+}
+```
+
+**422 Unprocessable Entity - Malformed JSON:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{"description": "Build a REST API"'  # Missing closing brace
+```
+
+Response:
+```json
+{
+  "error": {
+    "code": "invalid_json",
+    "message": "Request body is not valid JSON",
+    "details": {
+      "validation_errors": [
+        {
+          "loc": ["body"],
+          "msg": "JSON decode error",
+          "type": "json_invalid"
+        }
+      ]
+    },
+    "request_id": "req-a1b2c3d4e5f6"
+  }
+}
+```
+
+**404 Not Found - Job Not Found:**
+
+```bash
+curl http://localhost:8000/api/v1/plans/nonexistent-job-id \
+  -H "X-API-Key: your-api-key"
+```
+
+Response:
+```json
+{
+  "error": {
+    "code": "not_found",
+    "message": "Job not found",
+    "request_id": "req-a1b2c3d4e5f6"
+  }
+}
+```
+
+#### Using Request IDs for Debugging
+
+**What Are Request IDs?**
+
+Every API request is assigned a unique identifier (UUID v4 format) that:
+- Appears in the `request_id` field of all error responses
+- Is returned in the `X-Request-ID` response header
+- Is logged with all related log entries for the request
+- Enables tracing a request through the entire system
+
+**How to Use Request IDs:**
+
+1. **Client-Side Error Handling:**
+   ```javascript
+   try {
+     const response = await fetch('/api/v1/plans', {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/json',
+         'X-API-Key': apiKey
+       },
+       body: JSON.stringify({description: 'Build a REST API'})
+     });
+     
+     if (!response.ok) {
+       const error = await response.json();
+       console.error('API Error:', error.error.code);
+       console.error('Request ID:', error.error.request_id);
+       // Include request_id when contacting support
+     }
+   } catch (err) {
+     console.error('Network error:', err);
+   }
+   ```
+
+2. **Support Requests:**
+   When reporting issues, include the `request_id` from error responses:
+   ```
+   Issue: Getting 429 errors unexpectedly
+   Request ID: req-a1b2c3d4e5f6
+   Timestamp: 2025-01-15T10:30:00Z
+   ```
+
+3. **Log Searching:**
+   Search application logs for the request ID to see the full request lifecycle:
+   ```bash
+   # Find all log entries for a specific request
+   cat application.log | grep "req-a1b2c3d4e5f6"
+   
+   # Or with jq for structured JSON logs
+   cat application.log | jq 'select(.request_id == "req-a1b2c3d4e5f6")'
+   ```
+
+#### Error Response Security
+
+**What Is NOT Included in Errors:**
+
+- Internal file paths or system architecture details
+- Full stack traces or exception details
+- API key values (only hashed identifiers in logs)
+- Database connection strings or credentials
+- LLM prompts or responses containing user data
+- Internal service names or IP addresses
+
+**What IS Included:**
+
+- User-actionable error messages
+- Field names that failed validation
+- Available options (e.g., list of valid models)
+- Retry guidance (e.g., `retry_after_seconds`)
+- Request IDs for correlation and support
+
+**Example of Sanitized Error:**
+
+Internal error:
+```
+File "/app/services/planner.py", line 123, in generate_specs
+  raise ConnectionError("Failed to connect to llm-internal.svc.cluster.local:8080")
+```
+
+Sanitized API response:
+```json
+{
+  "error": {
+    "code": "planner_error",
+    "message": "Planning service temporarily unavailable. Please try again later.",
+    "request_id": "req-a1b2c3d4e5f6"
+  }
+}
+```
+
+The full error details are logged server-side with the request ID for debugging by operators.
+
+### CORS Configuration
+
+Cross-Origin Resource Sharing (CORS) configuration controls which browser-based clients can access the API. Proper CORS setup is essential for web applications consuming the API from different domains.
+
+#### Default Configuration (Development Only)
+
+**⚠️ Warning**: The default CORS configuration allows all origins and is **ONLY suitable for development**:
+
+```bash
+# Default settings in .env.example (insecure for production)
+ALLOWED_ORIGINS=["*"]
+CORS_WILDCARD_ENABLED=true
+ALLOWED_CREDENTIALS=false
+ALLOWED_METHODS=["*"]
+ALLOWED_HEADERS=["*"]
+```
+
+**Security Risk**: Wildcard origins (`*`) allow any website to make requests to your API, potentially enabling:
+- Unauthorized access if API keys are leaked
+- Cross-site request forgery (CSRF) attacks
+- Data exfiltration to malicious domains
+
+#### Production Configuration
+
+**Recommended Production Settings:**
+
+```bash
+# Allow only specific trusted domains
+ALLOWED_ORIGINS=["https://app.example.com","https://admin.example.com"]
+CORS_WILDCARD_ENABLED=false
+
+# Enable credentials if using cookies or authorization headers
+ALLOWED_CREDENTIALS=true
+
+# Restrict methods to those actually used
+ALLOWED_METHODS=["GET","POST","OPTIONS"]
+
+# Restrict headers to required ones
+ALLOWED_HEADERS=["Content-Type","X-API-Key","X-Request-ID"]
+```
+
+**Configuration Notes:**
+
+1. **Multiple Origins**: Provide array of allowed domains (include protocol and port if non-standard)
+2. **Credentials**: Only set `ALLOWED_CREDENTIALS=true` if using cookies or HTTP auth (not needed for `X-API-Key` header alone)
+3. **Wildcard Prevention**: Set `CORS_WILDCARD_ENABLED=false` to explicitly reject wildcard configurations
+4. **Methods**: Limit to `GET`, `POST`, `OPTIONS` unless you add other HTTP methods
+5. **Headers**: Always include `Content-Type`, `X-API-Key`, and optionally `X-Request-ID`
+
+#### CORS Response Headers
+
+**Exposed Headers:**
+
+The API exposes the following response headers to browser clients:
+
+```
+Access-Control-Expose-Headers: X-Request-ID
+```
+
+This allows JavaScript clients to read the `X-Request-ID` header for debugging:
+
+```javascript
+const response = await fetch('/api/v1/plans/job-123', {
+  headers: {'X-API-Key': apiKey}
+});
+const requestId = response.headers.get('X-Request-ID');
+console.log('Request ID:', requestId);
+```
+
+#### Testing CORS Configuration
+
+**1. Preflight Request (OPTIONS):**
+
+Browsers send preflight requests for cross-origin requests with custom headers:
+
+```bash
+curl -X OPTIONS http://localhost:8000/api/v1/plans \
+  -H "Origin: https://app.example.com" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: X-API-Key,Content-Type" \
+  -v
+```
+
+Expected response headers:
+```
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: https://app.example.com
+Access-Control-Allow-Methods: GET, POST, OPTIONS
+Access-Control-Allow-Headers: X-API-Key, Content-Type
+Access-Control-Max-Age: 600
+```
+
+**2. Actual Request:**
+
+After preflight succeeds, browser makes the actual request:
+
+```javascript
+fetch('http://localhost:8000/api/v1/plans', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-API-Key': 'your-api-key'
+  },
+  body: JSON.stringify({description: 'Build a REST API'})
+})
+.then(response => response.json())
+.then(data => console.log('Job ID:', data.job_id));
+```
+
+**3. Verify Origin Blocking:**
+
+Test that disallowed origins are rejected:
+
+```bash
+# Should be blocked if not in ALLOWED_ORIGINS
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Origin: https://malicious-site.com" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{"description": "Test"}' \
+  -v
+```
+
+Browser will not allow the response to be read by JavaScript if origin is blocked.
+
+#### Common CORS Issues
+
+**Issue 1: "CORS policy: No 'Access-Control-Allow-Origin' header"**
+
+**Cause**: Request origin is not in `ALLOWED_ORIGINS`
+
+**Solution**: Add the origin to `ALLOWED_ORIGINS` in `.env`:
+```bash
+ALLOWED_ORIGINS=["https://your-frontend-domain.com"]
+```
+
+**Issue 2: "Credential is not supported if the CORS header 'Access-Control-Allow-Origin' is '*'"**
+
+**Cause**: Cannot use `ALLOWED_CREDENTIALS=true` with wildcard origins
+
+**Solution**: Use specific origins instead of wildcard:
+```bash
+ALLOWED_ORIGINS=["https://app.example.com"]
+ALLOWED_CREDENTIALS=true
+CORS_WILDCARD_ENABLED=false
+```
+
+**Issue 3: "Request header X-API-Key is not allowed"**
+
+**Cause**: `X-API-Key` not in `ALLOWED_HEADERS`
+
+**Solution**: Add header to allowed list:
+```bash
+ALLOWED_HEADERS=["Content-Type","X-API-Key","X-Request-ID"]
+```
+
+**Issue 4: "Method POST is not allowed"**
+
+**Cause**: `POST` not in `ALLOWED_METHODS`
+
+**Solution**: Add method to allowed list:
+```bash
+ALLOWED_METHODS=["GET","POST","OPTIONS"]
+```
+
+#### Browser Security Considerations
+
+**Same-Origin Policy:**
+- CORS is a browser security feature enforced by the browser
+- Server-to-server requests (curl, Postman, backend services) are NOT affected by CORS
+- API responds to requests from any origin, but browser blocks reading responses from disallowed origins
+
+**CORS vs Authentication:**
+- CORS controls which origins can access the API
+- Authentication (X-API-Key) controls which clients can use the API
+- Both are necessary for complete security:
+  - CORS prevents unauthorized **origins** (websites)
+  - API keys prevent unauthorized **clients** (users/applications)
+
+**Development vs Production:**
+- Development: Use wildcard CORS for convenience (localhost, local IPs)
+- Production: Always restrict to specific trusted domains
+- Staging: Use staging domain origins for testing
+
 ### Database Setup
 
 The Software Planner API uses PostgreSQL for persistent job storage. Jobs are stored in a database table and survive server restarts. This section describes database prerequisites, connection configuration, migration management, and operational considerations.
@@ -1318,6 +2209,62 @@ When enabled, metrics are exposed at the `/api/v1/metrics` endpoint in Prometheu
 curl http://localhost:8000/api/v1/metrics
 ```
 
+**⚠️ Security Warning - Metrics Endpoint Protection:**
+
+The `/api/v1/metrics` endpoint is **NOT protected by API key authentication** by default. This endpoint exposes operational metrics including:
+- Request rates and patterns
+- Job processing statistics
+- LLM provider usage and latency
+- Error rates and types
+
+**Production Recommendations:**
+
+1. **Network-Level Protection**: Deploy metrics endpoint on a separate internal port or restrict access at the network level
+   - Use firewall rules to allow access only from monitoring systems (e.g., Prometheus)
+   - Place behind a VPN or internal network segment
+   - Use network policies in Kubernetes to restrict access
+
+2. **Reverse Proxy Authentication**: Use a reverse proxy (nginx, Caddy) to add authentication
+   ```nginx
+   location /api/v1/metrics {
+       auth_basic "Metrics Access";
+       auth_basic_user_file /etc/nginx/.htpasswd;
+       proxy_pass http://localhost:8000;
+   }
+   ```
+
+3. **IP Allowlisting**: Configure your reverse proxy or API gateway to allow metrics access only from known monitoring IPs
+   ```nginx
+   location /api/v1/metrics {
+       allow 10.0.0.0/8;      # Internal network
+       allow 192.168.1.100;   # Prometheus server
+       deny all;
+       proxy_pass http://localhost:8000;
+   }
+   ```
+
+4. **Separate Admin Port** (Future Enhancement): Consider running metrics on a separate port (e.g., 9090) that is not exposed externally
+
+**What Metrics Expose:**
+
+Metrics do NOT contain:
+- API key values or credentials
+- User prompts or generated content
+- Personal identifiable information (PII)
+- Internal system paths or configuration
+
+Metrics DO contain:
+- Aggregate request counts and latencies
+- Job success/failure rates
+- Model usage patterns
+- Error type distributions
+
+Even without sensitive data, metrics can reveal:
+- API usage patterns and peak times
+- Which models are most popular
+- Error rates that may indicate system health issues
+- Information useful for capacity planning or competitive analysis
+
 **Available Metrics:**
 
 1. **HTTP Request Metrics**
@@ -1404,6 +2351,120 @@ The application emits structured logs with consistent fields for correlation and
 - **Prompts**: Project descriptions and system prompts are never logged to prevent data leakage
 - **Secrets**: Database passwords, LLM API keys, and other secrets are never included in logs
 - **Token Counts**: Only aggregate counts are logged, not actual token content
+
+#### Logging Redaction Policies
+
+The application implements strict logging policies to prevent accidental exposure of sensitive data:
+
+**What Is NEVER Logged:**
+
+1. **API Keys and Secrets**
+   - LLM provider API keys (OpenAI, Anthropic, Google)
+   - Database passwords and connection strings
+   - Planner API keys (only hashed identifiers are logged)
+   - Any environment variables containing credentials
+
+2. **User Content and PII**
+   - Planning request descriptions (prompts)
+   - Custom system prompts
+   - LLM-generated specifications and responses
+   - Job result payloads
+   - Personally identifiable information (PII)
+
+3. **Internal System Details**
+   - Full file system paths
+   - Internal service hostnames and IP addresses
+   - Complete stack traces (sanitized versions in logs, full traces in monitoring only)
+   - Database schema or query details containing sensitive data
+
+**What IS Logged:**
+
+1. **Request Metadata**
+   - Request IDs for correlation
+   - HTTP method, endpoint, and status code
+   - Request duration and timestamp
+   - API key hashes (first 16 chars of SHA-256, e.g., `a1b2c3d4e5f6g7h8`)
+
+2. **Job Lifecycle Events**
+   - Job ID, status transitions (QUEUED → RUNNING → SUCCEEDED/FAILED)
+   - Processing duration and timestamps
+   - Model name used (logical name, not API key)
+   - Error types (exception class names, sanitized messages)
+
+3. **LLM API Interactions**
+   - Provider name (openai, anthropic, google) and model ID
+   - Request duration and retry attempts
+   - Token counts (prompt tokens, completion tokens, total tokens)
+   - HTTP status codes and error types (without sensitive details)
+
+4. **Authentication and Rate Limiting**
+   - Authentication success/failure (with request ID, without key values)
+   - Rate limit decisions (allowed/denied, retry-after seconds)
+   - Hashed API key identifiers for correlation
+
+**Debug Logging:**
+
+Even when `DEBUG=true`, the redaction policies remain in effect:
+- Debug logs include more verbose operation details
+- Sensitive data is still redacted (keys, prompts, secrets)
+- May include additional metadata like request headers (but not Authorization/X-API-Key values)
+
+**Enabling Debug Logging:**
+
+```bash
+# In .env file
+DEBUG=true
+```
+
+**⚠️ Warning**: Debug logging increases log volume significantly and may impact performance. Only enable for troubleshooting specific issues, and disable after debugging is complete.
+
+**Log Formats:**
+
+The application uses structured logging (JSON format) for machine readability:
+- Consistent field names across all log entries
+- Easy filtering and searching in log aggregation systems
+- Automatic inclusion of context (request_id, job_id, timestamps)
+
+**Example Redacted Error Log:**
+
+Instead of logging:
+```json
+{
+  "error": "LLM API request failed",
+  "api_key": "sk-actual-openai-key-here",
+  "prompt": "User's confidential project description",
+  "url": "https://api.openai.com/v1/responses"
+}
+```
+
+Actual redacted log:
+```json
+{
+  "level": "ERROR",
+  "message": "LLM API request failed: authentication error",
+  "provider": "openai",
+  "model": "gpt-5.1",
+  "error_type": "AuthenticationError",
+  "request_id": "req-a1b2c3d4",
+  "duration_seconds": 0.5
+}
+```
+
+**Compliance Considerations:**
+
+These redaction policies help maintain compliance with:
+- **GDPR**: Personal data not logged unnecessarily
+- **SOC 2**: Logging controls prevent sensitive data exposure
+- **PCI DSS**: Credentials and secrets never logged
+- **HIPAA**: Healthcare data (if in prompts) not logged
+
+**Audit Logging:**
+
+For compliance and security auditing, consider:
+1. **Centralized Log Collection**: Send logs to SIEM (Splunk, ELK, Datadog)
+2. **Log Retention**: Define retention policies (30-90 days for operational, longer for audit)
+3. **Access Controls**: Restrict log access to authorized personnel only
+4. **Tamper Protection**: Use write-once storage or log signing for audit trails
 
 **Log Filtering Examples:**
 
