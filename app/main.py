@@ -131,6 +131,11 @@ def create_app() -> FastAPI:
             cleaned_errors.append(cleaned_err)
         
         # Determine error code based on validation type
+        # NOTE: We use string matching on error messages to map to specific error codes.
+        # This is pragmatic given Pydantic's ValidationError API which doesn't expose
+        # custom error types. Alternative approaches (custom exception hierarchy, error
+        # context) would require more invasive changes to Pydantic's validation flow.
+        # If validation messages change significantly, these mappings may need updates.
         if is_custom_validation:
             # Check specific error messages to assign specific codes
             first_error_msg = errors[0].get("msg", "").lower()

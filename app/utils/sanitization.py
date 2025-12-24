@@ -41,21 +41,6 @@ def has_control_characters(text: str) -> bool:
     return False
 
 
-def count_unicode_codepoints(text: str) -> int:
-    """Count Unicode code points in text.
-    
-    This counts actual characters rather than bytes, which is important
-    for multi-byte UTF-8 characters like emojis.
-    
-    Args:
-        text: The text to count.
-        
-    Returns:
-        Number of Unicode code points.
-    """
-    return len(text)
-
-
 def sanitize_for_logging(
     text: str, 
     max_length: int = MAX_LOG_DESCRIPTION_LENGTH,
