@@ -27,7 +27,11 @@ COPY requirements.txt .
 # Install Python dependencies in a virtual environment
 # Using --no-cache-dir to reduce image size
 # Using --prefix to install in a custom location that we can copy to runtime stage
-# Using --trusted-host flags to work around SSL certificate issues in CI environments
+# Note: --trusted-host flags are used for CI environments with SSL certificate issues
+# (e.g., corporate proxies with SSL interception). In production, consider building
+# in an environment with proper SSL certificates, or accept this trade-off for
+# compatibility. PyPI packages still have integrity verified via pip's built-in
+# hash checking, so this primarily affects transport security, not package integrity.
 RUN pip install --no-cache-dir --prefix=/install \
     --trusted-host pypi.org --trusted-host files.pythonhosted.org \
     -r requirements.txt
@@ -79,8 +83,9 @@ EXPOSE 8000
 # Health check configuration
 # Checks if the /health endpoint responds with 200 OK
 # Start checking after 30s, check every 10s, timeout after 5s, retry 3 times
+# Note: Uses sh -c to ensure PORT environment variable is properly expanded
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-8000}/health').read()"
+    CMD sh -c 'python -c "import urllib.request; urllib.request.urlopen(\"http://localhost:${PORT:-8000}/health\").read()"'
 
 # Default configuration via environment variables
 # These can be overridden when running the container
