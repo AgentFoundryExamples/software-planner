@@ -28,6 +28,9 @@
     ├── request.py
     └── response.py
   ├── services
+    ├── db
+      ├── __init__.py
+      └── connection.py
     ├── __init__.py
     ├── job_store.py
     ├── llm_claude.py
@@ -39,9 +42,16 @@
     └── store_singleton.py
   ├── __init__.py
   └── main.py
+├── migrations
+  ├── versions
+    └── 20399264179a_create_jobs_table.py
+  ├── env.py
+  ├── README
+  └── script.py.mako
 ├── tests
   ├── __init__.py
   ├── test_config.py
+  ├── test_database.py
   ├── test_health_endpoint.py
   ├── test_job_model.py
   ├── test_job_store.py
@@ -50,6 +60,7 @@
   ├── test_llm_gemini.py
   ├── test_llm_openai.py
   ├── test_main.py
+  ├── test_migrations.py
   ├── test_model_registry.py
   ├── test_models_endpoint.py
   ├── test_plan_endpoint.py
@@ -59,6 +70,7 @@
   └── test_store_singleton.py
 ├── .env.example
 ├── .gitignore
+├── alembic.ini
 ├── LICENSE
 ├── LLMs.md
 ├── pytest.ini

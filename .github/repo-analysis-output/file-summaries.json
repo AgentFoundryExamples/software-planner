@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 36,
+  "total_files": 42,
   "files": [
     {
       "schema_version": "2.0",
@@ -67,8 +67,8 @@
       "summary": "Python configuration file (role: configuration)",
       "summary_text": "Python configuration file (role: configuration)",
       "metrics": {
-        "size_bytes": 9961,
-        "loc": 167,
+        "size_bytes": 13479,
+        "loc": 231,
         "todo_count": 0
       }
     },
@@ -153,6 +153,34 @@
       "metrics": {
         "size_bytes": 1135,
         "loc": 23,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "app/services/db/__init__.py",
+      "language": "Python",
+      "role": "module-init",
+      "role_justification": "module initialization file '__init__'",
+      "summary": "Python module initialization (role: module-init)",
+      "summary_text": "Python module initialization (role: module-init)",
+      "metrics": {
+        "size_bytes": 756,
+        "loc": 3,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "app/services/db/connection.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for connection",
+      "summary_text": "Python module for connection",
+      "metrics": {
+        "size_bytes": 4244,
+        "loc": 84,
         "todo_count": 0
       }
     },
@@ -270,6 +298,34 @@
     },
     {
       "schema_version": "2.0",
+      "path": "migrations/env.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for env",
+      "summary_text": "Python module for env",
+      "metrics": {
+        "size_bytes": 3456,
+        "loc": 59,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "migrations/versions/20399264179a_create_jobs_table.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for 20399264179a create jobs table",
+      "summary_text": "Python module for 20399264179a create jobs table",
+      "metrics": {
+        "size_bytes": 2302,
+        "loc": 34,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "tests/__init__.py",
       "language": "Python",
       "role": "test",
@@ -293,6 +349,20 @@
       "metrics": {
         "size_bytes": 6714,
         "loc": 115,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_database.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 8784,
+        "loc": 164,
         "todo_count": 0
       }
     },
@@ -405,6 +475,20 @@
       "metrics": {
         "size_bytes": 5325,
         "loc": 105,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_migrations.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 7441,
+        "loc": 118,
         "todo_count": 0
       }
     },

@@ -144,6 +144,33 @@
       }
     },
     {
+      "id": "app/services/db/__init__.py",
+      "path": "app/services/db/__init__.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "app/services/db/connection.py",
+      "path": "app/services/db/connection.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "logging",
+          "typing.Optional"
+        ],
+        "third-party": [
+          "sqlalchemy.ext.asyncio.AsyncConnection",
+          "sqlalchemy.ext.asyncio.AsyncEngine",
+          "sqlalchemy.ext.asyncio.create_async_engine",
+          "sqlalchemy.pool.NullPool",
+          "sqlalchemy.text"
+        ]
+      }
+    },
+    {
       "id": "app/services/job_store.py",
       "path": "app/services/job_store.py",
       "type": "file",
@@ -267,6 +294,39 @@
       }
     },
     {
+      "id": "migrations/env.py",
+      "path": "migrations/env.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "asyncio",
+          "logging.config.fileConfig",
+          "os"
+        ],
+        "third-party": [
+          "alembic.context",
+          "sqlalchemy.engine.Connection",
+          "sqlalchemy.ext.asyncio.async_engine_from_config",
+          "sqlalchemy.pool"
+        ]
+      }
+    },
+    {
+      "id": "migrations/versions/20399264179a_create_jobs_table.py",
+      "path": "migrations/versions/20399264179a_create_jobs_table.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "typing.Sequence",
+          "typing.Union"
+        ],
+        "third-party": [
+          "alembic.op",
+          "sqlalchemy"
+        ]
+      }
+    },
+    {
       "id": "tests/__init__.py",
       "path": "tests/__init__.py",
       "type": "file",
@@ -282,6 +342,22 @@
       "external_dependencies": {
         "stdlib": [
           "os"
+        ],
+        "third-party": [
+          "pydantic.ValidationError",
+          "pytest"
+        ]
+      }
+    },
+    {
+      "id": "tests/test_database.py",
+      "path": "tests/test_database.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "unittest.mock.AsyncMock",
+          "unittest.mock.MagicMock",
+          "unittest.mock.patch"
         ],
         "third-party": [
           "pydantic.ValidationError",
@@ -406,6 +482,21 @@
           "fastapi.FastAPI",
           "fastapi.Query",
           "fastapi.testclient.TestClient",
+          "pytest"
+        ]
+      }
+    },
+    {
+      "id": "tests/test_migrations.py",
+      "path": "tests/test_migrations.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "os",
+          "pathlib.Path",
+          "subprocess"
+        ],
+        "third-party": [
           "pytest"
         ]
       }
@@ -586,6 +677,14 @@
       "target": "app/services/llm_client.py"
     },
     {
+      "source": "app/services/db/__init__.py",
+      "target": "app/services/db/connection.py"
+    },
+    {
+      "source": "app/services/db/connection.py",
+      "target": "app/core/config.py"
+    },
+    {
       "source": "app/services/job_store.py",
       "target": "app/models/job.py"
     },
@@ -666,8 +765,20 @@
       "target": "app/services/model_registry.py"
     },
     {
+      "source": "migrations/env.py",
+      "target": "app/core/config.py"
+    },
+    {
       "source": "tests/test_config.py",
       "target": "app/core/config.py"
+    },
+    {
+      "source": "tests/test_database.py",
+      "target": "app/core/config.py"
+    },
+    {
+      "source": "tests/test_database.py",
+      "target": "app/services/db/connection.py"
     },
     {
       "source": "tests/test_health_endpoint.py",
@@ -818,15 +929,19 @@
     "stdlib": [
       "abc.ABC",
       "abc.abstractmethod",
+      "asyncio",
       "concurrent.futures.ThreadPoolExecutor",
       "datetime.datetime",
       "datetime.timezone",
       "hashlib",
       "json",
       "logging",
+      "logging.config.fileConfig",
       "os",
+      "pathlib.Path",
       "random",
       "re",
+      "subprocess",
       "threading",
       "threading.Lock",
       "time",
@@ -835,12 +950,17 @@
       "typing.List",
       "typing.Literal",
       "typing.Optional",
+      "typing.Sequence",
+      "typing.Union",
+      "unittest.mock.AsyncMock",
       "unittest.mock.MagicMock",
       "unittest.mock.Mock",
       "unittest.mock.patch",
       "uuid"
     ],
     "third-party": [
+      "alembic.context",
+      "alembic.op",
       "anthropic",
       "anthropic.Anthropic",
       "fastapi.APIRouter",
@@ -867,10 +987,19 @@
       "pydantic_settings.BaseSettings",
       "pydantic_settings.SettingsConfigDict",
       "pytest",
+      "sqlalchemy",
+      "sqlalchemy.engine.Connection",
+      "sqlalchemy.ext.asyncio.AsyncConnection",
+      "sqlalchemy.ext.asyncio.AsyncEngine",
+      "sqlalchemy.ext.asyncio.async_engine_from_config",
+      "sqlalchemy.ext.asyncio.create_async_engine",
+      "sqlalchemy.pool",
+      "sqlalchemy.pool.NullPool",
+      "sqlalchemy.text",
       "starlette.exceptions.HTTPException",
       "uvicorn"
     ],
-    "stdlib_count": 23,
-    "third-party_count": 28
+    "stdlib_count": 30,
+    "third-party_count": 39
   }
 }

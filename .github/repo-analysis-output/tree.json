@@ -129,6 +129,20 @@
           "name": "services",
           "children": [
             {
+              "type": "directory",
+              "name": "db",
+              "children": [
+                {
+                  "type": "file",
+                  "name": "__init__.py"
+                },
+                {
+                  "type": "file",
+                  "name": "connection.py"
+                }
+              ]
+            },
+            {
               "type": "file",
               "name": "__init__.py"
             },
@@ -178,6 +192,34 @@
     },
     {
       "type": "directory",
+      "name": "migrations",
+      "children": [
+        {
+          "type": "directory",
+          "name": "versions",
+          "children": [
+            {
+              "type": "file",
+              "name": "20399264179a_create_jobs_table.py"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "name": "env.py"
+        },
+        {
+          "type": "file",
+          "name": "README"
+        },
+        {
+          "type": "file",
+          "name": "script.py.mako"
+        }
+      ]
+    },
+    {
+      "type": "directory",
       "name": "tests",
       "children": [
         {
@@ -187,6 +229,10 @@
         {
           "type": "file",
           "name": "test_config.py"
+        },
+        {
+          "type": "file",
+          "name": "test_database.py"
         },
         {
           "type": "file",
@@ -219,6 +265,10 @@
         {
           "type": "file",
           "name": "test_main.py"
+        },
+        {
+          "type": "file",
+          "name": "test_migrations.py"
         },
         {
           "type": "file",
@@ -257,6 +307,10 @@
     {
       "type": "file",
       "name": ".gitignore"
+    },
+    {
+      "type": "file",
+      "name": "alembic.ini"
     },
     {
       "type": "file",

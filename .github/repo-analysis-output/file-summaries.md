@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 36
+Total files: 42
 
 ## app/__init__.py
 **Language:** Python  
@@ -47,8 +47,8 @@ Total files: 36
 **Role:** configuration  
 **Role Justification:** configuration file name 'config'  
 **Summary:** Python configuration file (role: configuration)  
-**Size:** 9.73 KB  
-**LOC:** 167  
+**Size:** 13.16 KB  
+**LOC:** 231  
 **TODOs/FIXMEs:** 0  
 
 ## app/main.py
@@ -103,6 +103,24 @@ Total files: 36
 **Summary:** Python module initialization (role: module-init)  
 **Size:** 1.11 KB  
 **LOC:** 23  
+**TODOs/FIXMEs:** 0  
+
+## app/services/db/__init__.py
+**Language:** Python  
+**Role:** module-init  
+**Role Justification:** module initialization file '__init__'  
+**Summary:** Python module initialization (role: module-init)  
+**Size:** 0.74 KB  
+**LOC:** 3  
+**TODOs/FIXMEs:** 0  
+
+## app/services/db/connection.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for connection  
+**Size:** 4.14 KB  
+**LOC:** 84  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/job_store.py
@@ -177,6 +195,24 @@ Total files: 36
 **LOC:** 129  
 **TODOs/FIXMEs:** 0  
 
+## migrations/env.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for env  
+**Size:** 3.38 KB  
+**LOC:** 59  
+**TODOs/FIXMEs:** 0  
+
+## migrations/versions/20399264179a_create_jobs_table.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for 20399264179a create jobs table  
+**Size:** 2.25 KB  
+**LOC:** 34  
+**TODOs/FIXMEs:** 0  
+
 ## tests/__init__.py
 **Language:** Python  
 **Role:** test  
@@ -193,6 +229,15 @@ Total files: 36
 **Summary:** Python test file (role: test)  
 **Size:** 6.56 KB  
 **LOC:** 115  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_database.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 8.58 KB  
+**LOC:** 164  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_health_endpoint.py
@@ -265,6 +310,15 @@ Total files: 36
 **Summary:** Python test file (role: test)  
 **Size:** 5.20 KB  
 **LOC:** 105  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_migrations.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 7.27 KB  
+**LOC:** 118  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_model_registry.py

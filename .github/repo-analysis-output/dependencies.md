@@ -8,43 +8,45 @@ Includes classification of external dependencies as stdlib vs third-party.
 
 ## Statistics
 
-- **Total files**: 36
-- **Intra-repo dependencies**: 73
-- **External stdlib dependencies**: 23
-- **External third-party dependencies**: 28
+- **Total files**: 42
+- **Intra-repo dependencies**: 78
+- **External stdlib dependencies**: 30
+- **External third-party dependencies**: 39
 
 ## External Dependencies
 
 ### Standard Library / Core Modules
 
-Total: 23 unique modules
+Total: 30 unique modules
 
 - `abc.ABC`
 - `abc.abstractmethod`
+- `asyncio`
 - `concurrent.futures.ThreadPoolExecutor`
 - `datetime.datetime`
 - `datetime.timezone`
 - `hashlib`
 - `json`
 - `logging`
+- `logging.config.fileConfig`
 - `os`
+- `pathlib.Path`
 - `random`
 - `re`
+- `subprocess`
 - `threading`
 - `threading.Lock`
 - `time`
 - `typing.Any`
 - `typing.Dict`
-- `typing.List`
-- `typing.Literal`
-- `typing.Optional`
-- `unittest.mock.MagicMock`
-- ... and 3 more (see JSON for full list)
+- ... and 10 more (see JSON for full list)
 
 ### Third-Party Packages
 
-Total: 28 unique packages
+Total: 39 unique packages
 
+- `alembic.context`
+- `alembic.op`
 - `anthropic`
 - `anthropic.Anthropic`
 - `fastapi.APIRouter`
@@ -63,13 +65,11 @@ Total: 28 unique packages
 - `google.genai.types`
 - `openai`
 - `openai.OpenAI`
-- `pydantic.BaseModel`
-- `pydantic.Field`
-- ... and 8 more (see JSON for full list)
+- ... and 19 more (see JSON for full list)
 
 ## Most Depended Upon Files (Intra-Repo)
 
-- `app/core/config.py` (13 dependents)
+- `app/core/config.py` (16 dependents)
 - `app/services/llm_client.py` (12 dependents)
 - `app/services/job_store.py` (8 dependents)
 - `app/services/store_singleton.py` (6 dependents)
