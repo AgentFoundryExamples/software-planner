@@ -699,14 +699,25 @@ spec:
     lifecycle:
       preStop:
         exec:
-          command: ["sh", "-c", "sleep 15"]  # Grace period for jobs to finish
+          # Wait for in-flight jobs to complete before terminating
+          # Adjust sleep duration based on your typical job processing time
+          command: ["sh", "-c", "sleep 15"]
     livenessProbe:
       httpGet:
         path: /health
         port: 8000
       initialDelaySeconds: 30
       periodSeconds: 10
+    # Ensure pod termination grace period is longer than preStop sleep
+    terminationGracePeriodSeconds: 30
 ```
+
+**Preventing Race Conditions:**
+- Set `terminationGracePeriodSeconds` higher than the `preStop` sleep duration to avoid forced termination
+- Monitor the `RUNNING` job count before shutdown (query: `SELECT COUNT(*) FROM jobs WHERE status = 'RUNNING'`)
+- Use readiness probes to stop routing traffic before the pod terminates
+- Configure load balancer connection draining to allow existing requests to complete
+- For critical jobs, consider implementing a graceful shutdown signal handler that waits for active jobs
 
 **Credential Rotation:**
 
@@ -714,7 +725,8 @@ To rotate database credentials without downtime:
 
 1. **Create new database user:**
 ```sql
-CREATE USER planner_app_new WITH PASSWORD 'new_secure_password';
+-- IMPORTANT: Replace 'YOUR_NEW_SECURE_PASSWORD' with a strong, randomly generated password
+CREATE USER planner_app_new WITH PASSWORD 'YOUR_NEW_SECURE_PASSWORD';
 GRANT SELECT, INSERT, UPDATE ON TABLE jobs TO planner_app_new;
 GRANT SELECT ON TABLE alembic_version TO planner_app_new;
 ```
@@ -733,6 +745,11 @@ GRANT SELECT ON TABLE alembic_version TO planner_app_new;
 -- After all instances updated and verified
 DROP USER planner_app_old;
 ```
+
+**Credential Security:**
+- Use secrets management systems to store and rotate credentials automatically
+- Never hardcode credentials in configuration files
+- Audit credential access and usage regularly
 
 **Read-Only Replicas:**
 
@@ -850,6 +867,7 @@ Configure the database connection using environment variables. You have two opti
 Set a single `DATABASE_URL` environment variable:
 
 ```bash
+# IMPORTANT: Replace with actual credentials - never commit real passwords
 export DATABASE_URL="postgresql+asyncpg://user:password@localhost:5432/software_planner"
 ```
 
@@ -862,6 +880,7 @@ export DATABASE_HOST=localhost
 export DATABASE_PORT=5432
 export DATABASE_NAME=software_planner
 export DATABASE_USER=planner
+# IMPORTANT: Use strong passwords even in development
 export DATABASE_PASSWORD=planner_dev_password
 ```
 
@@ -872,6 +891,7 @@ DATABASE_HOST=localhost
 DATABASE_PORT=5432
 DATABASE_NAME=software_planner
 DATABASE_USER=planner
+# IMPORTANT: Never commit .env file with real passwords to version control
 DATABASE_PASSWORD=planner_dev_password
 ```
 
@@ -911,7 +931,8 @@ psql -U postgres
 CREATE DATABASE software_planner;
 
 -- Create user with password
-CREATE USER planner_app WITH PASSWORD 'secure_production_password';
+-- IMPORTANT: Replace 'YOUR_SECURE_PASSWORD' with a strong password
+CREATE USER planner_app WITH PASSWORD 'YOUR_SECURE_PASSWORD';
 
 -- Grant privileges
 GRANT ALL PRIVILEGES ON DATABASE software_planner TO planner_app;
@@ -926,7 +947,9 @@ GRANT ALL ON SCHEMA public TO planner_app;
 2. **Set Environment Variables:**
 
 ```bash
-export DATABASE_URL="postgresql+asyncpg://planner_app:secure_production_password@db.example.com:5432/software_planner"
+# IMPORTANT: Replace with actual credentials from your secrets management system
+# Example format shown below - never use these values in production
+export DATABASE_URL="postgresql+asyncpg://planner_app:YOUR_SECURE_PASSWORD@db.example.com:5432/software_planner"
 ```
 
 3. **Run Migrations:**
@@ -965,16 +988,25 @@ Create two database users:
 Example setup:
 ```sql
 -- Create migration admin user
-CREATE USER planner_admin WITH PASSWORD 'secure_admin_password';
+-- IMPORTANT: Replace 'YOUR_SECURE_ADMIN_PASSWORD' with a strong password
+CREATE USER planner_admin WITH PASSWORD 'YOUR_SECURE_ADMIN_PASSWORD';
 GRANT ALL PRIVILEGES ON DATABASE software_planner TO planner_admin;
 
 -- Create application user with limited permissions
-CREATE USER planner_app WITH PASSWORD 'secure_app_password';
+-- IMPORTANT: Replace 'YOUR_SECURE_APP_PASSWORD' with a strong password
+CREATE USER planner_app WITH PASSWORD 'YOUR_SECURE_APP_PASSWORD';
 GRANT CONNECT ON DATABASE software_planner TO planner_app;
 GRANT USAGE ON SCHEMA public TO planner_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE jobs TO planner_app;
 GRANT SELECT ON TABLE alembic_version TO planner_app;
 ```
+
+**Security Best Practices:**
+- Use strong, randomly generated passwords (minimum 16 characters)
+- Store credentials in a secrets management system (e.g., HashiCorp Vault, AWS Secrets Manager, Kubernetes Secrets)
+- Never commit credentials to version control
+- Rotate passwords regularly (at least every 90 days)
+- Use different passwords for admin and application users
 
 #### Troubleshooting Database Connection
 
@@ -1060,7 +1092,7 @@ LLM_TIMEOUT=90
 # LLM_SYSTEM_PROMPT=Your custom prompt here...
 ```
 
-#### Getting Your OpenAI API Key
+**Getting Your OpenAI API Key**
 
 1. Sign up or log in to OpenAI Platform: https://platform.openai.com/
 2. Navigate to API Keys: https://platform.openai.com/api-keys
@@ -1068,10 +1100,14 @@ LLM_TIMEOUT=90
 4. Copy the key immediately (you won't see it again)
 5. Add it to your `.env` file as `LLM_API_KEY=sk-...`
 
-**Important**: 
-- Keep your API key secure - never share it or commit it to Git
-- Set usage limits on your OpenAI account to prevent unexpected charges
-- Monitor your API usage in the OpenAI dashboard
+**Security Best Practices:**
+- **Never commit API keys to Git** - Add `.env` to `.gitignore` and use `.env.example` as a template
+- **Keep your API key secure** - Treat it like a password; never share it publicly or in logs
+- **Use environment-specific keys** - Separate keys for development, staging, and production
+- **Rotate keys regularly** - Create new keys and revoke old ones periodically
+- **Monitor usage** - Set up billing alerts and monitor API usage in the OpenAI dashboard
+- **Set usage limits** - Configure spending limits on your OpenAI account to prevent unexpected charges
+- **Use secrets management** - Store keys in secure vaults (HashiCorp Vault, AWS Secrets Manager, etc.) for production
 
 #### Dependencies
 
@@ -1194,7 +1230,7 @@ The default system prompt instructs the LLM to generate specs in a specific JSON
 - Try removing `LLM_BASE_URL` to use the default OpenAI endpoint
 - Check proxy or custom service documentation for proper configuration
 
-#### How Errors Surface
+**How Errors Surface**
 
 **Via Job Status API (GET /api/v1/plans/{job_id})**:
 
@@ -1219,6 +1255,12 @@ When a planning job fails, the response includes error details:
 - `LLMRequestError`: API request failures (timeout, rate limit, network error, 5xx error)
 - `LLMResponseError`: Invalid response (JSON parse error, schema validation failure)
 
+**Security Note:** Error messages are sanitized to prevent information leakage:
+- API keys are never included in error responses or logs
+- Full stack traces are not exposed to API clients
+- Internal system paths and configurations are redacted
+- Only error types and user-actionable messages are returned
+
 **Via Application Logs**:
 
 The planner logs detailed information at various levels:
@@ -1227,7 +1269,11 @@ The planner logs detailed information at various levels:
 - **WARNING**: Non-fatal issues (empty `must` fields, oversized responses being truncated)
 - **ERROR**: Failures (authentication, timeout, validation errors) with sanitized error messages
 
-**Security Note**: API keys are never logged. Logs contain only metadata and error types, not sensitive credentials or full response content.
+**Logging Security:**
+- API keys and secrets are never logged
+- Sensitive data is redacted from logs (passwords, tokens, PII)
+- Logs contain only metadata and error types
+- Full request/response bodies are not logged to prevent data leaks
 
 **Example Log Output:**
 ```

@@ -39,7 +39,7 @@ When implementing OpenAI integration, the target API should be the **Responses A
   }
   ```
 - **Auto-Retry Behavior:**
-  - The planner service automatically retries rate limit errors (429) with exponential backoff
+  - The planner service automatically retries rate limit errors (429) and transient server errors (5xx) with exponential backoff
   - Default: 3 retry attempts with 1s, 2s, 4s delays
   - If all retries exhausted, job is marked as FAILED with `LLMRequestError`
 
@@ -73,7 +73,7 @@ When implementing Anthropic integration, the target API should be the **Messages
   - Monitor usage in Anthropic console: https://console.anthropic.com/settings/usage
 - **Auto-Retry Behavior:**
   - Same retry logic as OpenAI: 3 attempts with exponential backoff
-  - Automatically handles transient 429 errors
+  - Automatically handles transient 429 errors and 5xx server errors
 
 **Do NOT use:** Text Completions API (deprecated), Claude 2.x or older models
 
