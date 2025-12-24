@@ -6,6 +6,11 @@
 # ============================================================================
 FROM python:3.11-slim AS builder
 
+# Build argument to conditionally bypass SSL verification
+# Set TRUST_PYPI=true only in CI environments with SSL interception (e.g., corporate proxies)
+# Default is false for security best practices
+ARG TRUST_PYPI=false
+
 # Set working directory
 WORKDIR /app
 
@@ -27,14 +32,16 @@ COPY requirements.txt .
 # Install Python dependencies in a virtual environment
 # Using --no-cache-dir to reduce image size
 # Using --prefix to install in a custom location that we can copy to runtime stage
-# Note: --trusted-host flags are used for CI environments with SSL certificate issues
-# (e.g., corporate proxies with SSL interception). In production, consider building
-# in an environment with proper SSL certificates, or accept this trade-off for
-# compatibility. PyPI packages still have integrity verified via pip's built-in
-# hash checking, so this primarily affects transport security, not package integrity.
-RUN pip install --no-cache-dir --prefix=/install \
-    --trusted-host pypi.org --trusted-host files.pythonhosted.org \
-    -r requirements.txt
+# Conditionally add --trusted-host flags based on TRUST_PYPI build arg
+# Only use --trusted-host in CI environments with SSL certificate issues
+RUN if [ "$TRUST_PYPI" = "true" ]; then \
+        pip install --no-cache-dir --prefix=/install \
+            --trusted-host pypi.org --trusted-host files.pythonhosted.org \
+            -r requirements.txt; \
+    else \
+        pip install --no-cache-dir --prefix=/install \
+            -r requirements.txt; \
+    fi
 
 # ============================================================================
 # Stage 2: Runtime - Minimal production image

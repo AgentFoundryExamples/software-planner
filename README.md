@@ -57,6 +57,10 @@ docker build -t software-planner:v0.1.0 .
 
 # Build for multiple platforms (requires Docker Buildx)
 docker buildx build --platform linux/amd64,linux/arm64 -t software-planner:latest .
+
+# Build with SSL certificate bypass for CI environments with SSL interception
+# Only use this in CI/CD pipelines with corporate proxies - NOT recommended for production
+docker build --build-arg TRUST_PYPI=true -t software-planner:latest .
 ```
 
 ### Running the Container
@@ -202,7 +206,7 @@ services:
     command: >
       sh -c "
         alembic upgrade head &&
-        exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+        exec uvicorn app.main:app --host 0.0.0.0 --port $${PORT:-8000} --workers $${WORKERS:-1}
       "
 
 volumes:
