@@ -91,7 +91,13 @@ If `DATABASE_URL` is not set, provide these individual settings:
 | `PLANNER_RATE_LIMIT_WINDOW_SECONDS` | Rate limit window | `60` | `60` | Usually keep at 60s |
 | `PLANNER_TRUST_PROXY_HEADERS` | Trust X-Forwarded-For headers | `true` | `false` | Enable behind load balancer |
 
-**Rate Limiting Note**: In multi-instance deployments, each instance maintains independent rate limit state. Total effective limit is `configured_limit × number_of_instances`. Adjust accordingly.
+**⚠️ Rate Limiting in Multi-Instance Deployments**: The current implementation uses in-memory rate limiting, meaning each instance maintains independent rate limit state. This is by design for simplicity and performance.
+
+**Impact**: Total effective limit is `configured_limit × number_of_instances`. 
+
+**Example**: With `PLANNER_RATE_LIMIT_MAX_REQUESTS=10` and 3 instances, the system allows approximately 30 requests/minute total (10 per instance).
+
+**Important**: If exact per-key rate limiting across instances is required, consider implementing distributed rate limiting using Redis or deploying a centralized API gateway. See the "Scaling Considerations" section for detailed strategies.
 
 ### CORS Configuration
 
@@ -107,7 +113,15 @@ If `DATABASE_URL` is not set, provide these individual settings:
 |----------|---------|---------|---------|---------|
 | `PLANNER_METRICS_ENABLED` | Enable Prometheus metrics | `true` | `false` | Production: enable for monitoring |
 
-**Security Note**: Metrics endpoint (`/api/v1/metrics`) is not protected by API keys. Use network-level restrictions (firewall, VPN) to limit access to monitoring systems only.
+**⚠️ Critical Security Warning**: The metrics endpoint (`/api/v1/metrics`) is **NOT protected by API key authentication**. This endpoint exposes operational metrics including request patterns, job statistics, and LLM usage.
+
+**Required Security Controls**:
+- **Network-level restrictions** (firewall rules, security groups, VPN)
+- **IP allowlisting** (only monitoring systems like Prometheus)
+- **Reverse proxy authentication** (nginx basic auth, OAuth proxy)
+- **Separate admin port** (not exposed to public internet)
+
+**Never** expose the metrics endpoint directly to the public internet without authentication.
 
 ### Configuration Contexts Explained
 
@@ -136,10 +150,18 @@ docker build -t software-planner:v1.0.0 .
 docker buildx build --platform linux/amd64,linux/arm64 \
   -t software-planner:latest .
 
-# Build with SSL certificate bypass (CI only)
-# Only use in CI environments with corporate SSL proxies
+# Build with SSL certificate bypass (⚠️ CI ENVIRONMENTS ONLY ⚠️)
+# SECURITY WARNING: This disables SSL certificate verification for PyPI
+# ONLY use in CI/CD pipelines with corporate SSL interception proxies
+# NEVER use in production or for building production images
 docker build --build-arg TRUST_PYPI=true -t software-planner:latest .
 ```
+
+**⚠️ Security Note on TRUST_PYPI**: The `TRUST_PYPI=true` build argument bypasses SSL certificate verification when installing Python packages. This is **ONLY** for CI environments with SSL-intercepting corporate proxies. Using this flag:
+- Disables SSL verification for PyPI.org and files.pythonhosted.org
+- Increases risk of man-in-the-middle attacks
+- Should **NEVER** be used for production image builds
+- Should only be temporary until proper CA certificates are configured
 
 #### Running the Container
 
@@ -934,6 +956,13 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 PLANNER_API_KEY_MIN_LENGTH=32
 ```
 
+**⚠️ Security During Key Rotation**:
+- **Avoid logging keys**: Ensure new keys are not logged during configuration updates or rollouts
+- **Use secrets management**: Never set keys via command-line arguments (visible in process lists)
+- **Audit access**: Track who has access to API keys and when they are updated
+- **Monitoring**: Watch for authentication failures that might indicate key mismatches during rotation
+- **Secure communication**: Only transmit keys over encrypted channels (HTTPS, SSH, encrypted secrets stores)
+
 ### Database Credential Rotation
 
 Rotate database credentials without downtime:
@@ -1380,18 +1409,22 @@ software-planner:staging         # Staging environment
     
 - name: Tag image
   run: |
-    # Tag with semantic version on release
+    # Tag with semantic version on release (PRODUCTION USE ONLY)
     if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
       VERSION=${GITHUB_REF#refs/tags/}
       docker tag software-planner:${{ github.sha }} software-planner:${VERSION}
+      # Note: 'latest' tag is for convenience in development/testing
+      # DO NOT USE 'latest' tag in production deployments
       docker tag software-planner:${{ github.sha }} software-planner:latest
     fi
     
-    # Tag with branch name
+    # Tag with branch name (development/staging use)
     if [[ "${{ github.ref }}" == refs/heads/main ]]; then
       docker tag software-planner:${{ github.sha }} software-planner:main
     fi
 ```
+
+**⚠️ Important**: The `latest` tag shown above is created for development convenience but should **never** be used in production deployments. Always use exact semantic version tags (e.g., `v1.0.0`) in production to ensure predictable, repeatable deployments.
 
 ### Artifact Promotion
 
