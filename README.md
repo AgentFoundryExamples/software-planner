@@ -459,6 +459,352 @@ Response:
 
 **Note:** This endpoint is intended for debugging and monitoring only. Jobs are returned in most-recently-updated order.
 
+### Job Lifecycle and Persistence
+
+Understanding the job lifecycle is crucial for operations, monitoring, and troubleshooting. This section describes the states jobs transition through, how restarts are handled, and how to inspect job records.
+
+#### Job Status States
+
+Jobs progress through the following states during their lifecycle:
+
+```
+QUEUED → RUNNING → SUCCEEDED
+                 ↘ FAILED
+```
+
+**State Definitions:**
+
+1. **QUEUED** (Initial State)
+   - Job has been created and persisted to the database
+   - Job is waiting for a background worker to pick it up
+   - `created_at` timestamp is set
+   - `started_at` and `finished_at` are NULL
+
+2. **RUNNING** (Processing State)
+   - Background worker has claimed the job and is executing the LLM request
+   - `started_at` timestamp is set when transitioning to this state
+   - Job is actively calling the LLM API and processing results
+   - If server restarts while job is RUNNING, it will be marked as FAILED (see "Restart Recovery" below)
+
+3. **SUCCEEDED** (Terminal State)
+   - Planning completed successfully
+   - `result` field contains the generated specifications
+   - `finished_at` timestamp records completion time
+   - Job will not be processed again
+
+4. **FAILED** (Terminal State)
+   - Planning encountered an error (LLM failure, timeout, validation error, or restart recovery)
+   - `error` field contains error details with `error` and `type` fields
+   - `finished_at` timestamp records when failure was detected
+   - Job will not be retried automatically
+
+**Valid Transitions:**
+- `QUEUED → RUNNING` - Background worker starts processing
+- `RUNNING → SUCCEEDED` - Planning completes successfully
+- `RUNNING → FAILED` - Planning encounters an error
+- `QUEUED → FAILED` - Rare edge case, used during restart recovery
+
+**Invalid Transitions:**
+These transitions are prevented by the repository layer:
+- Cannot transition from terminal states (SUCCEEDED, FAILED) to any other state
+- Cannot mark a QUEUED job as SUCCEEDED without going through RUNNING
+- Cannot transition backwards in the lifecycle
+
+#### Restart Recovery and Behavior
+
+**What Happens on Server Restart:**
+
+When the application starts up, it automatically runs a recovery process to handle jobs that were interrupted by the previous shutdown:
+
+1. **Startup Recovery Process** (runs in `startup_event` in `app/main.py`):
+   - Queries database for all jobs in `RUNNING` state
+   - Marks them as `FAILED` with error type `RestartRecoveryError`
+   - Sets error message: "Job interrupted by server restart"
+   - Sets `finished_at` timestamp to the current time
+   - Logs a warning with count of recovered jobs
+
+2. **Why Jobs Are Marked as Failed:**
+   - Jobs in RUNNING state were actively processing when server stopped
+   - LLM requests may have been interrupted mid-flight
+   - No way to resume partial work or determine actual completion state
+   - Marking as FAILED provides clear signal to operators that these jobs need attention
+
+3. **Expected Log Messages:**
+   ```
+   WARNING: Startup recovery completed: 5 jobs marked as FAILED
+   ```
+   Or if no stuck jobs:
+   ```
+   INFO: No stuck jobs found during startup recovery
+   ```
+
+**Restart Semantics:**
+- **QUEUED jobs** - Preserved and will be processed normally after restart
+- **RUNNING jobs** - Automatically marked as FAILED with restart recovery error
+- **SUCCEEDED jobs** - Preserved unchanged
+- **FAILED jobs** - Preserved unchanged
+
+**Operational Implications:**
+- Users whose jobs were in RUNNING state during restart will see `status: "failed"` with restart recovery error
+- These jobs must be manually resubmitted if the planning results are still needed
+- Monitor the startup logs to understand how many jobs were affected by a restart
+- Consider graceful shutdown procedures for production deployments (see "Production Considerations" below)
+
+#### Database Unreachability at Startup
+
+**What Happens if Database is Unavailable:**
+
+The application **will fail to start** if it cannot connect to the database. This fail-fast behavior is intentional to prevent the application from running in a degraded state.
+
+**Expected Behavior:**
+1. Application attempts to initialize the database connection pool
+2. If connection fails, the connection module logs detailed error information
+3. Application exits with a non-zero exit code
+4. Orchestration system (Docker, Kubernetes, systemd) can detect failure and restart
+
+**Error Logs to Expect:**
+```
+ERROR: Database connection failed: could not connect to server: Connection refused
+ERROR: Please verify database configuration and ensure PostgreSQL is running
+ERROR: DATABASE_URL=postgresql+asyncpg://user@localhost:5432/software_planner
+```
+
+**Troubleshooting Steps:**
+1. Verify PostgreSQL is running: `pg_isready -h localhost -p 5432`
+2. Check database connection settings in environment variables or `.env`
+3. Verify network connectivity: `telnet db.example.com 5432`
+4. Check PostgreSQL logs for authentication or permission errors
+5. Verify database and user exist: `psql -U postgres -l`
+6. Check firewall rules if connecting to remote database
+
+**Production Recommendations:**
+- Use health checks in orchestration systems to detect startup failures
+- Implement retry logic at the orchestration level (e.g., Kubernetes restart policy)
+- Set up monitoring alerts for repeated startup failures
+- Ensure database is started before application in dependency management
+
+#### Verifying Job Persistence
+
+**SQL Queries for Debugging and Monitoring:**
+
+1. **Check Total Job Count by Status:**
+```sql
+SELECT status, COUNT(*) as count
+FROM jobs
+GROUP BY status
+ORDER BY status;
+```
+
+2. **Find Recently Created Jobs:**
+```sql
+SELECT job_id, status, created_at, updated_at
+FROM jobs
+ORDER BY created_at DESC
+LIMIT 10;
+```
+
+3. **Find Jobs Stuck in RUNNING State:**
+```sql
+-- These should be 0 unless actively processing
+-- If non-zero after restart, recovery process failed
+SELECT job_id, started_at, description
+FROM jobs
+WHERE status = 'RUNNING'
+ORDER BY started_at DESC;
+```
+
+4. **Find Jobs That Failed Due to Restart:**
+```sql
+SELECT job_id, created_at, finished_at, error
+FROM jobs
+WHERE status = 'FAILED'
+  AND error->>'type' = 'RestartRecoveryError'
+ORDER BY finished_at DESC;
+```
+
+5. **Check Average Processing Time for Successful Jobs:**
+```sql
+SELECT 
+    AVG(EXTRACT(EPOCH FROM (finished_at - started_at))) as avg_seconds,
+    MIN(EXTRACT(EPOCH FROM (finished_at - started_at))) as min_seconds,
+    MAX(EXTRACT(EPOCH FROM (finished_at - started_at))) as max_seconds
+FROM jobs
+WHERE status = 'SUCCEEDED'
+  AND started_at IS NOT NULL
+  AND finished_at IS NOT NULL;
+```
+
+6. **Find Jobs Using Specific Models:**
+```sql
+SELECT model, COUNT(*) as count
+FROM jobs
+WHERE model IS NOT NULL
+GROUP BY model
+ORDER BY count DESC;
+```
+
+**Database Schema Verification:**
+```sql
+-- Verify jobs table exists and has correct structure
+\d jobs
+
+-- Check indexes
+\di jobs*
+
+-- Verify migration version
+SELECT version_num FROM alembic_version;
+```
+
+#### Production Considerations
+
+**Multi-Instance Deployments:**
+
+When running multiple application instances (e.g., for high availability or load balancing) with a shared database:
+
+1. **Job Processing is NOT Distributed:**
+   - Current implementation does not include a job worker queue
+   - Each job is processed inline by the instance that received the POST request
+   - If that instance crashes, the job will be marked as FAILED on next startup of ANY instance
+   - Multiple instances can create jobs concurrently without conflicts (UUID-based job IDs prevent collisions)
+
+2. **Database Contention:**
+   - Multiple instances share the same database connection pool limits
+   - Recovery process runs on ALL instances at startup (idempotent, last one wins)
+   - Consider adjusting `DATABASE_POOL_SIZE` if running many instances
+
+3. **Recommended Architecture for Scale:**
+   - Use a dedicated job queue system (e.g., Celery, RabbitMQ, Redis Queue) for background processing
+   - Separate API instances from worker instances
+   - Implement worker claim/lock mechanism to prevent double-processing
+   - Current implementation is suitable for moderate load (single instance or 2-3 instances)
+
+**Graceful Shutdown:**
+
+To minimize job failures during deployments:
+
+1. **Stop Accepting New Requests First:**
+   - Remove instance from load balancer
+   - Wait for in-flight jobs to complete (monitor RUNNING count)
+   - Typical job duration is 5-60 seconds depending on complexity
+
+2. **Set Up Health Check Endpoint:**
+   - Use `/health` endpoint for liveness checks
+   - Consider adding `/ready` endpoint that checks for RUNNING jobs
+
+3. **Kubernetes Example:**
+```yaml
+spec:
+  containers:
+  - name: software-planner
+    lifecycle:
+      preStop:
+        exec:
+          # Wait for in-flight jobs to complete before terminating
+          # Adjust sleep duration based on your typical job processing time
+          command: ["sh", "-c", "sleep 15"]
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8000
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    # Ensure pod termination grace period is longer than preStop sleep
+    terminationGracePeriodSeconds: 30
+```
+
+**Preventing Race Conditions:**
+- Set `terminationGracePeriodSeconds` higher than the `preStop` sleep duration to avoid forced termination
+- Monitor the `RUNNING` job count before shutdown (query: `SELECT COUNT(*) FROM jobs WHERE status = 'RUNNING'`)
+- Use readiness probes to stop routing traffic before the pod terminates
+- Configure load balancer connection draining to allow existing requests to complete
+- For critical jobs, consider implementing a graceful shutdown signal handler that waits for active jobs
+
+**Credential Rotation:**
+
+To rotate database credentials without downtime:
+
+1. **Create new database user:**
+```sql
+-- IMPORTANT: Replace 'YOUR_NEW_SECURE_PASSWORD' with a strong, randomly generated password
+CREATE USER planner_app_new WITH PASSWORD 'YOUR_NEW_SECURE_PASSWORD';
+GRANT SELECT, INSERT, UPDATE ON TABLE jobs TO planner_app_new;
+GRANT SELECT ON TABLE alembic_version TO planner_app_new;
+```
+
+2. **Deploy application with new credentials:**
+   - Update `DATABASE_URL` or `DATABASE_PASSWORD` environment variable
+   - Perform rolling deployment (Kubernetes) or blue-green deployment
+   - New instances use new credentials, old instances continue with old
+
+3. **Verify new instances are healthy:**
+   - Check logs for successful database connections
+   - Test job creation and retrieval
+
+4. **Remove old user after full rollout:**
+```sql
+-- After all instances updated and verified
+DROP USER planner_app_old;
+```
+
+**Credential Security:**
+- Use secrets management systems to store and rotate credentials automatically
+- Never hardcode credentials in configuration files
+- Audit credential access and usage regularly
+
+**Read-Only Replicas:**
+
+The application requires **write access** to the database and cannot run with read-only replicas for job persistence:
+
+- Jobs are created (INSERT) and updated (UPDATE) frequently
+- Read replicas can only be used for reporting/analytics queries
+- Do NOT point `DATABASE_URL` to a read replica - application will fail when trying to create jobs
+
+**If you need to run analytics without impacting the primary:**
+```sql
+-- Connect to read replica for reporting only
+-- Run queries like job statistics, processing times, etc.
+-- DO NOT configure the application to use this connection
+```
+
+**Migration Management in Production:**
+
+1. **Safely Re-running Migrations:**
+   - Migrations are idempotent: `alembic upgrade head` can be run multiple times safely
+   - Alembic tracks applied migrations in `alembic_version` table
+   - Only unapplied migrations will be executed
+
+2. **Running Migrations with Zero Downtime:**
+   - Most migrations can run while application is live (adding columns, indexes)
+   - Schema changes are typically backward-compatible
+   - For major schema changes:
+     - Stop all application instances
+     - Run migration: `alembic upgrade head`
+     - Verify migration success: `alembic current`
+     - Start application instances with new code
+
+3. **Rolling Back Migrations:**
+```bash
+# View migration history
+alembic history
+
+# Rollback to specific version
+alembic downgrade <revision>
+
+# Rollback one version
+alembic downgrade -1
+
+# Rollback all migrations (destructive!)
+alembic downgrade base
+```
+
+4. **Migration Checklist:**
+   - [ ] Backup database before running migrations
+   - [ ] Test migrations in staging environment first
+   - [ ] Verify migrations can run with application user permissions
+   - [ ] Monitor migration logs for errors
+   - [ ] Verify schema with `alembic current` after upgrade
+   - [ ] Test application functionality after migration
+
 ### Configuration
 
 Configuration is managed through environment variables or a `.env` file. All settings have sensible defaults and are optional.
@@ -486,12 +832,13 @@ Configuration is managed through environment variables or a `.env` file. All set
 
 ### Database Setup
 
-The Software Planner API uses PostgreSQL for persistent job storage. Jobs are stored in a database table and survive server restarts.
+The Software Planner API uses PostgreSQL for persistent job storage. Jobs are stored in a database table and survive server restarts. This section describes database prerequisites, connection configuration, migration management, and operational considerations.
 
 #### Prerequisites
 
-- PostgreSQL 12 or higher
-- Database user with appropriate permissions
+- **PostgreSQL 12 or higher** (PostgreSQL 17 recommended for production)
+- Database user with appropriate permissions (see "Required Permissions" below)
+- Network connectivity from application server to PostgreSQL instance
 
 #### Quick Start with Docker (Development)
 
@@ -520,6 +867,7 @@ Configure the database connection using environment variables. You have two opti
 Set a single `DATABASE_URL` environment variable:
 
 ```bash
+# IMPORTANT: Replace with actual credentials - never commit real passwords
 export DATABASE_URL="postgresql+asyncpg://user:password@localhost:5432/software_planner"
 ```
 
@@ -532,6 +880,7 @@ export DATABASE_HOST=localhost
 export DATABASE_PORT=5432
 export DATABASE_NAME=software_planner
 export DATABASE_USER=planner
+# IMPORTANT: Use strong passwords even in development
 export DATABASE_PASSWORD=planner_dev_password
 ```
 
@@ -542,6 +891,7 @@ DATABASE_HOST=localhost
 DATABASE_PORT=5432
 DATABASE_NAME=software_planner
 DATABASE_USER=planner
+# IMPORTANT: Never commit .env file with real passwords to version control
 DATABASE_PASSWORD=planner_dev_password
 ```
 
@@ -581,7 +931,8 @@ psql -U postgres
 CREATE DATABASE software_planner;
 
 -- Create user with password
-CREATE USER planner_app WITH PASSWORD 'secure_production_password';
+-- IMPORTANT: Replace 'YOUR_SECURE_PASSWORD' with a strong password
+CREATE USER planner_app WITH PASSWORD 'YOUR_SECURE_PASSWORD';
 
 -- Grant privileges
 GRANT ALL PRIVILEGES ON DATABASE software_planner TO planner_app;
@@ -596,7 +947,9 @@ GRANT ALL ON SCHEMA public TO planner_app;
 2. **Set Environment Variables:**
 
 ```bash
-export DATABASE_URL="postgresql+asyncpg://planner_app:secure_production_password@db.example.com:5432/software_planner"
+# IMPORTANT: Replace with actual credentials from your secrets management system
+# Example format shown below - never use these values in production
+export DATABASE_URL="postgresql+asyncpg://planner_app:YOUR_SECURE_PASSWORD@db.example.com:5432/software_planner"
 ```
 
 3. **Run Migrations:**
@@ -614,15 +967,46 @@ The application will test the database connection on startup and log any errors.
 The database user needs the following permissions:
 
 **For Running the Application:**
-- `SELECT` on `jobs` table
-- `INSERT` on `jobs` table
-- `UPDATE` on `jobs` table
+- `SELECT` on `jobs` table - retrieve job status and results
+- `INSERT` on `jobs` table - create new planning jobs
+- `UPDATE` on `jobs` table - update job status and results
+- `SELECT` on `alembic_version` table - verify schema version on startup
 
-**For Running Migrations:**
-- `CREATE TABLE`
-- `CREATE INDEX`
-- `ALTER TABLE`
-- `DROP TABLE` (for rollbacks)
+**For Running Migrations (can be a separate admin user):**
+- `CREATE TABLE` - create new tables during schema upgrades
+- `CREATE INDEX` - create performance indexes
+- `ALTER TABLE` - modify existing table structure
+- `DROP TABLE` - remove tables during rollbacks
+- `DROP INDEX` - remove indexes during rollbacks
+- `INSERT/UPDATE/DELETE` on `alembic_version` table - track applied migrations
+
+**Best Practice for Production:**
+Create two database users:
+1. **Migration user** (`planner_admin`) with full DDL permissions - used only for running `alembic upgrade`
+2. **Application user** (`planner_app`) with limited DML permissions - used by the running application
+
+Example setup:
+```sql
+-- Create migration admin user
+-- IMPORTANT: Replace 'YOUR_SECURE_ADMIN_PASSWORD' with a strong password
+CREATE USER planner_admin WITH PASSWORD 'YOUR_SECURE_ADMIN_PASSWORD';
+GRANT ALL PRIVILEGES ON DATABASE software_planner TO planner_admin;
+
+-- Create application user with limited permissions
+-- IMPORTANT: Replace 'YOUR_SECURE_APP_PASSWORD' with a strong password
+CREATE USER planner_app WITH PASSWORD 'YOUR_SECURE_APP_PASSWORD';
+GRANT CONNECT ON DATABASE software_planner TO planner_app;
+GRANT USAGE ON SCHEMA public TO planner_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE jobs TO planner_app;
+GRANT SELECT ON TABLE alembic_version TO planner_app;
+```
+
+**Security Best Practices:**
+- Use strong, randomly generated passwords (minimum 16 characters)
+- Store credentials in a secrets management system (e.g., HashiCorp Vault, AWS Secrets Manager, Kubernetes Secrets)
+- Never commit credentials to version control
+- Rotate passwords regularly (at least every 90 days)
+- Use different passwords for admin and application users
 
 #### Troubleshooting Database Connection
 
@@ -708,7 +1092,7 @@ LLM_TIMEOUT=90
 # LLM_SYSTEM_PROMPT=Your custom prompt here...
 ```
 
-#### Getting Your OpenAI API Key
+**Getting Your OpenAI API Key**
 
 1. Sign up or log in to OpenAI Platform: https://platform.openai.com/
 2. Navigate to API Keys: https://platform.openai.com/api-keys
@@ -716,10 +1100,14 @@ LLM_TIMEOUT=90
 4. Copy the key immediately (you won't see it again)
 5. Add it to your `.env` file as `LLM_API_KEY=sk-...`
 
-**Important**: 
-- Keep your API key secure - never share it or commit it to Git
-- Set usage limits on your OpenAI account to prevent unexpected charges
-- Monitor your API usage in the OpenAI dashboard
+**Security Best Practices:**
+- **Never commit API keys to Git** - Add `.env` to `.gitignore` and use `.env.example` as a template
+- **Keep your API key secure** - Treat it like a password; never share it publicly or in logs
+- **Use environment-specific keys** - Separate keys for development, staging, and production
+- **Rotate keys regularly** - Create new keys and revoke old ones periodically
+- **Monitor usage** - Set up billing alerts and monitor API usage in the OpenAI dashboard
+- **Set usage limits** - Configure spending limits on your OpenAI account to prevent unexpected charges
+- **Use secrets management** - Store keys in secure vaults (HashiCorp Vault, AWS Secrets Manager, etc.) for production
 
 #### Dependencies
 
@@ -842,7 +1230,7 @@ The default system prompt instructs the LLM to generate specs in a specific JSON
 - Try removing `LLM_BASE_URL` to use the default OpenAI endpoint
 - Check proxy or custom service documentation for proper configuration
 
-#### How Errors Surface
+**How Errors Surface**
 
 **Via Job Status API (GET /api/v1/plans/{job_id})**:
 
@@ -867,6 +1255,12 @@ When a planning job fails, the response includes error details:
 - `LLMRequestError`: API request failures (timeout, rate limit, network error, 5xx error)
 - `LLMResponseError`: Invalid response (JSON parse error, schema validation failure)
 
+**Security Note:** Error messages are sanitized to prevent information leakage:
+- API keys are never included in error responses or logs
+- Full stack traces are not exposed to API clients
+- Internal system paths and configurations are redacted
+- Only error types and user-actionable messages are returned
+
 **Via Application Logs**:
 
 The planner logs detailed information at various levels:
@@ -875,7 +1269,11 @@ The planner logs detailed information at various levels:
 - **WARNING**: Non-fatal issues (empty `must` fields, oversized responses being truncated)
 - **ERROR**: Failures (authentication, timeout, validation errors) with sanitized error messages
 
-**Security Note**: API keys are never logged. Logs contain only metadata and error types, not sensitive credentials or full response content.
+**Logging Security:**
+- API keys and secrets are never logged
+- Sensitive data is redacted from logs (passwords, tokens, PII)
+- Logs contain only metadata and error types
+- Full request/response bodies are not logged to prevent data leaks
 
 **Example Log Output:**
 ```
