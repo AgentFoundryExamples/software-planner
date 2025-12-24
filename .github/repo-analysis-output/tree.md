@@ -97,6 +97,7 @@
 ├── .flake8
 ├── .gitignore
 ├── alembic.ini
+├── docker-compose.yml
 ├── Dockerfile
 ├── LICENSE
 ├── LLMs.md

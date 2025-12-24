@@ -422,6 +422,10 @@
     },
     {
       "type": "file",
+      "name": "docker-compose.yml"
+    },
+    {
+      "type": "file",
       "name": "Dockerfile"
     },
     {
