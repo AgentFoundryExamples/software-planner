@@ -63,12 +63,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     
-    env:
-      POSTGRES_USER: planner_test
-      POSTGRES_PASSWORD: planner_test_password
-      POSTGRES_DB: software_planner_test
-      DATABASE_URL: postgresql+asyncpg://planner_test:planner_test_password@localhost:5432/software_planner_test
-    
     services:
       postgres:
         image: postgres:17
@@ -83,6 +77,9 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+    
+    env:
+      DATABASE_URL: postgresql+asyncpg://planner_test:planner_test_password@localhost:5432/software_planner_test
 
     steps:
       - name: Checkout code
