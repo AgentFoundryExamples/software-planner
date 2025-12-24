@@ -18,10 +18,10 @@ from pydantic import BaseModel, Field
 
 class SpecItem(BaseModel):
     """Individual specification item in the plan response.
-    
+
     This model represents an immutable contract for specification structure.
     Field names and types should not be modified.
-    
+
     Attributes:
         purpose: High-level purpose of this specification.
         vision: Vision or goal statement.
@@ -29,7 +29,7 @@ class SpecItem(BaseModel):
         dont: List of things to avoid.
         nice: List of nice-to-have features.
     """
-    
+
     purpose: str = Field(..., description="High-level purpose of this specification")
     vision: str = Field(..., description="Vision or goal statement")
     must: list[str] = Field(default_factory=list, description="Must-have requirements")
@@ -39,15 +39,13 @@ class SpecItem(BaseModel):
 
 class PlanResponse(BaseModel):
     """Response model for the /plan endpoint.
-    
+
     This is an immutable contract - field names and types must not change.
-    
+
     Attributes:
         specs: List of specification items.
     """
-    
+
     specs: list[SpecItem] = Field(
-        ...,
-        min_length=1,
-        description="List of specification items (at least one required)"
+        ..., min_length=1, description="List of specification items (at least one required)"
     )

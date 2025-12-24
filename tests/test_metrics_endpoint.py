@@ -25,20 +25,21 @@ def app_with_metrics():
     """Create app with metrics enabled."""
     import os
     from importlib import reload
+
     from app.core import config
-    
+
     # Enable metrics for this test
     os.environ["PLANNER_METRICS_ENABLED"] = "true"
-    
+
     # Reload config module to pick up environment variable
     reload(config)
-    
+
     # Reset singleton to pick up new config
     reset_metrics_collector()
-    
+
     app = create_app()
     yield app
-    
+
     # Cleanup
     os.environ.pop("PLANNER_METRICS_ENABLED", None)
     reload(config)
@@ -50,20 +51,21 @@ def app_without_metrics():
     """Create app with metrics disabled."""
     import os
     from importlib import reload
+
     from app.core import config
-    
+
     # Ensure metrics are disabled
     os.environ.pop("PLANNER_METRICS_ENABLED", None)
-    
+
     # Reload config module to pick up environment variable
     reload(config)
-    
+
     # Reset singleton to pick up new config
     reset_metrics_collector()
-    
+
     app = create_app()
     yield app
-    
+
     # Cleanup
     reload(config)
     reset_metrics_collector()
@@ -72,12 +74,12 @@ def app_without_metrics():
 def test_metrics_endpoint_enabled(app_with_metrics):
     """Test that metrics endpoint works when metrics are enabled."""
     client = TestClient(app_with_metrics)
-    
+
     response = client.get("/api/v1/metrics")
-    
+
     assert response.status_code == 200
     assert "text/plain" in response.headers["content-type"]
-    
+
     # Check for Prometheus format
     content = response.text
     assert "# HELP" in content or "# TYPE" in content or "planner_" in content
@@ -86,9 +88,9 @@ def test_metrics_endpoint_enabled(app_with_metrics):
 def test_metrics_endpoint_disabled(app_without_metrics):
     """Test that metrics endpoint returns message when disabled."""
     client = TestClient(app_without_metrics)
-    
+
     response = client.get("/api/v1/metrics")
-    
+
     assert response.status_code == 200
     assert "Metrics collection is disabled" in response.text
 
@@ -96,17 +98,17 @@ def test_metrics_endpoint_disabled(app_without_metrics):
 def test_metrics_endpoint_collects_http_metrics(app_with_metrics):
     """Test that metrics endpoint includes HTTP metrics."""
     client = TestClient(app_with_metrics)
-    
+
     # Make some requests to generate metrics
     client.get("/health")
     client.get("/api/v1/models")
-    
+
     # Check metrics
     response = client.get("/api/v1/metrics")
-    
+
     assert response.status_code == 200
     content = response.text
-    
+
     # Should have HTTP metrics
     assert "planner_http_requests_total" in content
     assert "planner_http_request_duration_seconds" in content
@@ -115,15 +117,15 @@ def test_metrics_endpoint_collects_http_metrics(app_with_metrics):
 def test_metrics_do_not_expose_secrets(app_with_metrics):
     """Test that metrics do not expose sensitive data."""
     client = TestClient(app_with_metrics)
-    
+
     # Make some requests
     client.get("/health")
-    
+
     # Get metrics
     response = client.get("/api/v1/metrics")
-    
+
     content = response.text
-    
+
     # Should NOT contain any secrets
     assert "sk-" not in content  # API key prefix
     assert "password" not in content.lower()

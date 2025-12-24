@@ -37,6 +37,90 @@ pip install -r requirements.txt
 
 > **Note:** If you encounter permission errors when activating scripts on Windows PowerShell, you may need to run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
+## Development
+
+This project uses standardized tooling for code quality, formatting, and type checking. All development dependencies are included in `requirements.txt`.
+
+### Installing Development Dependencies
+
+Development tools (black, isort, flake8, mypy, coverage) are included in the main requirements file. After installing dependencies as shown above, you'll have all the tools needed for development.
+
+```bash
+# Install all dependencies (including dev tools)
+pip install -r requirements.txt
+```
+
+### Development Commands
+
+The project includes a `Makefile` with convenient commands for development. All commands are designed to work consistently across local development and CI environments.
+
+**Code Quality:**
+```bash
+make lint           # Run all linters (flake8, black --check, isort --check)
+make format         # Auto-format code with black and isort
+make type-check     # Run mypy type checker
+```
+
+**Testing:**
+```bash
+make test           # Run pytest tests
+make test-coverage  # Run tests with coverage report
+```
+
+**Combined Workflows:**
+```bash
+make all            # Run lint, type-check, and test in sequence
+make dev            # Format code, then run all checks and tests
+```
+
+**Utilities:**
+```bash
+make clean          # Remove build artifacts and cache files
+make help           # Show all available commands
+```
+
+### Code Quality Standards
+
+The project enforces consistent code quality through:
+
+- **Black** (v24.10.0): Code formatter with 100-character line length
+- **isort** (v5.13.2): Import statement organizer compatible with Black
+- **flake8** (v7.1.1): Linting for code quality and style
+- **mypy** (v1.13.0): Static type checking for Python
+
+Configuration for all tools is centralized in `pyproject.toml` and `.flake8`.
+
+### Type Checking Notes
+
+The project uses mypy for type checking with lenient settings to accommodate the current codebase state. Type checking is currently **informational only** and does not block CI or development workflows.
+
+Third-party libraries that lack type stubs (e.g., anthropic, google-genai, openai) have `ignore_missing_imports = true` configured to prevent failures due to missing type definitions.
+
+**Gradual Type Safety Roadmap:**
+- Current: Mypy runs with lenient settings to establish baseline
+- Future: Gradually enable stricter type checking as type annotations improve
+- Goal: Full strict type checking with minimal ignores
+
+To see type checking results without blocking your workflow:
+```bash
+make type-check
+```
+
+### Pre-Commit Workflow
+
+Before committing code, run:
+```bash
+make dev
+```
+
+This will:
+1. Format your code with black and isort
+2. Run linting checks (flake8, black --check, isort --check)
+3. Run type checking with mypy
+4. Run all tests
+
+All steps must pass for the command to succeed (fail-fast behavior with non-zero exit codes).
+
 ### Running the Application
 
 Start the development server:

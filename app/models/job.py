@@ -13,21 +13,20 @@
 # limitations under the License.
 """Job model for async task tracking."""
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
-
 
 JobStatus = Literal["QUEUED", "RUNNING", "SUCCEEDED", "FAILED"]
 
 
 class Job(BaseModel):
     """Job model representing an asynchronous task.
-    
+
     This model tracks the lifecycle of asynchronous planning jobs,
     including their status, timestamps, results, and any errors.
-    
+
     Attributes:
         job_id: Unique identifier for the job (UUID string).
         status: Current status of the job.
@@ -38,14 +37,16 @@ class Job(BaseModel):
         model: Optional logical model name used for this job.
         system_prompt_hash: Optional hash of the system prompt used (for tracking).
     """
-    
+
     job_id: str = Field(..., description="Unique job identifier (UUID string)")
     status: JobStatus = Field(..., description="Current job status")
     description: str | None = Field(None, description="Project description for planning")
     created_at: datetime = Field(..., description="Job creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     started_at: datetime | None = Field(None, description="Timestamp when job started execution")
-    finished_at: datetime | None = Field(None, description="Timestamp when job finished (succeeded or failed)")
+    finished_at: datetime | None = Field(
+        None, description="Timestamp when job finished (succeeded or failed)"
+    )
     result: dict | None = Field(None, description="Job result with top-level 'specs' field")
     error: dict | None = Field(None, description="Error details if job failed")
     model: str | None = Field(None, description="Logical model name used for this job")

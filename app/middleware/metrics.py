@@ -15,9 +15,9 @@
 
 import logging
 import time
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
 
 from app.services.metrics import get_metrics_collector
 from app.utils.logging_helpers import log_http_request
@@ -27,57 +27,54 @@ logger = logging.getLogger(__name__)
 
 class MetricsMiddleware(BaseHTTPMiddleware):
     """Middleware for collecting HTTP request metrics and structured logging.
-    
+
     This middleware:
     - Measures request duration
     - Records HTTP metrics (requests total, duration)
     - Logs HTTP requests with structured context
     - Extracts API key from headers for rate limiting context
     """
-    
+
     async def dispatch(self, request: Request, call_next):
         """Process request and record metrics.
-        
+
         Args:
             request: Incoming HTTP request
             call_next: Next middleware/handler in chain
-            
+
         Returns:
             HTTP response from downstream handlers
         """
         # Record start time
         start_time = time.time()
-        
+
         # Get request metadata
         method = request.method
         path = request.url.path
-        request_id = getattr(request.state, 'request_id', 'unknown')
-        
+        request_id = getattr(request.state, "request_id", "unknown")
+
         # Extract API key from headers if present (will be hashed for logging)
-        api_key = request.headers.get('X-API-Key')
-        
+        api_key = request.headers.get("X-API-Key")
+
         # Process request
         response = await call_next(request)
-        
+
         # Calculate duration
         duration = time.time() - start_time
-        
+
         # Record metrics (wrapped in try-except to prevent middleware failures)
         try:
             metrics = get_metrics_collector()
             metrics.record_http_request(
-                endpoint=path,
-                method=method,
-                status=response.status_code,
-                duration=duration
+                endpoint=path, method=method, status=response.status_code, duration=duration
             )
         except Exception as e:
             logger.warning(
                 f"Failed to record HTTP metrics: {e}",
                 extra={"error": str(e), "error_type": type(e).__name__},
-                exc_info=False
+                exc_info=False,
             )
-        
+
         # Log request with structured context (wrapped in try-except to prevent middleware failures)
         try:
             log_http_request(
@@ -87,13 +84,13 @@ class MetricsMiddleware(BaseHTTPMiddleware):
                 status=response.status_code,
                 duration=duration,
                 request_id=request_id,
-                api_key=api_key
+                api_key=api_key,
             )
         except Exception as e:
             logger.warning(
                 f"Failed to log HTTP request: {e}",
                 extra={"error": str(e), "error_type": type(e).__name__},
-                exc_info=False
+                exc_info=False,
             )
-        
+
         return response

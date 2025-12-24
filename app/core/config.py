@@ -18,16 +18,16 @@ import os
 import secrets
 from functools import cached_property
 from typing import Optional
-from pydantic import Field, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from pydantic import Field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
 
 class ModelConfig(BaseSettings):
     """Configuration for a single logical LLM model.
-    
+
     Attributes:
         provider: Provider identifier (e.g., 'openai', 'anthropic', 'google').
         model_id: Model identifier for the provider (e.g., 'gpt-5.1', 'claude-sonnet-4.5').
@@ -37,6 +37,7 @@ class ModelConfig(BaseSettings):
         timeout: Request timeout in seconds for API calls.
         max_retries: Maximum number of retry attempts for failed requests.
     """
+
     provider: str = Field(..., description="Provider identifier (openai, anthropic, google)")
     model_id: str = Field(..., description="Model identifier for the provider")
     base_url: Optional[str] = Field(None, description="Optional custom base URL")
@@ -44,120 +45,90 @@ class ModelConfig(BaseSettings):
     enabled: bool = Field(True, description="Whether this model is enabled")
     timeout: int = Field(60, ge=1, description="Request timeout in seconds")
     max_retries: int = Field(3, ge=0, description="Maximum retry attempts")
-    
-    model_config = SettingsConfigDict(
-        extra="forbid",
-        protected_namespaces=()
-    )
+
+    model_config = SettingsConfigDict(extra="forbid", protected_namespaces=())
 
 
 class Settings(BaseSettings):
     """Application settings with typed configuration.
-    
+
     All settings have sensible defaults and can be overridden via environment variables.
     """
-    
+
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
     )
-    
+
     # Application settings
     app_name: str = "Software Planner API"
     app_version: str = "0.1.0"
     debug: bool = False
-    
+
     # Server settings
     host: str = "0.0.0.0"
     port: int = 8000
-    
+
     # API settings
     api_prefix: str = "/api/v1"
-    
+
     # Planning settings
     max_description_bytes: int = 8192
     max_system_prompt_bytes: int = 32768  # Maximum length for custom system prompts
-    
+
     # Security: API key authentication
     planner_api_keys: list[str] = Field(
         default_factory=list,
-        description="List of valid API keys for planner authentication. Required for production use."
+        description="List of valid API keys for planner authentication. Required for production use.",
     )
     planner_api_keys_required: bool = Field(
         default=False,
-        description="If True, requires at least one API key to be configured at startup"
+        description="If True, requires at least one API key to be configured at startup",
     )
     planner_api_key_min_length: int = Field(
         default=16,
         ge=8,
-        description="Minimum length for API keys (default: 16 characters for security)"
+        description="Minimum length for API keys (default: 16 characters for security)",
     )
-    
+
     # Security: Request bounds
     planner_request_description_max_chars: int = Field(
-        default=50000,
-        ge=1,
-        description="Maximum characters allowed in request descriptions"
+        default=50000, ge=1, description="Maximum characters allowed in request descriptions"
     )
-    
+
     # Security: Rate limiting
     planner_rate_limit_window_seconds: int = Field(
-        default=60,
-        ge=1,
-        description="Rate limit time window in seconds"
+        default=60, ge=1, description="Rate limit time window in seconds"
     )
     planner_rate_limit_max_requests: int = Field(
-        default=10,
-        ge=1,
-        description="Maximum requests allowed per rate limit window"
+        default=10, ge=1, description="Maximum requests allowed per rate limit window"
     )
     planner_trust_proxy_headers: bool = Field(
         default=False,
         description="Trust X-Forwarded-For and X-Real-IP headers for client IP extraction. "
-                    "Only enable if behind a trusted proxy/load balancer. "
-                    "When False (default), only uses direct connection IP to prevent spoofing."
+        "Only enable if behind a trusted proxy/load balancer. "
+        "When False (default), only uses direct connection IP to prevent spoofing.",
     )
-    
+
     # Observability: Metrics and logging
     planner_metrics_enabled: bool = Field(
-        default=False,
-        description="Enable metrics collection and exposure"
+        default=False, description="Enable metrics collection and exposure"
     )
-    
+
     # Job listing settings
     default_jobs_list_limit: int = 100
     max_jobs_list_limit: int = 1000
-    
+
     # Database settings
-    database_host: str = Field(
-        default="localhost",
-        description="PostgreSQL database host"
-    )
-    database_port: int = Field(
-        default=5432,
-        ge=1,
-        le=65535,
-        description="PostgreSQL database port"
-    )
-    database_name: str = Field(
-        default="software_planner",
-        description="PostgreSQL database name"
-    )
-    database_user: str = Field(
-        default="",
-        description="PostgreSQL database user"
-    )
-    database_password: str = Field(
-        default="",
-        description="PostgreSQL database password"
-    )
+    database_host: str = Field(default="localhost", description="PostgreSQL database host")
+    database_port: int = Field(default=5432, ge=1, le=65535, description="PostgreSQL database port")
+    database_name: str = Field(default="software_planner", description="PostgreSQL database name")
+    database_user: str = Field(default="", description="PostgreSQL database user")
+    database_password: str = Field(default="", description="PostgreSQL database password")
     database_url: Optional[str] = Field(
         default=None,
-        description="Complete PostgreSQL connection URL (overrides individual settings if provided)"
+        description="Complete PostgreSQL connection URL (overrides individual settings if provided)",
     )
-    
+
     # CORS settings
     # For security, allow_credentials should only be True when allowed_origins is not ["*"]
     # WARNING: Default configuration is for development only. In production, set
@@ -166,50 +137,44 @@ class Settings(BaseSettings):
     allowed_credentials: bool = False
     allowed_methods: list[str] = ["*"]
     allowed_headers: list[str] = ["*"]
-    
+
     # Security: Explicit wildcard control for CORS
     cors_wildcard_enabled: bool = Field(
         default=True,  # Default to True for backward compatibility with existing ["*"] default
-        description="Explicitly enable wildcard (*) in allowed_origins. Set to False in production."
+        description="Explicitly enable wildcard (*) in allowed_origins. Set to False in production.",
     )
-    
+
     # LLM settings (legacy, kept for backward compatibility)
     llm_api_key: str = Field(
-        default="",
-        description="API key for LLM provider. Required for LLM-based planning."
+        default="", description="API key for LLM provider. Required for LLM-based planning."
     )
     llm_model: str = Field(
         default="gpt-4",
-        description="LLM model identifier (e.g., 'gpt-4', 'claude-sonnet-4.5', 'gemini-3.0-pro')"
+        description="LLM model identifier (e.g., 'gpt-4', 'claude-sonnet-4.5', 'gemini-3.0-pro')",
     )
     llm_base_url: Optional[str] = Field(
-        default=None,
-        description="Optional base URL for LLM API (for custom endpoints or proxies)"
+        default=None, description="Optional base URL for LLM API (for custom endpoints or proxies)"
     )
     llm_timeout: int = Field(
-        default=60,
-        ge=1,
-        description="Request timeout in seconds for LLM API calls"
+        default=60, ge=1, description="Request timeout in seconds for LLM API calls"
     )
     llm_system_prompt: Optional[str] = Field(
-        default=None,
-        description="Optional override for the default system prompt"
+        default=None, description="Optional override for the default system prompt"
     )
-    
+
     # Multi-provider LLM model registry
     models_registry: dict[str, ModelConfig] = Field(
         default_factory=dict,
-        description="Mapping of logical model names to provider configurations"
+        description="Mapping of logical model names to provider configurations",
     )
     default_model: Optional[str] = Field(
-        default=None,
-        description="Logical name of the default model to use"
+        default=None, description="Logical name of the default model to use"
     )
 
     @model_validator(mode="after")
     def _validate_planner_api_keys(self) -> "Settings":
         """Validate API keys for planner authentication.
-        
+
         Ensures:
         - API keys are not empty strings or whitespace-only
         - No duplicate keys
@@ -223,23 +188,23 @@ class Settings(BaseSettings):
                 "Set PLANNER_API_KEYS environment variable with at least one secure API key. "
                 "Generate keys using: openssl rand -hex 32"
             )
-        
+
         # If no keys provided and not required, skip validation
         if not self.planner_api_keys:
             return self
-        
+
         # Single-pass validation with set for deduplication
         seen_keys = set()
         for idx, key in enumerate(self.planner_api_keys):
             stripped_key = key.strip() if key else ""
-            
+
             # Check for empty or whitespace-only keys
             if not stripped_key:
                 raise ValueError(
                     f"Planner API key validation failed: Key at index {idx} is empty or contains only whitespace. "
                     "All API keys must be non-empty strings."
                 )
-            
+
             # Check minimum length
             if len(stripped_key) < self.planner_api_key_min_length:
                 raise ValueError(
@@ -247,7 +212,7 @@ class Settings(BaseSettings):
                     f"Minimum length is {self.planner_api_key_min_length} characters for security. "
                     "Generate secure keys using: openssl rand -hex 32"
                 )
-            
+
             # Check for duplicates
             if stripped_key in seen_keys:
                 raise ValueError(
@@ -256,13 +221,13 @@ class Settings(BaseSettings):
                     "Each API key must be unique."
                 )
             seen_keys.add(stripped_key)
-        
+
         return self
-    
+
     @model_validator(mode="after")
     def _validate_planner_request_limits(self) -> "Settings":
         """Validate request description character limits.
-        
+
         Ensures:
         - Max chars is within reasonable bounds for LLM processing
         - Value doesn't exceed typical LLM context window constraints
@@ -270,20 +235,20 @@ class Settings(BaseSettings):
         # Most LLMs have context windows of ~200K tokens, roughly 800K chars
         # Set a conservative upper limit of 500K characters
         MAX_REASONABLE_CHARS = 500000
-        
+
         if self.planner_request_description_max_chars > MAX_REASONABLE_CHARS:
             raise ValueError(
                 f"Planner request description max_chars validation failed: "
                 f"Value {self.planner_request_description_max_chars} exceeds reasonable limit of {MAX_REASONABLE_CHARS} characters. "
                 "This limit prevents exceeding LLM context window constraints."
             )
-        
+
         return self
-    
+
     @model_validator(mode="after")
     def _validate_cors_wildcard(self) -> "Settings":
         """Validate CORS wildcard configuration.
-        
+
         Ensures:
         - Wildcard '*' in origins is only allowed when explicitly enabled
         - Provides clear security guidance
@@ -294,18 +259,18 @@ class Settings(BaseSettings):
                 "To use wildcard origins, you must explicitly set cors_wildcard_enabled=True. "
                 "WARNING: Wildcard CORS origins are insecure for production. Use specific domains instead."
             )
-        
+
         return self
-    
+
     @model_validator(mode="after")
     def _validate_database_settings(self) -> "Settings":
         """Validate database configuration and construct DATABASE_URL if needed.
-        
+
         This validator ensures that database configuration is complete and valid when provided.
         If no database configuration is provided at all (both user and password empty),
         the validator allows it to pass - the application will fail at runtime when
         database operations are attempted.
-        
+
         Ensures:
         - If database_url is provided, it has the correct format
         - If individual settings are provided, they are complete and valid
@@ -320,39 +285,39 @@ class Settings(BaseSettings):
                     "database_url must start with 'postgresql://' or 'postgresql+asyncpg://'"
                 )
             return self
-        
+
         # Check if any database configuration was provided
         user_provided = self.database_user and self.database_user.strip()
         pass_provided = self.database_password and self.database_password.strip()
-        
+
         # If neither user nor password provided, skip validation
         # This allows tests and development without database
         # The application will fail at runtime when DB operations are attempted
         if not user_provided and not pass_provided:
             return self
-        
+
         # If partial configuration provided, validate it's complete
         if not user_provided:
             raise ValueError(
                 "Database configuration error: database_user is required when database_password is set. "
                 "Either set DATABASE_USER or provide a complete DATABASE_URL."
             )
-        
+
         if not pass_provided:
             raise ValueError(
                 "Database configuration error: database_password is required when database_user is set. "
                 "Either set DATABASE_PASSWORD or provide a complete DATABASE_URL."
             )
-        
+
         # Construct database URL from individual settings
         # Use asyncpg dialect for async operations
         self.database_url = (
             f"postgresql+asyncpg://{self.database_user}:{self.database_password}"
             f"@{self.database_host}:{self.database_port}/{self.database_name}"
         )
-        
+
         return self
-    
+
     @model_validator(mode="after")
     def _validate_cors_settings(self) -> "Settings":
         """Validate that CORS credentials are not enabled with wildcard origins."""
@@ -361,32 +326,32 @@ class Settings(BaseSettings):
                 "If `allowed_credentials` is True, `allowed_origins` must be a specific list of origins, not ['*']."
             )
         return self
-    
+
     @model_validator(mode="after")
     def _validate_llm_settings(self) -> "Settings":
         """Validate that required LLM settings are provided when needed.
-        
+
         Note: This validator only checks that if an API key is provided, it's not empty.
         The actual requirement for an API key depends on whether LLM features are used.
         """
         # If API key is explicitly set to empty string, that's acceptable for
         # configurations that don't use LLM features yet
         return self
-    
+
     @model_validator(mode="after")
     def _validate_model_registry(self) -> "Settings":
         """Validate model registry configuration.
-        
+
         This validation runs at Settings instantiation time (typically at application
         startup). It checks that environment variables exist at that moment, which is
         the intended behavior - we want to fail fast at startup if configuration is
         invalid rather than failing later when a model is actually used.
-        
+
         The Settings object is typically created once at application startup and
         is immutable thereafter, so the validation timing is appropriate. If
         environment variables change after startup, the application should be
         restarted to pick up the new configuration.
-        
+
         Ensures:
         - At least one model is enabled (if registry is configured)
         - Exactly one default model is specified
@@ -397,35 +362,33 @@ class Settings(BaseSettings):
         # If no registry is configured, skip validation (backward compatibility)
         if not self.models_registry:
             return self
-        
+
         # Collect enabled models
         enabled_models = {
-            name: config 
-            for name, config in self.models_registry.items() 
-            if config.enabled
+            name: config for name, config in self.models_registry.items() if config.enabled
         }
-        
+
         # At least one model must be enabled
         if not enabled_models:
             raise ValueError(
                 "Model registry validation failed: At least one model must be enabled. "
                 f"All {len(self.models_registry)} configured models are disabled."
             )
-        
+
         # Exactly one default model must be specified
         if not self.default_model:
             raise ValueError(
                 "Model registry validation failed: default_model must be specified when using model registry. "
                 f"Available models: {', '.join(self.models_registry.keys())}"
             )
-        
+
         # Default model must exist in registry
         if self.default_model not in self.models_registry:
             raise ValueError(
                 f"Model registry validation failed: default_model '{self.default_model}' not found in registry. "
                 f"Available models: {', '.join(self.models_registry.keys())}"
             )
-        
+
         # Default model must be enabled
         default_config = self.models_registry[self.default_model]
         if not default_config.enabled:
@@ -433,80 +396,80 @@ class Settings(BaseSettings):
                 f"Model registry validation failed: default_model '{self.default_model}' is disabled. "
                 "The default model must be enabled."
             )
-        
+
         # Validate all enabled models have their API key env vars set
         missing_env_vars = []
         for name, config in enabled_models.items():
             api_key_value = os.environ.get(config.api_key_env, "").strip()
             if not api_key_value:
                 missing_env_vars.append(f"{name} (env var: {config.api_key_env})")
-        
+
         if missing_env_vars:
             raise ValueError(
-                "Model registry validation failed: The following enabled models have missing or empty API key environment variables:\n" +
-                "\n".join(f"  - {item}" for item in missing_env_vars) +
-                "\n\nEither disable these models or set their API key environment variables."
+                "Model registry validation failed: The following enabled models have missing or empty API key environment variables:\n"
+                + "\n".join(f"  - {item}" for item in missing_env_vars)
+                + "\n\nEither disable these models or set their API key environment variables."
             )
-        
+
         # Validate provider identifiers
         known_providers = {"openai", "anthropic", "google"}
         unknown_providers = []
         for name, config in self.models_registry.items():
             if config.provider.lower() not in known_providers:
                 unknown_providers.append(f"{name} (provider: {config.provider})")
-        
+
         if unknown_providers:
             raise ValueError(
                 f"Model registry validation failed: Unknown provider identifiers found. "
-                f"Known providers: {', '.join(sorted(known_providers))}. Unknown:\n" +
-                "\n".join(f"  - {item}" for item in unknown_providers)
+                f"Known providers: {', '.join(sorted(known_providers))}. Unknown:\n"
+                + "\n".join(f"  - {item}" for item in unknown_providers)
             )
-        
+
         # Note: Timeout validation is handled by ModelConfig's Field(ge=1) constraint
         # and does not need to be checked here.
-        
+
         return self
-    
+
     # Helper methods for downstream dependencies
-    
+
     @cached_property
     def normalized_api_keys(self) -> set[str]:
         """Get a cached, normalized set of API keys with whitespace stripped.
-        
+
         Returns:
             Set of normalized (stripped) API keys.
-            
+
         Note:
             This property is cached for performance. The Settings object is
             typically immutable after initialization, so caching is safe.
         """
         return {key.strip() for key in self.planner_api_keys if key and key.strip()}
-    
+
     def get_rate_limit_config(self) -> dict[str, int]:
         """Get rate limit configuration as a dictionary.
-        
+
         Returns:
             Dictionary with 'window_seconds' and 'max_requests' keys.
         """
         return {
             "window_seconds": self.planner_rate_limit_window_seconds,
-            "max_requests": self.planner_rate_limit_max_requests
+            "max_requests": self.planner_rate_limit_max_requests,
         }
-    
+
     def is_api_key_valid(self, api_key: str) -> bool:
         """Check if an API key is valid using constant-time comparison.
-        
+
         Args:
             api_key: The API key to validate (must match exactly, no stripping).
-            
+
         Returns:
             True if the key is valid, False otherwise.
-            
+
         Note:
             Uses secrets.compare_digest for constant-time comparison to prevent
             timing attacks. Checks all keys to avoid leaking information about
             the number of keys or early match success.
-            
+
             The incoming key is NOT stripped to prevent security issues where
             attackers could add whitespace to bypass rate limiting or logging
             while still authenticating. Configured keys are normalized (stripped)
@@ -514,7 +477,7 @@ class Settings(BaseSettings):
         """
         if not api_key:
             return False
-        
+
         # Do NOT strip the incoming key for security reasons
         # Use constant-time comparison to prevent timing attacks
         # Check against all keys to avoid timing information leakage

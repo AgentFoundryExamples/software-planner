@@ -13,12 +13,13 @@
 # limitations under the License.
 """Tests for CORS configuration and behavior."""
 
+from unittest.mock import Mock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, Mock
 
-from app.main import get_app
 from app.core.config import Settings
+from app.main import get_app
 
 
 @pytest.fixture
@@ -32,7 +33,7 @@ def mock_llm_client():
                 "vision": "Test Vision",
                 "must": ["Must have 1"],
                 "dont": ["Don't do 1"],
-                "nice": ["Nice to have 1"]
+                "nice": ["Nice to have 1"],
             }
         ]
     }
@@ -49,13 +50,15 @@ def client_with_specific_origins(mock_llm_client):
         cors_wildcard_enabled=False,
         allowed_credentials=False,
         allowed_methods=["GET", "POST"],
-        allowed_headers=["Content-Type", "X-API-Key", "X-Request-ID"]
+        allowed_headers=["Content-Type", "X-API-Key", "X-Request-ID"],
     )
-    
-    with patch('app.core.config.settings', test_settings):
-        with patch('app.main.settings', test_settings):
-            with patch('app.api.dependencies.settings', test_settings):
-                with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
+
+    with patch("app.core.config.settings", test_settings):
+        with patch("app.main.settings", test_settings):
+            with patch("app.api.dependencies.settings", test_settings):
+                with patch(
+                    "app.services.store_singleton.get_llm_client", return_value=mock_llm_client
+                ):
                     app = get_app()
                     yield TestClient(app)
 
@@ -68,49 +71,48 @@ def client_with_wildcard_origins(mock_llm_client):
         planner_api_keys_required=False,
         allowed_origins=["*"],
         cors_wildcard_enabled=True,
-        allowed_credentials=False
+        allowed_credentials=False,
     )
-    
-    with patch('app.core.config.settings', test_settings):
-        with patch('app.main.settings', test_settings):
-            with patch('app.api.dependencies.settings', test_settings):
-                with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
+
+    with patch("app.core.config.settings", test_settings):
+        with patch("app.main.settings", test_settings):
+            with patch("app.api.dependencies.settings", test_settings):
+                with patch(
+                    "app.services.store_singleton.get_llm_client", return_value=mock_llm_client
+                ):
                     app = get_app()
                     yield TestClient(app)
 
 
 class TestCORSAllowedOrigins:
     """Test CORS behavior with allowed origins."""
-    
+
     def test_allowed_origin_in_response(self, client_with_specific_origins):
         """Test that allowed origin is reflected in CORS headers."""
         response = client_with_specific_origins.get(
-            "/health",
-            headers={"Origin": "https://example.com"}
+            "/health", headers={"Origin": "https://example.com"}
         )
-        
+
         assert response.status_code == 200
         assert "access-control-allow-origin" in response.headers
         assert response.headers["access-control-allow-origin"] == "https://example.com"
-    
+
     def test_second_allowed_origin(self, client_with_specific_origins):
         """Test that second allowed origin works."""
         response = client_with_specific_origins.get(
-            "/health",
-            headers={"Origin": "https://app.example.com"}
+            "/health", headers={"Origin": "https://app.example.com"}
         )
-        
+
         assert response.status_code == 200
         assert "access-control-allow-origin" in response.headers
         assert response.headers["access-control-allow-origin"] == "https://app.example.com"
-    
+
     def test_disallowed_origin_rejected(self, client_with_specific_origins):
         """Test that disallowed origin doesn't get CORS headers."""
         response = client_with_specific_origins.get(
-            "/health",
-            headers={"Origin": "https://evil.com"}
+            "/health", headers={"Origin": "https://evil.com"}
         )
-        
+
         # Request should succeed but without CORS headers
         assert response.status_code == 200
         # CORS middleware won't add allow-origin for disallowed origins
@@ -121,7 +123,7 @@ class TestCORSAllowedOrigins:
 
 class TestCORSPreflightRequests:
     """Test CORS preflight (OPTIONS) requests."""
-    
+
     def test_preflight_for_allowed_origin(self, client_with_specific_origins):
         """Test OPTIONS preflight succeeds for allowed origin."""
         response = client_with_specific_origins.options(
@@ -129,16 +131,16 @@ class TestCORSPreflightRequests:
             headers={
                 "Origin": "https://example.com",
                 "Access-Control-Request-Method": "POST",
-                "Access-Control-Request-Headers": "Content-Type,X-API-Key"
-            }
+                "Access-Control-Request-Headers": "Content-Type,X-API-Key",
+            },
         )
-        
+
         assert response.status_code == 200
         assert "access-control-allow-origin" in response.headers
         assert response.headers["access-control-allow-origin"] == "https://example.com"
         assert "access-control-allow-methods" in response.headers
         assert "access-control-allow-headers" in response.headers
-    
+
     def test_preflight_for_disallowed_origin(self, client_with_specific_origins):
         """Test OPTIONS preflight for disallowed origin."""
         response = client_with_specific_origins.options(
@@ -146,10 +148,10 @@ class TestCORSPreflightRequests:
             headers={
                 "Origin": "https://evil.com",
                 "Access-Control-Request-Method": "POST",
-                "Access-Control-Request-Headers": "Content-Type"
-            }
+                "Access-Control-Request-Headers": "Content-Type",
+            },
         )
-        
+
         # FastAPI/Starlette may return 400 or 200 depending on CORS config
         # The key is that CORS headers for the evil origin are not present
         assert response.status_code in [200, 400]
@@ -159,26 +161,24 @@ class TestCORSPreflightRequests:
 
 class TestCORSExposeHeaders:
     """Test that X-Request-ID is exposed via CORS."""
-    
+
     def test_request_id_exposed_in_cors(self, client_with_specific_origins):
         """Test that X-Request-ID is in Access-Control-Expose-Headers."""
         response = client_with_specific_origins.get(
-            "/health",
-            headers={"Origin": "https://example.com"}
+            "/health", headers={"Origin": "https://example.com"}
         )
-        
+
         assert response.status_code == 200
         assert "access-control-expose-headers" in response.headers
         expose_headers = response.headers["access-control-expose-headers"].lower()
         assert "x-request-id" in expose_headers
-    
+
     def test_request_id_accessible_from_browser(self, client_with_specific_origins):
         """Test that X-Request-ID header is present and exposed."""
         response = client_with_specific_origins.get(
-            "/health",
-            headers={"Origin": "https://example.com"}
+            "/health", headers={"Origin": "https://example.com"}
         )
-        
+
         assert response.status_code == 200
         # Request ID should be in response headers
         assert "X-Request-ID" in response.headers
@@ -188,22 +188,19 @@ class TestCORSExposeHeaders:
 
 class TestCORSWildcardOrigins:
     """Test CORS behavior with wildcard origins."""
-    
+
     def test_wildcard_allows_any_origin(self, client_with_wildcard_origins):
         """Test that wildcard origin allows any domain."""
         test_origins = [
             "https://example.com",
             "https://app.example.com",
             "http://localhost:3000",
-            "https://random-domain.org"
+            "https://random-domain.org",
         ]
-        
+
         for origin in test_origins:
-            response = client_with_wildcard_origins.get(
-                "/health",
-                headers={"Origin": origin}
-            )
-            
+            response = client_with_wildcard_origins.get("/health", headers={"Origin": origin})
+
             assert response.status_code == 200
             assert "access-control-allow-origin" in response.headers
             # With wildcard, typically returns "*"
@@ -213,23 +210,22 @@ class TestCORSWildcardOrigins:
 
 class TestCORSWithoutOriginHeader:
     """Test behavior when Origin header is not present."""
-    
+
     def test_request_without_origin_header(self, client_with_specific_origins):
         """Test that requests without Origin header work normally."""
         response = client_with_specific_origins.get("/health")
-        
+
         # Should succeed - CORS only applies to cross-origin requests
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
-    
+
     def test_post_without_origin_header(self, client_with_specific_origins):
         """Test that POST requests without Origin header work (still need auth if configured)."""
         response = client_with_specific_origins.post(
-            "/api/v1/plan",
-            json={"description": "Build a REST API"}
+            "/api/v1/plan", json={"description": "Build a REST API"}
         )
-        
+
         # Should succeed (no auth configured in this fixture)
         assert response.status_code == 200
         data = response.json()
@@ -238,17 +234,14 @@ class TestCORSWithoutOriginHeader:
 
 class TestCORSMethodRestrictions:
     """Test CORS method restrictions."""
-    
+
     def test_allowed_methods_in_preflight(self, client_with_specific_origins):
         """Test that allowed methods are reflected in preflight response."""
         response = client_with_specific_origins.options(
             "/api/v1/plan",
-            headers={
-                "Origin": "https://example.com",
-                "Access-Control-Request-Method": "POST"
-            }
+            headers={"Origin": "https://example.com", "Access-Control-Request-Method": "POST"},
         )
-        
+
         assert response.status_code == 200
         assert "access-control-allow-methods" in response.headers
         allowed_methods = response.headers["access-control-allow-methods"].upper()
@@ -258,7 +251,7 @@ class TestCORSMethodRestrictions:
 
 class TestCORSWithAuthentication:
     """Test CORS behavior combined with authentication."""
-    
+
     @pytest.fixture
     def client_with_cors_and_auth(self, mock_llm_client):
         """Create test client with both CORS and authentication."""
@@ -267,16 +260,18 @@ class TestCORSWithAuthentication:
             planner_api_keys_required=True,
             planner_api_key_min_length=16,
             allowed_origins=["https://example.com"],
-            cors_wildcard_enabled=False
+            cors_wildcard_enabled=False,
         )
-        
-        with patch('app.core.config.settings', test_settings):
-            with patch('app.main.settings', test_settings):
-                with patch('app.api.dependencies.settings', test_settings):
-                    with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
+
+        with patch("app.core.config.settings", test_settings):
+            with patch("app.main.settings", test_settings):
+                with patch("app.api.dependencies.settings", test_settings):
+                    with patch(
+                        "app.services.store_singleton.get_llm_client", return_value=mock_llm_client
+                    ):
                         app = get_app()
                         yield TestClient(app)
-    
+
     def test_preflight_does_not_require_auth(self, client_with_cors_and_auth):
         """Test that OPTIONS preflight doesn't require API key."""
         response = client_with_cors_and_auth.options(
@@ -284,36 +279,33 @@ class TestCORSWithAuthentication:
             headers={
                 "Origin": "https://example.com",
                 "Access-Control-Request-Method": "POST",
-                "Access-Control-Request-Headers": "Content-Type,X-API-Key"
-            }
+                "Access-Control-Request-Headers": "Content-Type,X-API-Key",
+            },
         )
-        
+
         # Preflight should succeed without API key
         assert response.status_code == 200
         assert "access-control-allow-origin" in response.headers
-    
+
     def test_actual_request_requires_auth(self, client_with_cors_and_auth):
         """Test that actual POST request requires API key even with valid origin."""
         response = client_with_cors_and_auth.post(
             "/api/v1/plan",
             json={"description": "Build a REST API"},
-            headers={"Origin": "https://example.com"}
+            headers={"Origin": "https://example.com"},
         )
-        
+
         # Should fail with 401 - missing API key
         assert response.status_code == 401
-    
+
     def test_request_with_auth_and_cors(self, client_with_cors_and_auth):
         """Test that request with both auth and CORS succeeds."""
         response = client_with_cors_and_auth.post(
             "/api/v1/plan",
             json={"description": "Build a REST API"},
-            headers={
-                "Origin": "https://example.com",
-                "X-API-Key": "test-key-1234567890"
-            }
+            headers={"Origin": "https://example.com", "X-API-Key": "test-key-1234567890"},
         )
-        
+
         # Should succeed with both valid origin and API key
         assert response.status_code == 200
         assert "access-control-allow-origin" in response.headers
@@ -322,7 +314,7 @@ class TestCORSWithAuthentication:
 
 class TestCORSHeaderConfiguration:
     """Test CORS header configuration."""
-    
+
     def test_allowed_headers_reflected(self, client_with_specific_origins):
         """Test that allowed headers are reflected in preflight."""
         response = client_with_specific_origins.options(
@@ -330,10 +322,10 @@ class TestCORSHeaderConfiguration:
             headers={
                 "Origin": "https://example.com",
                 "Access-Control-Request-Method": "POST",
-                "Access-Control-Request-Headers": "X-API-Key"
-            }
+                "Access-Control-Request-Headers": "X-API-Key",
+            },
         )
-        
+
         assert response.status_code == 200
         assert "access-control-allow-headers" in response.headers
         allowed_headers = response.headers["access-control-allow-headers"].lower()
