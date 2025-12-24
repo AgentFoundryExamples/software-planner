@@ -252,6 +252,16 @@
     },
     {
       "type": "directory",
+      "name": "docs",
+      "children": [
+        {
+          "type": "file",
+          "name": "deployment.md"
+        }
+      ]
+    },
+    {
+      "type": "directory",
       "name": "migrations",
       "children": [
         {
