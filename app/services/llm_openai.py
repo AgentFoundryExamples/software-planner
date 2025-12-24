@@ -205,6 +205,15 @@ class OpenAIClient(BaseLLMClient):
         
         start_time = time.time()
         
+        # Log LLM request start
+        from app.utils.logging_helpers import log_llm_request
+        log_llm_request(
+            logger=logger,
+            provider="openai",
+            model=self.model,
+            description_length=len(description)
+        )
+        
         while retry_count <= self.max_retries:
             try:
                 # Log attempt (not on first try to avoid log spam)
@@ -268,17 +277,54 @@ class OpenAIClient(BaseLLMClient):
                 elapsed = time.time() - start_time
                 
                 # Extract token usage - Responses API has similar usage structure
+                prompt_tokens = None
+                completion_tokens = None
                 total_tokens = None
+                
                 if hasattr(response, 'usage') and response.usage:
                     if hasattr(response.usage, 'total_tokens'):
                         total_tokens = response.usage.total_tokens
-                    elif hasattr(response.usage, 'input_tokens') and hasattr(response.usage, 'output_tokens'):
+                    if hasattr(response.usage, 'input_tokens'):
+                        prompt_tokens = response.usage.input_tokens
+                    if hasattr(response.usage, 'output_tokens'):
+                        completion_tokens = response.usage.output_tokens
+                    
+                    # Calculate total if individual tokens available
+                    if total_tokens is None and prompt_tokens and completion_tokens:
+                        total_tokens = prompt_tokens + completion_tokens
+                    
+                    if total_tokens is None and hasattr(response.usage, 'input_tokens') and hasattr(response.usage, 'output_tokens'):
                         total_tokens = response.usage.input_tokens + response.usage.output_tokens
-                    else:
+                    elif total_tokens is None:
                         logger.debug(
                             "Token usage information unavailable or in unexpected format",
                             extra={"usage_attrs": dir(response.usage) if response.usage else None}
                         )
+                
+                # Record metrics
+                from app.services.metrics import get_metrics_collector
+                from app.utils.logging_helpers import log_llm_response
+                
+                metrics = get_metrics_collector()
+                metrics.record_llm_request(
+                    provider="openai",
+                    model=self.model,
+                    status="success",
+                    duration=elapsed,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens
+                )
+                
+                # Log structured response
+                log_llm_response(
+                    logger=logger,
+                    provider="openai",
+                    model=self.model,
+                    duration=elapsed,
+                    status="success",
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens
+                )
                 
                 logger.info(
                     "OpenAI API call succeeded",
@@ -349,6 +395,29 @@ class OpenAIClient(BaseLLMClient):
                 # If we've exhausted retries, raise the error
                 if retry_count >= self.max_retries:
                     elapsed = time.time() - start_time
+                    
+                    # Record failure metrics
+                    from app.services.metrics import get_metrics_collector
+                    from app.utils.logging_helpers import log_llm_response
+                    
+                    metrics = get_metrics_collector()
+                    metrics.record_llm_request(
+                        provider="openai",
+                        model=self.model,
+                        status="error",
+                        duration=elapsed
+                    )
+                    
+                    # Log structured error
+                    log_llm_response(
+                        logger=logger,
+                        provider="openai",
+                        model=self.model,
+                        duration=elapsed,
+                        status="error",
+                        error_type=type(e).__name__
+                    )
+                    
                     logger.error(
                         "OpenAI API call failed after all retries",
                         extra={

@@ -250,6 +250,15 @@ class GeminiClient(BaseLLMClient):
         
         start_time = time.time()
         
+        # Log LLM request start
+        from app.utils.logging_helpers import log_llm_request
+        log_llm_request(
+            logger=logger,
+            provider="google",
+            model=self.model,
+            description_length=len(description)
+        )
+        
         while retry_count <= self.max_retries:
             try:
                 # Log attempt (not on first try to avoid log spam)
@@ -292,6 +301,31 @@ class GeminiClient(BaseLLMClient):
                 if hasattr(response, 'usage_metadata'):
                     input_tokens = getattr(response.usage_metadata, 'prompt_token_count', None)
                     output_tokens = getattr(response.usage_metadata, 'candidates_token_count', None)
+                
+                # Record metrics
+                from app.services.metrics import get_metrics_collector
+                from app.utils.logging_helpers import log_llm_response
+                
+                metrics = get_metrics_collector()
+                metrics.record_llm_request(
+                    provider="google",
+                    model=self.model,
+                    status="success",
+                    duration=elapsed,
+                    prompt_tokens=input_tokens,
+                    completion_tokens=output_tokens
+                )
+                
+                # Log structured response
+                log_llm_response(
+                    logger=logger,
+                    provider="google",
+                    model=self.model,
+                    duration=elapsed,
+                    status="success",
+                    prompt_tokens=input_tokens,
+                    completion_tokens=output_tokens
+                )
                 
                 logger.info(
                     "Gemini API call succeeded",
@@ -364,6 +398,29 @@ class GeminiClient(BaseLLMClient):
                 # If we've exhausted retries, raise the error
                 if retry_count >= self.max_retries:
                     elapsed = time.time() - start_time
+                    
+                    # Record failure metrics
+                    from app.services.metrics import get_metrics_collector
+                    from app.utils.logging_helpers import log_llm_response
+                    
+                    metrics = get_metrics_collector()
+                    metrics.record_llm_request(
+                        provider="google",
+                        model=self.model,
+                        status="error",
+                        duration=elapsed
+                    )
+                    
+                    # Log structured error
+                    log_llm_response(
+                        logger=logger,
+                        provider="google",
+                        model=self.model,
+                        duration=elapsed,
+                        status="error",
+                        error_type=type(e).__name__
+                    )
+                    
                     logger.error(
                         "Gemini API call failed after all retries",
                         extra={
