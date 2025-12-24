@@ -221,6 +221,8 @@ class OpenAIClient(BaseLLMClient):
                 # Make the API call using Responses API
                 # The Responses API uses 'instructions' for system context
                 # and 'input' for the user message
+                # Note: GPT-5 models do not support the temperature parameter.
+                # Use reasoning_effort and verbosity for output control instead.
                 response = self.client.responses.create(
                     model=self.model,
                     instructions=system_prompt,
