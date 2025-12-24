@@ -614,7 +614,8 @@
           "json",
           "unittest.mock.AsyncMock",
           "unittest.mock.MagicMock",
-          "unittest.mock.patch"
+          "unittest.mock.patch",
+          "uuid"
         ],
         "third-party": [
           "pytest"
@@ -665,6 +666,7 @@
           "unittest.mock.patch"
         ],
         "third-party": [
+          "openai.APITimeoutError",
           "pytest"
         ]
       }
@@ -1228,6 +1230,10 @@
       "target": "app/services/store_singleton.py"
     },
     {
+      "source": "tests/test_authentication.py",
+      "target": "app/services/rate_limiter.py"
+    },
+    {
       "source": "tests/test_config.py",
       "target": "app/core/config.py"
     },
@@ -1544,6 +1550,7 @@
       "google.genai",
       "google.genai.types",
       "openai",
+      "openai.APITimeoutError",
       "openai.OpenAI",
       "prometheus_client.CONTENT_TYPE_LATEST",
       "prometheus_client.CollectorRegistry",
@@ -1577,6 +1584,6 @@
       "uvicorn"
     ],
     "stdlib_count": 35,
-    "third-party_count": 52
+    "third-party_count": 53
   }
 }

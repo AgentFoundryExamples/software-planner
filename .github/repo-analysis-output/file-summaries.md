@@ -326,8 +326,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 11.59 KB  
-**LOC:** 232  
+**Size:** 16.52 KB  
+**LOC:** 333  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_config.py
@@ -380,8 +380,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 17.15 KB  
-**LOC:** 329  
+**Size:** 19.03 KB  
+**LOC:** 362  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_job_store.py
@@ -407,8 +407,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 12.52 KB  
-**LOC:** 280  
+**Size:** 20.13 KB  
+**LOC:** 441  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_llm_gemini.py
@@ -533,8 +533,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 16.43 KB  
-**LOC:** 352  
+**Size:** 25.41 KB  
+**LOC:** 546  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_rate_limiting_endpoints.py
