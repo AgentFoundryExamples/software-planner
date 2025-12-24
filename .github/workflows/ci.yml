@@ -15,6 +15,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,6 +38,7 @@ jobs:
   type-check:
     name: Type Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -59,6 +61,13 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    env:
+      POSTGRES_USER: planner_test
+      POSTGRES_PASSWORD: planner_test_password
+      POSTGRES_DB: software_planner_test
+      DATABASE_URL: postgresql+asyncpg://planner_test:planner_test_password@localhost:5432/software_planner_test
     
     services:
       postgres:
@@ -74,9 +83,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
-    env:
-      DATABASE_URL: postgresql+asyncpg://planner_test:planner_test_password@localhost:5432/software_planner_test
 
     steps:
       - name: Checkout code
