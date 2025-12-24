@@ -165,7 +165,7 @@ See `.env.example` for a complete list of configuration options with detailed de
 
 ## Docker Compose Setup (Recommended for Local Development)
 
-The Software Planner includes a production-ready `docker compose.yml` configuration that provides:
+The Software Planner includes a production-ready `docker-compose.yml` configuration that provides:
 - **PostgreSQL 17 database** with persistent storage and health checks
 - **API service** with automatic database migrations
 - **Proper networking** and service dependencies
