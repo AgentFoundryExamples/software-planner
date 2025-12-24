@@ -54,8 +54,10 @@
       "type": "file",
       "external_dependencies": {
         "stdlib": [
+          "functools.cached_property",
           "logging",
           "os",
+          "secrets",
           "typing.Optional"
         ],
         "third-party": [
@@ -1002,6 +1004,7 @@
       "concurrent.futures.ThreadPoolExecutor",
       "datetime.datetime",
       "datetime.timezone",
+      "functools.cached_property",
       "hashlib",
       "json",
       "logging",
@@ -1010,6 +1013,7 @@
       "pathlib.Path",
       "random",
       "re",
+      "secrets",
       "subprocess",
       "threading",
       "threading.Lock",
@@ -1070,7 +1074,7 @@
       "starlette.exceptions.HTTPException",
       "uvicorn"
     ],
-    "stdlib_count": 30,
+    "stdlib_count": 32,
     "third-party_count": 41
   }
 }

@@ -10,14 +10,14 @@ Includes classification of external dependencies as stdlib vs third-party.
 
 - **Total files**: 44
 - **Intra-repo dependencies**: 82
-- **External stdlib dependencies**: 30
+- **External stdlib dependencies**: 32
 - **External third-party dependencies**: 41
 
 ## External Dependencies
 
 ### Standard Library / Core Modules
 
-Total: 30 unique modules
+Total: 32 unique modules
 
 - `abc.ABC`
 - `abc.abstractmethod`
@@ -25,6 +25,7 @@ Total: 30 unique modules
 - `concurrent.futures.ThreadPoolExecutor`
 - `datetime.datetime`
 - `datetime.timezone`
+- `functools.cached_property`
 - `hashlib`
 - `json`
 - `logging`
@@ -33,13 +34,12 @@ Total: 30 unique modules
 - `pathlib.Path`
 - `random`
 - `re`
+- `secrets`
 - `subprocess`
 - `threading`
 - `threading.Lock`
 - `time`
-- `typing.Any`
-- `typing.Dict`
-- ... and 10 more (see JSON for full list)
+- ... and 12 more (see JSON for full list)
 
 ### Third-Party Packages
 

@@ -47,8 +47,8 @@ Total files: 44
 **Role:** configuration  
 **Role Justification:** configuration file name 'config'  
 **Summary:** Python configuration file (role: configuration)  
-**Size:** 13.16 KB  
-**LOC:** 231  
+**Size:** 20.74 KB  
+**LOC:** 375  
 **TODOs/FIXMEs:** 0  
 
 ## app/main.py
@@ -236,8 +236,8 @@ Total files: 44
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 6.56 KB  
-**LOC:** 115  
+**Size:** 19.68 KB  
+**LOC:** 338  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_database.py

@@ -67,8 +67,8 @@
       "summary": "Python configuration file (role: configuration)",
       "summary_text": "Python configuration file (role: configuration)",
       "metrics": {
-        "size_bytes": 13479,
-        "loc": 231,
+        "size_bytes": 21237,
+        "loc": 375,
         "todo_count": 0
       }
     },
@@ -361,8 +361,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 6714,
-        "loc": 115,
+        "size_bytes": 20151,
+        "loc": 338,
         "todo_count": 0
       }
     },
