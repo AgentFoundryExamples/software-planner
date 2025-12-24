@@ -325,7 +325,7 @@ class TestPlanEndpointValidationErrors:
         
         # Verify the character count would be under limit if counted incorrectly
         char_count = len(mixed_description)
-        assert char_count < max_bytes, "Character count is under limit (proving byte-based validation)"
+        assert char_count < max_bytes, "Character count is under byte limit (proving byte-based validation)"
 
 
 class TestPlanEndpointMalformedRequests:

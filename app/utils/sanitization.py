@@ -66,8 +66,8 @@ def sanitize_for_logging(
     # Replace tab, newline, and CR with spaces to preserve readability
     sanitized = text.replace('\t', ' ').replace('\n', ' ').replace('\r', ' ')
     
-    # Remove any other control characters
-    sanitized = ''.join(char if ord(char) >= 0x20 or char == ' ' else ' ' for char in sanitized)
+    # Remove any other control characters (space is 0x20, already allowed)
+    sanitized = ''.join(char if ord(char) >= 0x20 else ' ' for char in sanitized)
     
     if len(sanitized) <= max_length:
         return sanitized
