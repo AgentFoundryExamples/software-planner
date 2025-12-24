@@ -122,7 +122,7 @@ compose-up:
 		echo "✓ Created .env file. Please edit it to set LLM_API_KEY and other required variables."; \
 		echo ""; \
 	fi
-	docker-compose up -d
+	docker compose up -d
 	@echo ""
 	@echo "✓ Services started successfully!"
 	@echo ""
@@ -136,31 +136,31 @@ compose-up:
 # Stop all services
 compose-down:
 	@echo "Stopping Software Planner services..."
-	docker-compose down
+	docker compose down
 	@echo "✓ Services stopped"
 
 # View service logs (follow mode)
 compose-logs:
 	@echo "Showing service logs (press CTRL+C to exit)..."
 	@echo ""
-	docker-compose logs -f
+	docker compose logs -f
 
 # Rebuild containers from scratch
 compose-build:
 	@echo "Rebuilding containers..."
-	docker-compose build --no-cache
+	docker compose build --no-cache
 	@echo "✓ Containers rebuilt successfully"
 
 # Run database migrations in the running app container
 compose-migrate:
 	@echo "Running database migrations..."
-	docker-compose exec app alembic upgrade head
+	docker compose exec app alembic upgrade head
 	@echo "✓ Migrations completed"
 
 # Restart all services
 compose-restart:
 	@echo "Restarting services..."
-	docker-compose restart
+	docker compose restart
 	@echo "✓ Services restarted"
 
 # Stop services and remove volumes (WARNING: deletes all data!)
@@ -169,7 +169,7 @@ compose-clean:
 	@echo "Press CTRL+C to cancel, or wait 5 seconds to continue..."
 	@sleep 5
 	@echo "Stopping services and removing volumes..."
-	docker-compose down -v
+	docker compose down -v
 	@echo "✓ Services stopped and volumes removed"
 	@echo ""
 	@echo "To start fresh, run: make compose-up"

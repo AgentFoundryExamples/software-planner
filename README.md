@@ -165,7 +165,7 @@ See `.env.example` for a complete list of configuration options with detailed de
 
 ## Docker Compose Setup (Recommended for Local Development)
 
-The Software Planner includes a production-ready `docker-compose.yml` configuration that provides:
+The Software Planner includes a production-ready `docker compose.yml` configuration that provides:
 - **PostgreSQL 17 database** with persistent storage and health checks
 - **API service** with automatic database migrations
 - **Proper networking** and service dependencies
@@ -200,8 +200,8 @@ cp .env.example .env
 # Start all services (API + database)
 make compose-up
 
-# Or use docker-compose directly:
-docker-compose up -d
+# Or use docker compose directly:
+docker compose up -d
 ```
 
 The `compose-up` command will:
@@ -224,8 +224,8 @@ curl http://localhost:8000/health
 make compose-logs
 
 # Or view specific service logs:
-docker-compose logs -f app
-docker-compose logs -f db
+docker compose logs -f app
+docker compose logs -f db
 ```
 
 **5. Access the API:**
@@ -310,14 +310,14 @@ Migrations are run automatically when starting the API service. To run migration
 # Run migrations in the running container
 make compose-migrate
 
-# Or use docker-compose directly:
-docker-compose exec app alembic upgrade head
+# Or use docker compose directly:
+docker compose exec app alembic upgrade head
 
 # Check migration status
-docker-compose exec app alembic current
+docker compose exec app alembic current
 
 # View migration history
-docker-compose exec app alembic history
+docker compose exec app alembic history
 ```
 
 ### Seeding Test Jobs
@@ -381,10 +381,10 @@ docker volume inspect software-planner-db-data
 **Backup database data:**
 ```bash
 # Backup to SQL dump
-docker-compose exec db pg_dump -U planner software_planner > backup.sql
+docker compose exec db pg_dump -U planner software_planner > backup.sql
 
 # Restore from backup
-docker-compose exec -T db psql -U planner software_planner < backup.sql
+docker compose exec -T db psql -U planner software_planner < backup.sql
 ```
 
 **Clean up volumes (WARNING: deletes all data!):**
@@ -392,8 +392,8 @@ docker-compose exec -T db psql -U planner software_planner < backup.sql
 # Stop services and remove volumes
 make compose-clean
 
-# Or use docker-compose directly:
-docker-compose down -v
+# Or use docker compose directly:
+docker compose down -v
 
 # Remove named volume manually if needed:
 docker volume rm software-planner-db-data
@@ -418,26 +418,26 @@ Check logs for errors:
 make compose-logs
 
 # Or check specific service:
-docker-compose logs db
-docker-compose logs app
+docker compose logs db
+docker compose logs app
 ```
 
 **Issue: Database connection failed**
 
 1. Verify database is healthy:
 ```bash
-docker-compose ps
+docker compose ps
 # Status should show "healthy" for db service
 ```
 
 2. Check database logs:
 ```bash
-docker-compose logs db
+docker compose logs db
 ```
 
 3. Test database connection:
 ```bash
-docker-compose exec db pg_isready -U planner
+docker compose exec db pg_isready -U planner
 ```
 
 **Issue: Port already in use**
@@ -458,12 +458,12 @@ make compose-up
 
 1. Check migration status:
 ```bash
-docker-compose exec app alembic current
+docker compose exec app alembic current
 ```
 
 2. View database tables:
 ```bash
-docker-compose exec db psql -U planner -d software_planner -c "\dt"
+docker compose exec db psql -U planner -d software_planner -c "\dt"
 ```
 
 3. Reset database if needed:
@@ -476,7 +476,7 @@ make compose-up
 
 1. Check for missing LLM_API_KEY:
 ```bash
-docker-compose logs app | grep "LLM_API_KEY"
+docker compose logs app | grep "LLM_API_KEY"
 ```
 
 2. Verify .env file exists and is valid:
@@ -486,7 +486,7 @@ cat .env | grep LLM_API_KEY
 
 3. Check container health:
 ```bash
-docker-compose ps
+docker compose ps
 # Health should transition from "starting" to "healthy"
 ```
 

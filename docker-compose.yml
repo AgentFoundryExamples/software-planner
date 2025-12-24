@@ -1,6 +1,5 @@
 # Docker Compose configuration for Software Planner API
 # Provides local development environment with API and PostgreSQL database
-version: '3.8'
 
 services:
   # PostgreSQL database service
@@ -56,17 +55,17 @@ services:
       LLM_API_KEY: ${LLM_API_KEY}
       LLM_MODEL: ${LLM_MODEL:-gpt-4}
       LLM_TIMEOUT: ${LLM_TIMEOUT:-90}
-      LLM_BASE_URL: ${LLM_BASE_URL:-}
       
-      # Multi-provider model registry (optional)
-      MODELS_REGISTRY: ${MODELS_REGISTRY:-}
-      DEFAULT_MODEL: ${DEFAULT_MODEL:-}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      # Multi-provider model registry (optional - only set if using)
+      # MODELS_REGISTRY: ${MODELS_REGISTRY}
+      # DEFAULT_MODEL: ${DEFAULT_MODEL}
+      # OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      # GOOGLE_API_KEY: ${GOOGLE_API_KEY}
       
       # API Authentication (optional for dev, required for production)
-      PLANNER_API_KEYS: ${PLANNER_API_KEYS:-}
+      # Note: Leave PLANNER_API_KEYS empty or set to JSON array like '["key1","key2"]'
+      # Do not pass environment variable if using default (no authentication)
       PLANNER_API_KEYS_REQUIRED: ${PLANNER_API_KEYS_REQUIRED:-false}
       PLANNER_API_KEY_MIN_LENGTH: ${PLANNER_API_KEY_MIN_LENGTH:-16}
       
@@ -99,13 +98,14 @@ services:
       start_period: 40s
     networks:
       - planner-network
-    # Run migrations before starting the server
+    # Override entrypoint to run migrations before starting server
+    entrypoint: []
     command: >
       sh -c "
         echo 'Waiting for database to be ready...' &&
         alembic upgrade head &&
         echo 'Database migrations completed successfully' &&
-        exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
+        exec uvicorn app.main:app --host 0.0.0.0 --port $${PORT:-8000} --workers $${WORKERS:-1}
       "
 
 # Named volumes for data persistence
