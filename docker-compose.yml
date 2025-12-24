@@ -1,0 +1,131 @@
+# Docker Compose configuration for Software Planner API
+# Provides local development environment with API and PostgreSQL database
+
+services:
+  # PostgreSQL database service
+  db:
+    image: postgres:17
+    container_name: software-planner-db
+    restart: unless-stopped
+    environment:
+      # Database credentials - override via .env file
+      POSTGRES_USER: ${DATABASE_USER:-planner}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-planner_dev_password}
+      POSTGRES_DB: ${DATABASE_NAME:-software_planner}
+    volumes:
+      # Persistent storage for database data
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Expose PostgreSQL port - configurable to avoid conflicts
+      - "${DATABASE_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-planner} -d ${DATABASE_NAME:-software_planner}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - planner-network
+
+  # Software Planner API service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Trust PyPI for SSL in CI environments if needed
+        TRUST_PYPI: ${TRUST_PYPI:-false}
+    container_name: software-planner-api
+    restart: unless-stopped
+    ports:
+      # Expose API port - configurable to avoid conflicts
+      - "${PORT:-8000}:8000"
+    environment:
+      # Server configuration
+      PORT: ${PORT:-8000}
+      HOST: 0.0.0.0
+      WORKERS: ${WORKERS:-1}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DEBUG: ${DEBUG:-false}
+      
+      # Database configuration - connects to db service
+      DATABASE_URL: postgresql+asyncpg://${DATABASE_USER:-planner}:${DATABASE_PASSWORD:-planner_dev_password}@db:5432/${DATABASE_NAME:-software_planner}
+      
+      # LLM configuration - required for planning functionality
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4}
+      LLM_TIMEOUT: ${LLM_TIMEOUT:-90}
+      
+      # Multi-provider model registry (optional - only set if using)
+      # MODELS_REGISTRY: ${MODELS_REGISTRY}
+      # DEFAULT_MODEL: ${DEFAULT_MODEL}
+      # OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      # GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      
+      # API Authentication (optional for dev, required for production)
+      # Note: PLANNER_API_KEYS can be set via .env file as JSON array like '["key1","key2"]'
+      # If not set in .env, authentication is disabled (suitable for local development only)
+      # Uncomment and set in .env for production:
+      # PLANNER_API_KEYS: ${PLANNER_API_KEYS}
+      PLANNER_API_KEYS_REQUIRED: ${PLANNER_API_KEYS_REQUIRED:-false}
+      PLANNER_API_KEY_MIN_LENGTH: ${PLANNER_API_KEY_MIN_LENGTH:-16}
+      
+      # Rate limiting configuration
+      PLANNER_RATE_LIMIT_WINDOW_SECONDS: ${PLANNER_RATE_LIMIT_WINDOW_SECONDS:-60}
+      PLANNER_RATE_LIMIT_MAX_REQUESTS: ${PLANNER_RATE_LIMIT_MAX_REQUESTS:-10}
+      PLANNER_TRUST_PROXY_HEADERS: ${PLANNER_TRUST_PROXY_HEADERS:-false}
+      
+      # CORS configuration
+      # Note: Default settings allow all origins (development only)
+      # For production, set ALLOWED_ORIGINS in .env to specific domains like:
+      # ALLOWED_ORIGINS=["https://app.example.com","https://admin.example.com"]
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-["*"]}
+      CORS_WILDCARD_ENABLED: ${CORS_WILDCARD_ENABLED:-true}
+      ALLOWED_CREDENTIALS: ${ALLOWED_CREDENTIALS:-false}
+      ALLOWED_METHODS: ${ALLOWED_METHODS:-["*"]}
+      ALLOWED_HEADERS: ${ALLOWED_HEADERS:-["*"]}
+      
+      # Metrics and observability
+      PLANNER_METRICS_ENABLED: ${PLANNER_METRICS_ENABLED:-false}
+      
+      # Request bounds
+      PLANNER_REQUEST_DESCRIPTION_MAX_CHARS: ${PLANNER_REQUEST_DESCRIPTION_MAX_CHARS:-50000}
+      MAX_DESCRIPTION_BYTES: ${MAX_DESCRIPTION_BYTES:-8192}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os, urllib.request; port = os.environ.get('PORT', '8000'); urllib.request.urlopen(f'http://localhost:{port}/health').read()\""]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    networks:
+      - planner-network
+    # Override entrypoint to run migrations before starting server
+    entrypoint: []
+    command: >
+      sh -c "
+        set -e
+        echo 'Waiting for database to be ready...'
+        echo 'Running database migrations...'
+        alembic upgrade head
+        echo 'Database migrations completed successfully'
+        echo 'Starting API server...'
+        exec uvicorn app.main:app --host 0.0.0.0 --port $${PORT:-8000} --workers $${WORKERS:-1}
+      "
+    # Note: Double $$ escapes variable so shell expands it at runtime, not Docker Compose
+    # set -e ensures script exits immediately on any error
+
+# Named volumes for data persistence
+volumes:
+  postgres_data:
+    driver: local
+    name: software-planner-db-data
+
+# Network configuration
+networks:
+  planner-network:
+    driver: bridge
+    name: software-planner-network
