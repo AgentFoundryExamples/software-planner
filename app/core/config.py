@@ -405,10 +405,11 @@ class Settings(BaseSettings):
                 missing_env_vars.append(f"{name} (env var: {config.api_key_env})")
 
         if missing_env_vars:
+            error_list = "\n".join(f"  - {item}" for item in missing_env_vars)
             raise ValueError(
                 "Model registry validation failed: The following enabled models have missing or empty API key environment variables:\n"
-                + "\n".join(f"  - {item}" for item in missing_env_vars)
-                + "\n\nEither disable these models or set their API key environment variables."
+                f"{error_list}"
+                "\n\nEither disable these models or set their API key environment variables."
             )
 
         # Validate provider identifiers

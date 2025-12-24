@@ -235,18 +235,20 @@ def test_generate_specs_with_non_array_field():
 
 
 def test_generate_specs_with_empty_specs_array():
-    """Test that empty specs array is allowed."""
+    """Test that empty specs array is allowed by the parser."""
     client = MockLLMClient(
         api_key="test-key", model="gpt-5.1", response_text=json.dumps({"specs": []})
     )
 
-    # Empty specs should not raise an error at parse level
-    # The PlanResponse validation will handle min_length requirement
+    # The _parse_response method should successfully handle an empty specs list.
+    # The subsequent PlanResponse model validation will raise the error, which is
+    # the expected behavior. This test now correctly expects that validation failure.
     with pytest.raises(LLMResponseError) as exc_info:
         client.generate_specs("Build a REST API")
 
-    # Error should come from PlanResponse validation, not parse_response
+    # The error should be a validation error from PlanResponse, not a parsing error.
     assert "validation" in str(exc_info.value).lower()
+    assert "at least 1 item" in str(exc_info.value)
 
 
 def test_get_default_system_prompt():

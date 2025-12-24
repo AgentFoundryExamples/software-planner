@@ -13,6 +13,7 @@
 # limitations under the License.
 """API route handlers for the planning service."""
 
+import asyncio
 import hashlib
 import logging
 from typing import Optional
@@ -540,7 +541,7 @@ def create_plan(
     )
 
 
-def _background_planner_worker(
+async def _background_planner_worker(
     job_id: str,
     description: str,
     job_repository: JobRepository,
@@ -571,7 +572,9 @@ def _background_planner_worker(
 
         # Execute planner with job tracking and optional overrides
         # The generate_plan function will update status to "RUNNING" and then "SUCCEEDED"
-        generate_plan(
+        # Run the blocking generate_plan function in a separate thread
+        await asyncio.to_thread(
+            generate_plan,
             description=description,
             job_repository=job_repository,
             job_id=job_id,
@@ -591,14 +594,12 @@ def _background_planner_worker(
             exc_info=True,
         )
         try:
-            import asyncio
-
             # Create sanitized error dict without stack trace
             error_dict = {
                 "error": str(e)[:500],  # Truncate to avoid huge error payloads
                 "type": type(e).__name__,
             }
-            asyncio.run(job_repository.mark_failed(job_id, error_dict))
+            await job_repository.mark_failed(job_id, error_dict)
         except Exception as update_exc:
             # If we can't even update the job status, log this critical failure
             # to avoid masking the original exception and losing all trace of the error.
