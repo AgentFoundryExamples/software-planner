@@ -866,7 +866,7 @@ PLANNER_API_KEY_MIN_LENGTH=16
    ```bash
    # Generate a secure API key
    openssl rand -hex 32
-   python -c "import secrets; print(secrets.token_urlsafe(32))"
+   python -c "import secrets; print(secrets.token_hex(32))"
    ```
 
 2. **Never Commit Keys**: Add `.env` to `.gitignore` and never commit actual keys to version control
@@ -2341,7 +2341,7 @@ The application emits structured logs with consistent fields for correlation and
   "endpoint": "/api/v1/plans",
   "status": 202,
   "duration_seconds": 0.05,
-  "api_key_hash": "a1b2c3d4e5f6g7h8"
+  "api_key_hash": "a1b2c3d4e5f6a7b8"
 }
 ```
 
@@ -2383,7 +2383,7 @@ The application implements strict logging policies to prevent accidental exposur
    - Request IDs for correlation
    - HTTP method, endpoint, and status code
    - Request duration and timestamp
-   - API key hashes (first 16 chars of SHA-256, e.g., `a1b2c3d4e5f6g7h8`)
+   - API key hashes (first 16 chars of SHA-256, e.g., `a1b2c3d4e5f6a7b8`)
 
 2. **Job Lifecycle Events**
    - Job ID, status transitions (QUEUED → RUNNING → SUCCEEDED/FAILED)
