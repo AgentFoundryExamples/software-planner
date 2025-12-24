@@ -26,6 +26,8 @@ from sqlalchemy.exc import IntegrityError, DBAPIError
 
 from app.models.job import Job, JobStatus
 from app.services.db.connection import get_db_engine
+from app.services.metrics import get_metrics_collector
+from app.utils.logging_helpers import log_job_transition
 
 logger = logging.getLogger(__name__)
 
@@ -150,9 +152,6 @@ class JobRepository:
                 )
                 
                 # Record metrics and structured logging
-                from app.services.metrics import get_metrics_collector
-                from app.utils.logging_helpers import log_job_transition
-                
                 metrics = get_metrics_collector()
                 metrics.record_job_status("QUEUED")
                 
@@ -348,9 +347,6 @@ class JobRepository:
             )
             
             # Record metrics and structured logging
-            from app.services.metrics import get_metrics_collector
-            from app.utils.logging_helpers import log_job_transition
-            
             metrics = get_metrics_collector()
             metrics.record_job_status("RUNNING")
             metrics.increment_jobs_in_progress()
@@ -458,9 +454,6 @@ class JobRepository:
             )
             
             # Record metrics and structured logging
-            from app.services.metrics import get_metrics_collector
-            from app.utils.logging_helpers import log_job_transition
-            
             metrics = get_metrics_collector()
             metrics.record_job_status("SUCCEEDED")
             metrics.decrement_jobs_in_progress()
@@ -580,9 +573,6 @@ class JobRepository:
             )
             
             # Record metrics and structured logging
-            from app.services.metrics import get_metrics_collector
-            from app.utils.logging_helpers import log_job_transition
-            
             metrics = get_metrics_collector()
             metrics.record_job_status("FAILED")
             

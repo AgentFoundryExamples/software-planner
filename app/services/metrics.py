@@ -22,6 +22,7 @@ Metrics are disabled by default and must be enabled via config.
 """
 
 import logging
+import threading
 from typing import Optional
 from prometheus_client import Counter, Histogram, Gauge, CollectorRegistry, generate_latest, CONTENT_TYPE_LATEST
 
@@ -264,10 +265,13 @@ class MetricsCollector:
 
 # Global singleton instance
 _metrics_collector: Optional[MetricsCollector] = None
+_metrics_collector_lock = threading.Lock()
 
 
 def get_metrics_collector() -> MetricsCollector:
     """Get or create the global metrics collector instance.
+    
+    Thread-safe singleton initialization using double-checked locking pattern.
     
     Returns:
         MetricsCollector singleton instance.
@@ -275,9 +279,11 @@ def get_metrics_collector() -> MetricsCollector:
     global _metrics_collector
     
     if _metrics_collector is None:
-        # Import here to avoid circular dependency
-        from app.core.config import settings
-        _metrics_collector = MetricsCollector(enabled=settings.planner_metrics_enabled)
+        with _metrics_collector_lock:
+            if _metrics_collector is None:
+                # Import here to avoid circular dependency
+                from app.core.config import settings
+                _metrics_collector = MetricsCollector(enabled=settings.planner_metrics_enabled)
     
     return _metrics_collector
 
@@ -288,4 +294,5 @@ def reset_metrics_collector():
     This is primarily used for testing to ensure clean state between tests.
     """
     global _metrics_collector
-    _metrics_collector = None
+    with _metrics_collector_lock:
+        _metrics_collector = None

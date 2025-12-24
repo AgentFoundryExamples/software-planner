@@ -62,24 +62,38 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         # Calculate duration
         duration = time.time() - start_time
         
-        # Record metrics
-        metrics = get_metrics_collector()
-        metrics.record_http_request(
-            endpoint=path,
-            method=method,
-            status=response.status_code,
-            duration=duration
-        )
+        # Record metrics (wrapped in try-except to prevent middleware failures)
+        try:
+            metrics = get_metrics_collector()
+            metrics.record_http_request(
+                endpoint=path,
+                method=method,
+                status=response.status_code,
+                duration=duration
+            )
+        except Exception as e:
+            logger.warning(
+                f"Failed to record HTTP metrics: {e}",
+                extra={"error": str(e), "error_type": type(e).__name__},
+                exc_info=False
+            )
         
-        # Log request with structured context
-        log_http_request(
-            logger=logger,
-            method=method,
-            endpoint=path,
-            status=response.status_code,
-            duration=duration,
-            request_id=request_id,
-            api_key=api_key
-        )
+        # Log request with structured context (wrapped in try-except to prevent middleware failures)
+        try:
+            log_http_request(
+                logger=logger,
+                method=method,
+                endpoint=path,
+                status=response.status_code,
+                duration=duration,
+                request_id=request_id,
+                api_key=api_key
+            )
+        except Exception as e:
+            logger.warning(
+                f"Failed to log HTTP request: {e}",
+                extra={"error": str(e), "error_type": type(e).__name__},
+                exc_info=False
+            )
         
         return response
