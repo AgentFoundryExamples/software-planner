@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 42
+Total files: 44
 
 ## app/__init__.py
 **Language:** Python  
@@ -29,8 +29,8 @@ Total files: 42
 **Role:** router  
 **Role Justification:** filename contains routing term  
 **Summary:** Python routing configuration (role: router)  
-**Size:** 30.83 KB  
-**LOC:** 692  
+**Size:** 30.77 KB  
+**LOC:** 688  
 **TODOs/FIXMEs:** 0  
 
 ## app/core/__init__.py
@@ -56,8 +56,8 @@ Total files: 42
 **Role:** entry-point  
 **Role Justification:** common entry point name 'main'  
 **Summary:** Python main entry point (role: entry-point)  
-**Size:** 5.81 KB  
-**LOC:** 112  
+**Size:** 6.71 KB  
+**LOC:** 133  
 **TODOs/FIXMEs:** 0  
 
 ## app/models/__init__.py
@@ -74,8 +74,8 @@ Total files: 42
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for job  
-**Size:** 2.15 KB  
-**LOC:** 27  
+**Size:** 2.44 KB  
+**LOC:** 30  
 **TODOs/FIXMEs:** 0  
 
 ## app/models/request.py
@@ -121,6 +121,15 @@ Total files: 42
 **Summary:** Python module for connection  
 **Size:** 4.14 KB  
 **LOC:** 84  
+**TODOs/FIXMEs:** 0  
+
+## app/services/job_repository.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for job repository  
+**Size:** 25.16 KB  
+**LOC:** 520  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/job_store.py
@@ -182,8 +191,8 @@ Total files: 42
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for planner  
-**Size:** 13.25 KB  
-**LOC:** 244  
+**Size:** 14.71 KB  
+**LOC:** 276  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/store_singleton.py
@@ -191,8 +200,8 @@ Total files: 42
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for store singleton  
-**Size:** 7.32 KB  
-**LOC:** 129  
+**Size:** 8.01 KB  
+**LOC:** 139  
 **TODOs/FIXMEs:** 0  
 
 ## migrations/env.py
@@ -254,8 +263,17 @@ Total files: 42
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 6.32 KB  
-**LOC:** 163  
+**Size:** 6.60 KB  
+**LOC:** 172  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_job_repository.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 17.15 KB  
+**LOC:** 329  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_job_store.py
@@ -353,7 +371,7 @@ Total files: 42
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 17.92 KB  
+**Size:** 18.00 KB  
 **LOC:** 360  
 **TODOs/FIXMEs:** 0  
 

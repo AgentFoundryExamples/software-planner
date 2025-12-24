@@ -32,6 +32,7 @@
       ├── __init__.py
       └── connection.py
     ├── __init__.py
+    ├── job_repository.py
     ├── job_store.py
     ├── llm_claude.py
     ├── llm_client.py
@@ -54,6 +55,7 @@
   ├── test_database.py
   ├── test_health_endpoint.py
   ├── test_job_model.py
+  ├── test_job_repository.py
   ├── test_job_store.py
   ├── test_llm_claude.py
   ├── test_llm_client.py

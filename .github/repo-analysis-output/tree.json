@@ -148,6 +148,10 @@
             },
             {
               "type": "file",
+              "name": "job_repository.py"
+            },
+            {
+              "type": "file",
               "name": "job_store.py"
             },
             {
@@ -241,6 +245,10 @@
         {
           "type": "file",
           "name": "test_job_model.py"
+        },
+        {
+          "type": "file",
+          "name": "test_job_repository.py"
         },
         {
           "type": "file",

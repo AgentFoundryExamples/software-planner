@@ -8,10 +8,10 @@ Includes classification of external dependencies as stdlib vs third-party.
 
 ## Statistics
 
-- **Total files**: 42
-- **Intra-repo dependencies**: 78
+- **Total files**: 44
+- **Intra-repo dependencies**: 82
 - **External stdlib dependencies**: 30
-- **External third-party dependencies**: 39
+- **External third-party dependencies**: 41
 
 ## External Dependencies
 
@@ -43,7 +43,7 @@ Total: 30 unique modules
 
 ### Third-Party Packages
 
-Total: 39 unique packages
+Total: 41 unique packages
 
 - `alembic.context`
 - `alembic.op`
@@ -65,20 +65,20 @@ Total: 39 unique packages
 - `google.genai.types`
 - `openai`
 - `openai.OpenAI`
-- ... and 19 more (see JSON for full list)
+- ... and 21 more (see JSON for full list)
 
 ## Most Depended Upon Files (Intra-Repo)
 
 - `app/core/config.py` (16 dependents)
 - `app/services/llm_client.py` (12 dependents)
-- `app/services/job_store.py` (8 dependents)
 - `app/services/store_singleton.py` (6 dependents)
 - `app/services/model_registry.py` (6 dependents)
 - `app/main.py` (6 dependents)
+- `app/models/job.py` (5 dependents)
+- `app/services/job_store.py` (5 dependents)
 - `app/services/llm_openai.py` (5 dependents)
 - `app/services/planner.py` (4 dependents)
-- `app/models/job.py` (3 dependents)
-- `app/models/response.py` (3 dependents)
+- `app/services/job_repository.py` (4 dependents)
 
 ## Files with Most Dependencies (Intra-Repo)
 

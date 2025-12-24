@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 42,
+  "total_files": 44,
   "files": [
     {
       "schema_version": "2.0",
@@ -39,8 +39,8 @@
       "summary": "Python routing configuration (role: router)",
       "summary_text": "Python routing configuration (role: router)",
       "metrics": {
-        "size_bytes": 31565,
-        "loc": 692,
+        "size_bytes": 31505,
+        "loc": 688,
         "todo_count": 0
       }
     },
@@ -81,8 +81,8 @@
       "summary": "Python main entry point (role: entry-point)",
       "summary_text": "Python main entry point (role: entry-point)",
       "metrics": {
-        "size_bytes": 5949,
-        "loc": 112,
+        "size_bytes": 6871,
+        "loc": 133,
         "todo_count": 0
       }
     },
@@ -109,8 +109,8 @@
       "summary": "Python module for job",
       "summary_text": "Python module for job",
       "metrics": {
-        "size_bytes": 2200,
-        "loc": 27,
+        "size_bytes": 2495,
+        "loc": 30,
         "todo_count": 0
       }
     },
@@ -181,6 +181,20 @@
       "metrics": {
         "size_bytes": 4244,
         "loc": 84,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "app/services/job_repository.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for job repository",
+      "summary_text": "Python module for job repository",
+      "metrics": {
+        "size_bytes": 25765,
+        "loc": 520,
         "todo_count": 0
       }
     },
@@ -277,8 +291,8 @@
       "summary": "Python module for planner",
       "summary_text": "Python module for planner",
       "metrics": {
-        "size_bytes": 13572,
-        "loc": 244,
+        "size_bytes": 15058,
+        "loc": 276,
         "todo_count": 0
       }
     },
@@ -291,8 +305,8 @@
       "summary": "Python module for store singleton",
       "summary_text": "Python module for store singleton",
       "metrics": {
-        "size_bytes": 7495,
-        "loc": 129,
+        "size_bytes": 8199,
+        "loc": 139,
         "todo_count": 0
       }
     },
@@ -389,8 +403,22 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 6470,
-        "loc": 163,
+        "size_bytes": 6763,
+        "loc": 172,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_job_repository.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 17559,
+        "loc": 329,
         "todo_count": 0
       }
     },
@@ -403,7 +431,7 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 17764,
+        "size_bytes": 17763,
         "loc": 359,
         "todo_count": 0
       }
@@ -543,7 +571,7 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 18348,
+        "size_bytes": 18437,
         "loc": 360,
         "todo_count": 0
       }
