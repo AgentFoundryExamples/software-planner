@@ -65,6 +65,10 @@
             {
               "type": "file",
               "name": "af_maintenance.yml"
+            },
+            {
+              "type": "file",
+              "name": "ci.yml"
             }
           ]
         }
