@@ -40,23 +40,30 @@ VALID_RESPONSE = {
 }
 
 
-def create_mock_openai_response(content: str, finish_reason: str = "stop") -> Mock:
-    """Create a mock OpenAI API response.
+def create_mock_openai_response(content: str) -> Mock:
+    """Create a mock OpenAI Responses API response.
     
     Args:
         content: Response content text.
-        finish_reason: Completion finish reason.
         
     Returns:
-        Mock response object matching OpenAI API structure.
+        Mock response object matching OpenAI Responses API structure.
     """
     response = Mock()
-    response.choices = [Mock()]
-    response.choices[0].message = Mock()
-    response.choices[0].message.content = content
-    response.choices[0].finish_reason = finish_reason
+    
+    # Responses API returns 'output' array instead of 'choices'
+    output_item = Mock()
+    output_item.role = "assistant"
+    output_item.content = content  # Can be string or array of content items
+    
+    response.output = [output_item]
+    
+    # Usage structure is similar
     response.usage = Mock()
+    response.usage.input_tokens = 50
+    response.usage.output_tokens = 50
     response.usage.total_tokens = 100
+    
     return response
 
 
@@ -177,7 +184,7 @@ class TestOpenAIClientAPICall:
         mock_openai_class.return_value = mock_client
         
         response_content = json.dumps(VALID_RESPONSE)
-        mock_client.chat.completions.create.return_value = create_mock_openai_response(
+        mock_client.responses.create.return_value = create_mock_openai_response(
             response_content
         )
         
@@ -190,14 +197,13 @@ class TestOpenAIClientAPICall:
         assert len(result["specs"]) == 1
         assert result["specs"][0]["purpose"] == "Test Purpose"
         
-        # Verify API was called correctly
-        mock_client.chat.completions.create.assert_called_once()
-        call_args = mock_client.chat.completions.create.call_args
+        # Verify API was called correctly with Responses API
+        mock_client.responses.create.assert_called_once()
+        call_args = mock_client.responses.create.call_args
         assert call_args[1]["model"] == "gpt-5.1"
-        assert len(call_args[1]["messages"]) == 2
-        assert call_args[1]["messages"][0]["role"] == "system"
-        assert call_args[1]["messages"][1]["role"] == "user"
-        assert call_args[1]["messages"][1]["content"] == "Build a REST API"
+        assert "instructions" in call_args[1]
+        assert "input" in call_args[1]
+        assert call_args[1]["input"] == "Build a REST API"
     
     @patch('app.services.llm_openai.OpenAI')
     def test_api_call_with_markdown_wrapped_response(self, mock_openai_class):
@@ -207,7 +213,7 @@ class TestOpenAIClientAPICall:
         mock_openai_class.return_value = mock_client
         
         response_content = f"```json\n{json.dumps(VALID_RESPONSE)}\n```"
-        mock_client.chat.completions.create.return_value = create_mock_openai_response(
+        mock_client.responses.create.return_value = create_mock_openai_response(
             response_content
         )
         
@@ -226,7 +232,7 @@ class TestOpenAIClientAPICall:
         mock_client = Mock()
         mock_openai_class.return_value = mock_client
         
-        mock_client.chat.completions.create.side_effect = openai.AuthenticationError(
+        mock_client.responses.create.side_effect = openai.AuthenticationError(
             "Invalid API key",
             response=Mock(status_code=401),
             body=None
@@ -241,7 +247,7 @@ class TestOpenAIClientAPICall:
         assert "authentication" in str(exc_info.value).lower()
         
         # Verify API was called only once (no retries)
-        assert mock_client.chat.completions.create.call_count == 1
+        assert mock_client.responses.create.call_count == 1
     
     @patch('app.services.llm_openai.OpenAI')
     def test_api_call_not_found_error(self, mock_openai_class):
@@ -250,7 +256,7 @@ class TestOpenAIClientAPICall:
         mock_client = Mock()
         mock_openai_class.return_value = mock_client
         
-        mock_client.chat.completions.create.side_effect = openai.NotFoundError(
+        mock_client.responses.create.side_effect = openai.NotFoundError(
             "Model not found",
             response=Mock(status_code=404),
             body=None
@@ -265,7 +271,7 @@ class TestOpenAIClientAPICall:
         assert "not found" in str(exc_info.value).lower()
         
         # Verify API was called only once (no retries)
-        assert mock_client.chat.completions.create.call_count == 1
+        assert mock_client.responses.create.call_count == 1
     
     @patch('app.services.llm_openai.OpenAI')
     def test_api_call_bad_request_error(self, mock_openai_class):
@@ -274,7 +280,7 @@ class TestOpenAIClientAPICall:
         mock_client = Mock()
         mock_openai_class.return_value = mock_client
         
-        mock_client.chat.completions.create.side_effect = openai.BadRequestError(
+        mock_client.responses.create.side_effect = openai.BadRequestError(
             "Invalid request",
             response=Mock(status_code=400),
             body=None
@@ -289,7 +295,7 @@ class TestOpenAIClientAPICall:
         assert "invalid request" in str(exc_info.value).lower()
         
         # Verify API was called only once (no retries)
-        assert mock_client.chat.completions.create.call_count == 1
+        assert mock_client.responses.create.call_count == 1
     
     @patch('app.services.llm_openai.OpenAI')
     @patch('time.sleep')  # Mock sleep to speed up test
@@ -301,7 +307,7 @@ class TestOpenAIClientAPICall:
         
         # First two calls timeout, third succeeds
         response_content = json.dumps(VALID_RESPONSE)
-        mock_client.chat.completions.create.side_effect = [
+        mock_client.responses.create.side_effect = [
             openai.APITimeoutError("Request timeout"),
             openai.APITimeoutError("Request timeout"),
             create_mock_openai_response(response_content),
@@ -315,7 +321,7 @@ class TestOpenAIClientAPICall:
         assert "specs" in result
         
         # Verify API was called 3 times (2 failures + 1 success)
-        assert mock_client.chat.completions.create.call_count == 3
+        assert mock_client.responses.create.call_count == 3
         
         # Verify sleep was called for backoff
         assert mock_sleep.call_count == 2
@@ -330,7 +336,7 @@ class TestOpenAIClientAPICall:
         
         # First call rate limited, second succeeds
         response_content = json.dumps(VALID_RESPONSE)
-        mock_client.chat.completions.create.side_effect = [
+        mock_client.responses.create.side_effect = [
             openai.RateLimitError(
                 "Rate limit exceeded",
                 response=Mock(status_code=429),
@@ -347,7 +353,7 @@ class TestOpenAIClientAPICall:
         assert "specs" in result
         
         # Verify API was called 2 times (1 failure + 1 success)
-        assert mock_client.chat.completions.create.call_count == 2
+        assert mock_client.responses.create.call_count == 2
     
     @patch('app.services.llm_openai.OpenAI')
     @patch('time.sleep')  # Mock sleep to speed up test
@@ -359,7 +365,7 @@ class TestOpenAIClientAPICall:
         
         # Create a proper InternalServerError
         response_content = json.dumps(VALID_RESPONSE)
-        mock_client.chat.completions.create.side_effect = [
+        mock_client.responses.create.side_effect = [
             openai.InternalServerError(
                 "Internal server error",
                 response=Mock(status_code=500),
@@ -376,7 +382,7 @@ class TestOpenAIClientAPICall:
         assert "specs" in result
         
         # Verify API was called 2 times (1 failure + 1 success)
-        assert mock_client.chat.completions.create.call_count == 2
+        assert mock_client.responses.create.call_count == 2
     
     @patch('app.services.llm_openai.OpenAI')
     @patch('time.sleep')  # Mock sleep to speed up test
@@ -387,7 +393,7 @@ class TestOpenAIClientAPICall:
         mock_openai_class.return_value = mock_client
         
         # All calls fail with timeout
-        mock_client.chat.completions.create.side_effect = openai.APITimeoutError(
+        mock_client.responses.create.side_effect = openai.APITimeoutError(
             "Request timeout"
         )
         
@@ -400,18 +406,18 @@ class TestOpenAIClientAPICall:
         assert "failed after 2 retries" in str(exc_info.value).lower()
         
         # Verify API was called 3 times (initial + 2 retries)
-        assert mock_client.chat.completions.create.call_count == 3
+        assert mock_client.responses.create.call_count == 3
     
     @patch('app.services.llm_openai.OpenAI')
     def test_api_call_empty_choices(self, mock_openai_class):
-        """Test that empty choices raises error."""
+        """Test that empty output raises error."""
         # Setup mock
         mock_client = Mock()
         mock_openai_class.return_value = mock_client
         
         response = Mock()
-        response.choices = []
-        mock_client.chat.completions.create.return_value = response
+        response.output = []
+        mock_client.responses.create.return_value = response
         
         # Create client and call API
         client = OpenAIClient(api_key="sk-test", model="gpt-5.1")
@@ -419,7 +425,7 @@ class TestOpenAIClientAPICall:
         with pytest.raises(LLMResponseError) as exc_info:
             client.generate_specs("Build a REST API")
         
-        assert "empty choices" in str(exc_info.value).lower()
+        assert "empty output" in str(exc_info.value).lower()
     
     @patch('app.services.llm_openai.OpenAI')
     def test_api_call_empty_content(self, mock_openai_class):
@@ -429,10 +435,10 @@ class TestOpenAIClientAPICall:
         mock_openai_class.return_value = mock_client
         
         response = Mock()
-        response.choices = [Mock()]
-        response.choices[0].message = Mock()
-        response.choices[0].message.content = None
-        mock_client.chat.completions.create.return_value = response
+        output_item = Mock()
+        output_item.content = None
+        response.output = [output_item]
+        mock_client.responses.create.return_value = response
         
         # Create client and call API
         client = OpenAIClient(api_key="sk-test", model="gpt-5.1")
@@ -507,7 +513,7 @@ class TestOpenAIClientRetryLogic:
         mock_openai_class.return_value = mock_client
         
         # All calls fail
-        mock_client.chat.completions.create.side_effect = openai.APITimeoutError(
+        mock_client.responses.create.side_effect = openai.APITimeoutError(
             "Timeout"
         )
         
@@ -540,7 +546,7 @@ class TestOpenAIClientRetryLogic:
         mock_openai_class.return_value = mock_client
         
         # All calls fail
-        mock_client.chat.completions.create.side_effect = openai.APITimeoutError(
+        mock_client.responses.create.side_effect = openai.APITimeoutError(
             "Timeout"
         )
         
@@ -574,7 +580,7 @@ class TestOpenAIClientEdgeCases:
         mock_client = Mock()
         mock_openai_class.return_value = mock_client
         
-        mock_client.chat.completions.create.return_value = create_mock_openai_response(
+        mock_client.responses.create.return_value = create_mock_openai_response(
             "This is not JSON"
         )
         
@@ -587,13 +593,120 @@ class TestOpenAIClientEdgeCases:
         assert "json" in str(exc_info.value).lower()
     
     @patch('app.services.llm_openai.OpenAI')
+    def test_multi_part_content_response(self, mock_openai_class):
+        """Test that multi-part content arrays are concatenated correctly."""
+        # Setup mock
+        mock_client = Mock()
+        mock_openai_class.return_value = mock_client
+        
+        # Create response with content as an array of parts
+        response = Mock()
+        output_item = Mock()
+        
+        # Mock content parts
+        part1 = Mock()
+        part1.text = '{"specs": ['
+        part2 = Mock()
+        part2.text = json.dumps({
+            "purpose": "Test Purpose",
+            "vision": "Test Vision",
+            "must": ["requirement1"],
+            "dont": ["avoid1"],
+            "nice": ["feature1"]
+        })
+        part3 = Mock()
+        part3.text = ']}'
+        
+        output_item.content = [part1, part2, part3]
+        response.output = [output_item]
+        response.usage = Mock()
+        response.usage.input_tokens = 50
+        response.usage.output_tokens = 50
+        
+        mock_client.responses.create.return_value = response
+        
+        # Create client and call API
+        client = OpenAIClient(api_key="sk-test", model="gpt-5.1")
+        result = client.generate_specs("Build a REST API")
+        
+        # Verify result was parsed correctly
+        assert "specs" in result
+        assert len(result["specs"]) == 1
+        assert result["specs"][0]["purpose"] == "Test Purpose"
+    
+    @patch('app.services.llm_openai.OpenAI')
+    def test_multi_part_content_with_dicts(self, mock_openai_class):
+        """Test that multi-part content with dict format is handled correctly."""
+        # Setup mock
+        mock_client = Mock()
+        mock_openai_class.return_value = mock_client
+        
+        # Create response with content as an array of dict parts
+        response = Mock()
+        output_item = Mock()
+        
+        # Mock content parts as dicts
+        output_item.content = [
+            {"text": '{"specs": ['},
+            {"text": json.dumps({
+                "purpose": "Test Purpose",
+                "vision": "Test Vision",
+                "must": ["requirement1"],
+                "dont": ["avoid1"],
+                "nice": ["feature1"]
+            })},
+            {"text": ']}'}
+        ]
+        response.output = [output_item]
+        response.usage = Mock()
+        response.usage.input_tokens = 50
+        response.usage.output_tokens = 50
+        
+        mock_client.responses.create.return_value = response
+        
+        # Create client and call API
+        client = OpenAIClient(api_key="sk-test", model="gpt-5.1")
+        result = client.generate_specs("Build a REST API")
+        
+        # Verify result was parsed correctly
+        assert "specs" in result
+        assert len(result["specs"]) == 1
+        assert result["specs"][0]["purpose"] == "Test Purpose"
+    
+    @patch('app.services.llm_openai.OpenAI')
+    def test_unsupported_content_type(self, mock_openai_class):
+        """Test that unsupported content types are handled gracefully."""
+        # Setup mock
+        mock_client = Mock()
+        mock_openai_class.return_value = mock_client
+        
+        # Create response with unexpected content type
+        response = Mock()
+        output_item = Mock()
+        output_item.content = 12345  # Numeric content (unsupported)
+        response.output = [output_item]
+        response.usage = Mock()
+        response.usage.input_tokens = 50
+        response.usage.output_tokens = 50
+        
+        mock_client.responses.create.return_value = response
+        
+        # Create client and call API
+        client = OpenAIClient(api_key="sk-test", model="gpt-5.1")
+        
+        with pytest.raises(LLMResponseError) as exc_info:
+            client.generate_specs("Build a REST API")
+        
+        assert "empty content" in str(exc_info.value).lower()
+    
+    @patch('app.services.llm_openai.OpenAI')
     def test_zero_retries(self, mock_openai_class):
         """Test client with max_retries=0 doesn't retry."""
         # Setup mock
         mock_client = Mock()
         mock_openai_class.return_value = mock_client
         
-        mock_client.chat.completions.create.side_effect = openai.APITimeoutError(
+        mock_client.responses.create.side_effect = openai.APITimeoutError(
             "Timeout"
         )
         
@@ -604,4 +717,4 @@ class TestOpenAIClientEdgeCases:
             client.generate_specs("Build a REST API")
         
         # Verify API was called only once
-        assert mock_client.chat.completions.create.call_count == 1
+        assert mock_client.responses.create.call_count == 1

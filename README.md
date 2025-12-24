@@ -730,7 +730,7 @@ pip install openai==2.14.0
 ```
 
 This is included in `requirements.txt` and will be installed automatically. The implementation uses:
-- **OpenAI Chat Completions API** (recommended, not deprecated Completions API)
+- **OpenAI Responses API** (recommended for GPT-5+ models, replacing Chat Completions API)
 - **Automatic retry logic** for transient failures
 - **Structured logging** without exposing API keys
 
