@@ -402,6 +402,10 @@
     },
     {
       "type": "file",
+      "name": ".dockerignore"
+    },
+    {
+      "type": "file",
       "name": ".env.example"
     },
     {
@@ -415,6 +419,10 @@
     {
       "type": "file",
       "name": "alembic.ini"
+    },
+    {
+      "type": "file",
+      "name": "Dockerfile"
     },
     {
       "type": "file",

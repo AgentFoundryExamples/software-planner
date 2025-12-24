@@ -92,10 +92,12 @@
   ├── test_rate_limiting_security.py
   ├── test_request_id.py
   └── test_store_singleton.py
+├── .dockerignore
 ├── .env.example
 ├── .flake8
 ├── .gitignore
 ├── alembic.ini
+├── Dockerfile
 ├── LICENSE
 ├── LLMs.md
 ├── Makefile
