@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 44
+Total files: 50
 
 ## app/__init__.py
 **Language:** Python  
@@ -24,13 +24,22 @@ Total files: 44
 **LOC:** 1  
 **TODOs/FIXMEs:** 0  
 
+## app/api/dependencies.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for dependencies  
+**Size:** 3.61 KB  
+**LOC:** 67  
+**TODOs/FIXMEs:** 0  
+
 ## app/api/routes.py
 **Language:** Python  
 **Role:** router  
 **Role Justification:** filename contains routing term  
 **Summary:** Python routing configuration (role: router)  
-**Size:** 30.77 KB  
-**LOC:** 688  
+**Size:** 33.02 KB  
+**LOC:** 745  
 **TODOs/FIXMEs:** 0  
 
 ## app/core/__init__.py
@@ -47,8 +56,8 @@ Total files: 44
 **Role:** configuration  
 **Role Justification:** configuration file name 'config'  
 **Summary:** Python configuration file (role: configuration)  
-**Size:** 20.74 KB  
-**LOC:** 375  
+**Size:** 21.08 KB  
+**LOC:** 378  
 **TODOs/FIXMEs:** 0  
 
 ## app/main.py
@@ -56,8 +65,26 @@ Total files: 44
 **Role:** entry-point  
 **Role Justification:** common entry point name 'main'  
 **Summary:** Python main entry point (role: entry-point)  
-**Size:** 6.71 KB  
-**LOC:** 133  
+**Size:** 6.98 KB  
+**LOC:** 136  
+**TODOs/FIXMEs:** 0  
+
+## app/middleware/__init__.py
+**Language:** Python  
+**Role:** module-init  
+**Role Justification:** module initialization file '__init__'  
+**Summary:** Python module initialization (role: module-init)  
+**Size:** 0.70 KB  
+**LOC:** 3  
+**TODOs/FIXMEs:** 0  
+
+## app/middleware/request_id.py
+**Language:** Python  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** Python module for request id  
+**Size:** 3.69 KB  
+**LOC:** 55  
 **TODOs/FIXMEs:** 0  
 
 ## app/models/__init__.py
@@ -231,6 +258,15 @@ Total files: 44
 **LOC:** 1  
 **TODOs/FIXMEs:** 0  
 
+## tests/test_authentication.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 11.59 KB  
+**LOC:** 232  
+**TODOs/FIXMEs:** 0  
+
 ## tests/test_config.py
 **Language:** Python  
 **Role:** test  
@@ -238,6 +274,15 @@ Total files: 44
 **Summary:** Python test file (role: test)  
 **Size:** 19.68 KB  
 **LOC:** 338  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_cors.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 13.25 KB  
+**LOC:** 255  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_database.py
@@ -391,6 +436,15 @@ Total files: 44
 **Summary:** Python test file (role: test)  
 **Size:** 30.47 KB  
 **LOC:** 519  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_request_id.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 13.18 KB  
+**LOC:** 272  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_store_singleton.py

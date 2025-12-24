@@ -19,6 +19,23 @@
       }
     },
     {
+      "id": "app/api/dependencies.py",
+      "path": "app/api/dependencies.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "logging",
+          "typing.Optional"
+        ],
+        "third-party": [
+          "fastapi.HTTPException",
+          "fastapi.Header",
+          "fastapi.Request",
+          "fastapi.status"
+        ]
+      }
+    },
+    {
       "id": "app/api/routes.py",
       "path": "app/api/routes.py",
       "type": "file",
@@ -87,6 +104,31 @@
           "fastapi.status",
           "starlette.exceptions.HTTPException",
           "uvicorn"
+        ]
+      }
+    },
+    {
+      "id": "app/middleware/__init__.py",
+      "path": "app/middleware/__init__.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "app/middleware/request_id.py",
+      "path": "app/middleware/request_id.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "logging",
+          "uuid"
+        ],
+        "third-party": [
+          "starlette.middleware.base.BaseHTTPMiddleware",
+          "starlette.requests.Request",
+          "starlette.responses.Response"
         ]
       }
     },
@@ -367,6 +409,21 @@
       }
     },
     {
+      "id": "tests/test_authentication.py",
+      "path": "tests/test_authentication.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "unittest.mock.Mock",
+          "unittest.mock.patch"
+        ],
+        "third-party": [
+          "fastapi.testclient.TestClient",
+          "pytest"
+        ]
+      }
+    },
+    {
       "id": "tests/test_config.py",
       "path": "tests/test_config.py",
       "type": "file",
@@ -376,6 +433,21 @@
         ],
         "third-party": [
           "pydantic.ValidationError",
+          "pytest"
+        ]
+      }
+    },
+    {
+      "id": "tests/test_cors.py",
+      "path": "tests/test_cors.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "unittest.mock.Mock",
+          "unittest.mock.patch"
+        ],
+        "third-party": [
+          "fastapi.testclient.TestClient",
           "pytest"
         ]
       }
@@ -652,6 +724,22 @@
       }
     },
     {
+      "id": "tests/test_request_id.py",
+      "path": "tests/test_request_id.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "unittest.mock.Mock",
+          "unittest.mock.patch",
+          "uuid"
+        ],
+        "third-party": [
+          "fastapi.testclient.TestClient",
+          "pytest"
+        ]
+      }
+    },
+    {
       "id": "tests/test_store_singleton.py",
       "path": "tests/test_store_singleton.py",
       "type": "file",
@@ -667,6 +755,14 @@
     }
   ],
   "edges": [
+    {
+      "source": "app/api/dependencies.py",
+      "target": "app/core/config.py"
+    },
+    {
+      "source": "app/api/routes.py",
+      "target": "app/api/dependencies.py"
+    },
     {
       "source": "app/api/routes.py",
       "target": "app/core/config.py"
@@ -713,7 +809,15 @@
     },
     {
       "source": "app/main.py",
+      "target": "app/middleware/__init__.py"
+    },
+    {
+      "source": "app/main.py",
       "target": "app/services/store_singleton.py"
+    },
+    {
+      "source": "app/middleware/__init__.py",
+      "target": "app/middleware/request_id.py"
     },
     {
       "source": "app/models/request.py",
@@ -832,7 +936,31 @@
       "target": "app/core/config.py"
     },
     {
+      "source": "tests/test_authentication.py",
+      "target": "app/main.py"
+    },
+    {
+      "source": "tests/test_authentication.py",
+      "target": "app/core/config.py"
+    },
+    {
+      "source": "tests/test_authentication.py",
+      "target": "app/services/job_store.py"
+    },
+    {
+      "source": "tests/test_authentication.py",
+      "target": "app/services/store_singleton.py"
+    },
+    {
       "source": "tests/test_config.py",
+      "target": "app/core/config.py"
+    },
+    {
+      "source": "tests/test_cors.py",
+      "target": "app/main.py"
+    },
+    {
+      "source": "tests/test_cors.py",
       "target": "app/core/config.py"
     },
     {
@@ -984,6 +1112,22 @@
       "target": "app/core/config.py"
     },
     {
+      "source": "tests/test_request_id.py",
+      "target": "app/main.py"
+    },
+    {
+      "source": "tests/test_request_id.py",
+      "target": "app/core/config.py"
+    },
+    {
+      "source": "tests/test_request_id.py",
+      "target": "app/services/job_store.py"
+    },
+    {
+      "source": "tests/test_request_id.py",
+      "target": "app/services/store_singleton.py"
+    },
+    {
       "source": "tests/test_store_singleton.py",
       "target": "app/services/store_singleton.py"
     },
@@ -1041,6 +1185,7 @@
       "fastapi.Depends",
       "fastapi.FastAPI",
       "fastapi.HTTPException",
+      "fastapi.Header",
       "fastapi.Query",
       "fastapi.Request",
       "fastapi.exceptions.RequestValidationError",
@@ -1072,9 +1217,12 @@
       "sqlalchemy.pool.NullPool",
       "sqlalchemy.text",
       "starlette.exceptions.HTTPException",
+      "starlette.middleware.base.BaseHTTPMiddleware",
+      "starlette.requests.Request",
+      "starlette.responses.Response",
       "uvicorn"
     ],
     "stdlib_count": 32,
-    "third-party_count": 41
+    "third-party_count": 45
   }
 }

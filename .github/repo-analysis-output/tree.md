@@ -18,10 +18,14 @@
 ├── app
   ├── api
     ├── __init__.py
+    ├── dependencies.py
     └── routes.py
   ├── core
     ├── __init__.py
     └── config.py
+  ├── middleware
+    ├── __init__.py
+    └── request_id.py
   ├── models
     ├── __init__.py
     ├── job.py
@@ -51,7 +55,9 @@
   └── script.py.mako
 ├── tests
   ├── __init__.py
+  ├── test_authentication.py
   ├── test_config.py
+  ├── test_cors.py
   ├── test_database.py
   ├── test_health_endpoint.py
   ├── test_job_model.py
@@ -69,6 +75,7 @@
   ├── test_planner_integration.py
   ├── test_plans_async_endpoint.py
   ├── test_plans_polling_endpoints.py
+  ├── test_request_id.py
   └── test_store_singleton.py
 ├── .env.example
 ├── .gitignore

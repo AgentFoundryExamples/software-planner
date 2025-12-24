@@ -84,6 +84,10 @@
             },
             {
               "type": "file",
+              "name": "dependencies.py"
+            },
+            {
+              "type": "file",
               "name": "routes.py"
             }
           ]
@@ -99,6 +103,20 @@
             {
               "type": "file",
               "name": "config.py"
+            }
+          ]
+        },
+        {
+          "type": "directory",
+          "name": "middleware",
+          "children": [
+            {
+              "type": "file",
+              "name": "__init__.py"
+            },
+            {
+              "type": "file",
+              "name": "request_id.py"
             }
           ]
         },
@@ -232,7 +250,15 @@
         },
         {
           "type": "file",
+          "name": "test_authentication.py"
+        },
+        {
+          "type": "file",
           "name": "test_config.py"
+        },
+        {
+          "type": "file",
+          "name": "test_cors.py"
         },
         {
           "type": "file",
@@ -301,6 +327,10 @@
         {
           "type": "file",
           "name": "test_plans_polling_endpoints.py"
+        },
+        {
+          "type": "file",
+          "name": "test_request_id.py"
         },
         {
           "type": "file",

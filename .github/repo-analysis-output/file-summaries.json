@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 44,
+  "total_files": 50,
   "files": [
     {
       "schema_version": "2.0",
@@ -32,6 +32,20 @@
     },
     {
       "schema_version": "2.0",
+      "path": "app/api/dependencies.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for dependencies",
+      "summary_text": "Python module for dependencies",
+      "metrics": {
+        "size_bytes": 3692,
+        "loc": 67,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "app/api/routes.py",
       "language": "Python",
       "role": "router",
@@ -39,8 +53,8 @@
       "summary": "Python routing configuration (role: router)",
       "summary_text": "Python routing configuration (role: router)",
       "metrics": {
-        "size_bytes": 31505,
-        "loc": 688,
+        "size_bytes": 33810,
+        "loc": 745,
         "todo_count": 0
       }
     },
@@ -67,8 +81,8 @@
       "summary": "Python configuration file (role: configuration)",
       "summary_text": "Python configuration file (role: configuration)",
       "metrics": {
-        "size_bytes": 21237,
-        "loc": 375,
+        "size_bytes": 21585,
+        "loc": 378,
         "todo_count": 0
       }
     },
@@ -81,8 +95,36 @@
       "summary": "Python main entry point (role: entry-point)",
       "summary_text": "Python main entry point (role: entry-point)",
       "metrics": {
-        "size_bytes": 6871,
-        "loc": 133,
+        "size_bytes": 7151,
+        "loc": 136,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "app/middleware/__init__.py",
+      "language": "Python",
+      "role": "module-init",
+      "role_justification": "module initialization file '__init__'",
+      "summary": "Python module initialization (role: module-init)",
+      "summary_text": "Python module initialization (role: module-init)",
+      "metrics": {
+        "size_bytes": 721,
+        "loc": 3,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "app/middleware/request_id.py",
+      "language": "Python",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "Python module for request id",
+      "summary_text": "Python module for request id",
+      "metrics": {
+        "size_bytes": 3781,
+        "loc": 55,
         "todo_count": 0
       }
     },
@@ -354,6 +396,20 @@
     },
     {
       "schema_version": "2.0",
+      "path": "tests/test_authentication.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 11870,
+        "loc": 232,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "tests/test_config.py",
       "language": "Python",
       "role": "test",
@@ -363,6 +419,20 @@
       "metrics": {
         "size_bytes": 20151,
         "loc": 338,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_cors.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 13570,
+        "loc": 255,
         "todo_count": 0
       }
     },
@@ -601,6 +671,20 @@
       "metrics": {
         "size_bytes": 31202,
         "loc": 519,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "tests/test_request_id.py",
+      "language": "Python",
+      "role": "test",
+      "role_justification": "filename starts with 'test_'",
+      "summary": "Python test file (role: test)",
+      "summary_text": "Python test file (role: test)",
+      "metrics": {
+        "size_bytes": 13499,
+        "loc": 272,
         "todo_count": 0
       }
     },
