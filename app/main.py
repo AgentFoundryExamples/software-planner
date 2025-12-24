@@ -135,9 +135,9 @@ def create_app() -> FastAPI:
             # Check specific error messages to assign specific codes
             first_error_msg = errors[0].get("msg", "").lower()
             
-            if "exceeds maximum length" in first_error_msg or "too large" in first_error_msg:
+            if "exceeds" in first_error_msg or "too large" in first_error_msg or "maximum length" in first_error_msg:
                 code = ErrorCode.PAYLOAD_TOO_LARGE
-            elif "control character" in first_error_msg:
+            elif "control character" in first_error_msg or "null byte" in first_error_msg:
                 code = ErrorCode.INVALID_DESCRIPTION
             elif "empty" in first_error_msg or "whitespace" in first_error_msg:
                 code = ErrorCode.INVALID_DESCRIPTION
@@ -154,9 +154,13 @@ def create_app() -> FastAPI:
         
         status_code = status.HTTP_400_BAD_REQUEST if is_custom_validation else status.HTTP_422_UNPROCESSABLE_ENTITY
         
-        error_response = create_validation_error(
+        # Build details dict
+        details = {"validation_errors": cleaned_errors}
+        
+        error_response = create_error_response(
+            code=code,
             message="Validation error",
-            validation_errors=cleaned_errors,
+            details=details,
             request_id=request_id
         )
         
