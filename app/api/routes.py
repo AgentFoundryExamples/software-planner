@@ -13,19 +13,30 @@
 # limitations under the License.
 """API route handlers for the planning service."""
 
+import asyncio
 import hashlib
 import logging
 from typing import Optional
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
 
-from app.api.dependencies import require_api_key, get_client_ip
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    status,
+)
+
+from app.api.dependencies import get_client_ip, require_api_key
 from app.core.config import settings
+from app.models.error import ErrorCode, create_error_response
 from app.models.job import Job
 from app.models.request import PlanRequest
 from app.models.response import PlanResponse
-from app.models.error import create_error_response, ErrorCode
-from app.services.planner import generate_plan
 from app.services.job_repository import JobRepository
+from app.services.planner import generate_plan
 from app.services.store_singleton import get_job_store, get_rate_limiter
 from app.utils.sanitization import sanitize_for_logging
 
@@ -35,27 +46,23 @@ router = APIRouter()
 
 
 def _check_rate_limit_or_raise(
-    api_key: Optional[str],
-    client_ip: Optional[str],
-    request_id: str
+    api_key: Optional[str], client_ip: Optional[str], request_id: str
 ) -> None:
     """Check rate limit and raise HTTPException if exceeded.
-    
+
     Args:
         api_key: Optional API key for per-key rate limiting.
         client_ip: Optional client IP for per-IP rate limiting.
         request_id: Request ID for logging and response headers.
-        
+
     Raises:
         HTTPException: 429 if rate limit exceeded, with Retry-After header.
     """
     rate_limiter = get_rate_limiter()
     allowed, retry_after = rate_limiter.check_rate_limit(
-        api_key=api_key,
-        client_ip=client_ip,
-        request_id=request_id
+        api_key=api_key, client_ip=client_ip, request_id=request_id
     )
-    
+
     if not allowed:
         # Create standardized error response
         # Note: The global exception handler in main.py will detect this
@@ -63,19 +70,17 @@ def _check_rate_limit_or_raise(
         error_response = create_error_response(
             code=ErrorCode.RATE_LIMIT_EXCEEDED,
             message="Rate limit exceeded. Please retry after the specified delay.",
-            details={
-                "retry_after_seconds": retry_after
-            },
-            request_id=request_id
+            details={"retry_after_seconds": retry_after},
+            request_id=request_id,
         )
-        
+
         # Raise HTTPException with Retry-After header
         # Pass the error response directly as detail
         headers = {"Retry-After": str(retry_after)} if retry_after is not None else {}
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=error_response,  # This will be wrapped in {"detail": error_response}
-            headers=headers
+            headers=headers,
         )
 
 
@@ -99,13 +104,13 @@ def _check_rate_limit_or_raise(
                                 "description": "OpenAI GPT-5.1 model for high-quality software planning",
                                 "metadata": {
                                     "approximate_max_context": 128000,
-                                    "supports_streaming": False
-                                }
+                                    "supports_streaming": False,
+                                },
                             }
                         ]
                     }
                 }
-            }
+            },
         }
     },
     summary="Discover available LLM models",
@@ -131,41 +136,41 @@ Returns an empty list if no models are enabled (still returns 200 OK).
 **Usage:**
 Call this endpoint before submitting planning jobs to discover available models
 and their constraints (e.g., timeout expectations, context limits).
-"""
+""",
 )
 def list_models() -> dict:
     """List all enabled LLM models with metadata.
-    
+
     This endpoint exposes the model registry to clients, allowing them to:
     - Discover which models are available
     - Understand model constraints (timeout, retries, context limits)
     - Validate model names before submitting planning jobs
     - Select appropriate models based on their characteristics
-    
+
     **Model Discovery Flow:**
     1. Client calls GET /models to see available options
     2. Client selects a model based on requirements (timeout, provider preference, etc.)
     3. Client includes model name in POST /plans request body
     4. Client can later check model used via GET /plans/{job_id}
-    
+
     **Metadata:**
     Each model includes approximate_max_context (token limit) and other
     provider-specific metadata to help clients make informed choices.
-    
+
     Returns:
         Dict with list of model configurations including all metadata fields.
     """
     from app.services.model_registry import get_model_registry
-    
+
     registry = get_model_registry()
     enabled_models = registry.get_enabled_models()
-    
+
     # Build response with comprehensive metadata
     models_list = []
     for logical_name, config in enabled_models.items():
         # Determine approximate max context based on provider and model
         approximate_max_context = _get_approximate_max_context(config.provider, config.model_id)
-        
+
         model_info = {
             "logical_name": logical_name,
             "provider": config.provider,
@@ -176,16 +181,16 @@ def list_models() -> dict:
             "description": _get_model_description(config.provider, config.model_id),
             "metadata": {
                 "approximate_max_context": approximate_max_context,
-                "supports_streaming": False  # Currently no streaming support
-            }
+                "supports_streaming": False,  # Currently no streaming support
+            },
         }
-        
+
         # Include base_url presence indicator (but not the actual URL for security)
         if config.base_url is not None:
             model_info["metadata"]["has_custom_base_url"] = True
-        
+
         models_list.append(model_info)
-    
+
     return {"models": models_list}
 
 
@@ -231,20 +236,20 @@ _DEFAULT_CONTEXT_SIZE = 8192  # Very conservative default for unknown providers
 
 def _get_approximate_max_context(provider: str, model_id: str) -> int:
     """Get approximate maximum context window for a model.
-    
+
     Uses prefix matching against known model patterns for most providers.
     For Anthropic models, also checks substrings for variant names (opus, sonnet, haiku)
     which can appear in various positions in model IDs.
-    
+
     Prefixes are checked in order, so more specific patterns should come before general ones.
-    
+
     Args:
         provider: Provider identifier (openai, anthropic, google).
         model_id: Model identifier.
-        
+
     Returns:
         Approximate token limit for the model's context window.
-        
+
     Note:
         Context limits are based on published provider documentation and may
         become outdated. Update _MODEL_CONTEXT_SIZES when providers release
@@ -252,41 +257,41 @@ def _get_approximate_max_context(provider: str, model_id: str) -> int:
     """
     provider_lower = provider.lower()
     model_id_lower = model_id.lower()
-    
+
     provider_info = _MODEL_CONTEXT_SIZES.get(provider_lower)
     if not provider_info:
         return _DEFAULT_CONTEXT_SIZE
-    
+
     # Check prefixes first (more specific matching)
     for prefix, size in provider_info.get("prefixes", []):
         if model_id_lower.startswith(prefix):
             return size
-    
+
     # For providers that need it (like Anthropic), check substrings
     # This handles model variants like "claude-sonnet-4.5" where "sonnet" is in the middle
     for substring, size in provider_info.get("substrings", []):
         if substring in model_id_lower:
             return size
-            
+
     return provider_info["default"]
 
 
 def _get_model_description(provider: str, model_id: str) -> str:
     """Get human-readable description for a model.
-    
+
     Uses prefix matching against known model patterns. More specific patterns
     are checked before general ones to avoid false positives.
-    
+
     Args:
         provider: Provider identifier (openai, anthropic, google).
         model_id: Model identifier.
-        
+
     Returns:
         Human-readable description of the model.
     """
     provider_lower = provider.lower()
     model_id_lower = model_id.lower()
-    
+
     # OpenAI models - check more specific patterns first
     if provider_lower == "openai":
         if model_id_lower.startswith("gpt-5"):
@@ -297,7 +302,7 @@ def _get_model_description(provider: str, model_id: str) -> str:
             return f"OpenAI {model_id} - Advanced reasoning and code generation"
         else:
             return f"OpenAI {model_id}"
-    
+
     # Anthropic models
     elif provider_lower == "anthropic":
         if "opus" in model_id_lower:
@@ -308,7 +313,7 @@ def _get_model_description(provider: str, model_id: str) -> str:
             return f"Anthropic {model_id} - Fast and efficient for simpler tasks"
         else:
             return f"Anthropic {model_id}"
-    
+
     # Google models
     elif provider_lower == "google":
         if "pro" in model_id_lower:
@@ -317,7 +322,7 @@ def _get_model_description(provider: str, model_id: str) -> str:
             return f"Google {model_id} - Fast Gemini variant for quick responses"
         else:
             return f"Google {model_id}"
-    
+
     # Unknown provider
     else:
         return f"{provider} {model_id}"
@@ -325,39 +330,39 @@ def _get_model_description(provider: str, model_id: str) -> str:
 
 def _validate_model_or_raise(model_name: str) -> None:
     """Validate model exists and is enabled, or raise HTTPException.
-    
+
     Args:
         model_name: The logical model name to validate.
-        
+
     Raises:
         HTTPException: 400 if model is unknown or disabled.
     """
     from app.services.model_registry import get_model_registry
+
     registry = get_model_registry()
-    
+
     model_config = registry.get_model_config(model_name)
     if model_config is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unknown model '{model_name}'. Available models: {', '.join(registry.get_enabled_models().keys())}"
+            detail=f"Unknown model '{model_name}'. Available models: {', '.join(registry.get_enabled_models().keys())}",
         )
-    
+
     if not model_config.enabled:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Model '{model_name}' is disabled"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Model '{model_name}' is disabled"
         )
 
 
 def _format_job_response(job: Job) -> dict:
     """Format a job instance into a response dictionary.
-    
+
     Helper function to ensure consistent job response structure across endpoints.
     Per acceptance criteria: QUEUED jobs return result=null and omit error field.
-    
+
     Args:
         job: Job instance to format.
-        
+
     Returns:
         Dict with job metadata in API response format.
     """
@@ -367,24 +372,26 @@ def _format_job_response(job: Job) -> dict:
         "created_at": job.created_at.isoformat(),
         "updated_at": job.updated_at.isoformat(),
     }
-    
+
     # Include model metadata if present
     if job.model is not None:
         response["model"] = job.model
-    
+
     if job.system_prompt is not None and len(job.system_prompt) > 0:
-        response["system_prompt_hash"] = hashlib.sha256(job.system_prompt.encode('utf-8')).hexdigest()
-    
+        response["system_prompt_hash"] = hashlib.sha256(
+            job.system_prompt.encode("utf-8")
+        ).hexdigest()
+
     # Include result for succeeded jobs, otherwise null
     if job.status == "SUCCEEDED" and job.result is not None:
         response["result"] = job.result
     else:
         response["result"] = None
-    
+
     # Include error for failed jobs (omit for non-failed jobs)
     if job.status == "FAILED" and job.error is not None:
         response["error"] = job.error
-    
+
     return response
 
 
@@ -404,12 +411,12 @@ def _format_job_response(job: Job) -> dict:
                                 "vision": "Build a robust and scalable REST API",
                                 "must": ["Implement RESTful endpoints"],
                                 "dont": ["Skip validation"],
-                                "nice": ["Add rate limiting"]
+                                "nice": ["Add rate limiting"],
                             }
                         ]
                     }
                 }
-            }
+            },
         },
         400: {
             "description": "Invalid request - empty, whitespace-only, or oversized description",
@@ -422,34 +429,26 @@ def _format_job_response(job: Job) -> dict:
                             {
                                 "loc": ["body", "description"],
                                 "msg": "Description cannot be empty or whitespace-only",
-                                "type": "value_error"
+                                "type": "value_error",
                             }
-                        ]
+                        ],
                     }
                 }
-            }
+            },
         },
         401: {
             "description": "Missing authentication - X-API-Key header required",
             "content": {
                 "application/json": {
-                    "example": {
-                        "error": "Missing X-API-Key header",
-                        "status_code": 401
-                    }
+                    "example": {"error": "Missing X-API-Key header", "status_code": 401}
                 }
-            }
+            },
         },
         403: {
             "description": "Invalid authentication - API key not recognized",
             "content": {
-                "application/json": {
-                    "example": {
-                        "error": "Invalid API key",
-                        "status_code": 403
-                    }
-                }
-            }
+                "application/json": {"example": {"error": "Invalid API key", "status_code": 403}}
+            },
         },
         422: {
             "description": "Malformed JSON or missing required fields",
@@ -462,12 +461,12 @@ def _format_job_response(job: Job) -> dict:
                             {
                                 "loc": ["body", "description"],
                                 "msg": "Field required",
-                                "type": "missing"
+                                "type": "missing",
                             }
-                        ]
+                        ],
                     }
                 }
-            }
+            },
         },
         429: {
             "description": "Rate limit exceeded",
@@ -477,10 +476,8 @@ def _format_job_response(job: Job) -> dict:
                         "error": {
                             "code": "rate_limit_exceeded",
                             "message": "Rate limit exceeded. Please retry after the specified delay.",
-                            "details": {
-                                "retry_after_seconds": 60
-                            },
-                            "request_id": "550e8400-e29b-41d4-a716-446655440000"
+                            "details": {"retry_after_seconds": 60},
+                            "request_id": "550e8400-e29b-41d4-a716-446655440000",
                         }
                     }
                 }
@@ -488,30 +485,32 @@ def _format_job_response(job: Job) -> dict:
             "headers": {
                 "Retry-After": {
                     "description": "Seconds to wait before retrying",
-                    "schema": {"type": "integer"}
+                    "schema": {"type": "integer"},
                 }
-            }
-        }
+            },
+        },
     },
     summary="Generate software plan",
-    description="Accepts a project description and returns a structured plan with specifications"
+    description="Accepts a project description and returns a structured plan with specifications",
 )
 def create_plan(
     request_obj: PlanRequest,
     request: Request,
-    api_key: str = Depends(require_api_key)  # Validates auth; unused in body (validation occurs in dependency)
+    api_key: str = Depends(
+        require_api_key
+    ),  # Validates auth; unused in body (validation occurs in dependency)
 ) -> PlanResponse:
     """Generate a software plan based on the provided description.
-    
+
     Args:
         request_obj: PlanRequest containing the project description and optional model/prompt overrides.
         request: FastAPI Request object for accessing client IP and request ID.
         api_key: Validated API key from X-API-Key header (injected via dependency).
                  Parameter is unused in function body as validation occurs in the dependency itself.
-        
+
     Returns:
         PlanResponse with structured specifications.
-        
+
     Raises:
         HTTPException: 401 if X-API-Key header is missing.
         HTTPException: 403 if X-API-Key value is invalid.
@@ -523,41 +522,37 @@ def create_plan(
     # Get request ID and client IP for rate limiting
     request_id = getattr(request.state, "request_id", "unknown")
     client_ip = get_client_ip(request)
-    
+
     # Check rate limit before processing
     # Explicitly handle empty string API keys (convert to None)
     # This ensures empty strings don't bypass key-based rate limiting
     rate_limit_key = api_key if api_key and api_key.strip() else None
-    _check_rate_limit_or_raise(
-        api_key=rate_limit_key,
-        client_ip=client_ip,
-        request_id=request_id
-    )
-    
+    _check_rate_limit_or_raise(api_key=rate_limit_key, client_ip=client_ip, request_id=request_id)
+
     # Validate model if provided
     if request_obj.model is not None:
         _validate_model_or_raise(request_obj.model)
-    
+
     # Generate plan with optional overrides
     return generate_plan(
         description=request_obj.description,
         model=request_obj.model,
-        system_prompt=request_obj.system_prompt
+        system_prompt=request_obj.system_prompt,
     )
 
 
-def _background_planner_worker(
-    job_id: str, 
-    description: str, 
+async def _background_planner_worker(
+    job_id: str,
+    description: str,
     job_repository: JobRepository,
     model: Optional[str] = None,
-    system_prompt: Optional[str] = None
+    system_prompt: Optional[str] = None,
 ):
     """Background worker that executes the planner and updates job status.
-    
+
     This function runs in the background after the POST /plans endpoint returns.
     It updates the job status through the lifecycle: QUEUED -> RUNNING -> SUCCEEDED/FAILED.
-    
+
     Args:
         job_id: The job identifier to track.
         description: The project description to plan.
@@ -571,18 +566,20 @@ def _background_planner_worker(
             f"Background planner worker starting for job {job_id}",
             extra={
                 "job_id": job_id,
-                "description_preview": sanitize_for_logging(description, max_length=100)
-            }
+                "description_preview": sanitize_for_logging(description, max_length=100),
+            },
         )
-        
+
         # Execute planner with job tracking and optional overrides
         # The generate_plan function will update status to "RUNNING" and then "SUCCEEDED"
-        generate_plan(
-            description=description, 
-            job_repository=job_repository, 
+        # Run the blocking generate_plan function in a separate thread
+        await asyncio.to_thread(
+            generate_plan,
+            description=description,
+            job_repository=job_repository,
             job_id=job_id,
             model=model,
-            system_prompt=system_prompt
+            system_prompt=system_prompt,
         )
     except Exception as e:
         # Capture any exception and set failed status
@@ -592,18 +589,17 @@ def _background_planner_worker(
             extra={
                 "job_id": job_id,
                 "error_type": type(e).__name__,
-                "error_message": str(e)[:200]  # Truncate error message
+                "error_message": str(e)[:200],  # Truncate error message
             },
-            exc_info=True
+            exc_info=True,
         )
         try:
-            import asyncio
             # Create sanitized error dict without stack trace
             error_dict = {
                 "error": str(e)[:500],  # Truncate to avoid huge error payloads
-                "type": type(e).__name__
+                "type": type(e).__name__,
             }
-            asyncio.run(job_repository.mark_failed(job_id, error_dict))
+            await job_repository.mark_failed(job_id, error_dict)
         except Exception as update_exc:
             # If we can't even update the job status, log this critical failure
             # to avoid masking the original exception and losing all trace of the error.
@@ -614,9 +610,9 @@ def _background_planner_worker(
                 extra={
                     "job_id": job_id,
                     "original_error": type(e).__name__,
-                    "update_error": type(update_exc).__name__
+                    "update_error": type(update_exc).__name__,
                 },
-                exc_info=True
+                exc_info=True,
             )
 
 
@@ -630,10 +626,10 @@ def _background_planner_worker(
                 "application/json": {
                     "example": {
                         "job_id": "550e8400-e29b-41d4-a716-446655440000",
-                        "status": "QUEUED"
+                        "status": "QUEUED",
                     }
                 }
-            }
+            },
         },
         400: {
             "description": "Invalid request - empty, whitespace-only, or oversized description",
@@ -646,34 +642,26 @@ def _background_planner_worker(
                             {
                                 "loc": ["body", "description"],
                                 "msg": "Description cannot be empty or whitespace-only",
-                                "type": "value_error"
+                                "type": "value_error",
                             }
-                        ]
+                        ],
                     }
                 }
-            }
+            },
         },
         401: {
             "description": "Missing authentication - X-API-Key header required",
             "content": {
                 "application/json": {
-                    "example": {
-                        "error": "Missing X-API-Key header",
-                        "status_code": 401
-                    }
+                    "example": {"error": "Missing X-API-Key header", "status_code": 401}
                 }
-            }
+            },
         },
         403: {
             "description": "Invalid authentication - API key not recognized",
             "content": {
-                "application/json": {
-                    "example": {
-                        "error": "Invalid API key",
-                        "status_code": 403
-                    }
-                }
-            }
+                "application/json": {"example": {"error": "Invalid API key", "status_code": 403}}
+            },
         },
         422: {
             "description": "Malformed JSON or missing required fields",
@@ -686,12 +674,12 @@ def _background_planner_worker(
                             {
                                 "loc": ["body", "description"],
                                 "msg": "Field required",
-                                "type": "missing"
+                                "type": "missing",
                             }
-                        ]
+                        ],
                     }
                 }
-            }
+            },
         },
         429: {
             "description": "Rate limit exceeded",
@@ -701,10 +689,8 @@ def _background_planner_worker(
                         "error": {
                             "code": "rate_limit_exceeded",
                             "message": "Rate limit exceeded. Please retry after the specified delay.",
-                            "details": {
-                                "retry_after_seconds": 60
-                            },
-                            "request_id": "550e8400-e29b-41d4-a716-446655440000"
+                            "details": {"retry_after_seconds": 60},
+                            "request_id": "550e8400-e29b-41d4-a716-446655440000",
                         }
                     }
                 }
@@ -712,10 +698,10 @@ def _background_planner_worker(
             "headers": {
                 "Retry-After": {
                     "description": "Seconds to wait before retrying",
-                    "schema": {"type": "integer"}
+                    "schema": {"type": "integer"},
                 }
-            }
-        }
+            },
+        },
     },
     summary="Create async software planning job",
     description="""Create an asynchronous planning job that executes in the background.
@@ -732,34 +718,36 @@ def _background_planner_worker(
 **Validation:**
 - Description must be non-empty and not whitespace-only
 - Maximum size: 8192 bytes (UTF-8 encoded)
-"""
+""",
 )
 async def create_plan_async(
     request_obj: PlanRequest,
     request: Request,
     background_tasks: BackgroundTasks,
-    api_key: str = Depends(require_api_key),  # Validates auth; unused in body (validation occurs in dependency)
-    job_repository: JobRepository = Depends(get_job_store)
+    api_key: str = Depends(
+        require_api_key
+    ),  # Validates auth; unused in body (validation occurs in dependency)
+    job_repository: JobRepository = Depends(get_job_store),
 ) -> dict:
     """Create an async planning job that executes in the background.
-    
+
     This endpoint validates the request, creates a job with 'QUEUED' status,
     schedules background execution, and returns immediately with the job_id.
-    
+
     **Job Lifecycle:**
     1. Job created with status='QUEUED'
     2. Background task starts, status transitions to 'RUNNING'
     3. On success: status='SUCCEEDED', result contains specs
     4. On failure: status='FAILED', error contains details
-    
+
     **Polling:**
     Use GET /plans/{job_id} to check job status and retrieve results.
-    
+
     **Persistence:**
     - Jobs stored in PostgreSQL database
     - Jobs persist across server restarts
     - No cancellation support
-    
+
     Args:
         request_obj: PlanRequest containing the project description and optional overrides.
         request: FastAPI Request object for accessing client IP and request ID.
@@ -767,10 +755,10 @@ async def create_plan_async(
         api_key: Validated API key from X-API-Key header (injected via dependency).
                  Parameter is unused in function body as validation occurs in the dependency itself.
         job_repository: JobRepository instance (injected via dependency).
-        
+
     Returns:
         Dict with job_id and status "QUEUED".
-        
+
     Raises:
         HTTPException: 401 if X-API-Key header is missing.
         HTTPException: 403 if X-API-Key value is invalid.
@@ -782,28 +770,24 @@ async def create_plan_async(
     # Get request ID and client IP for rate limiting
     request_id = getattr(request.state, "request_id", "unknown")
     client_ip = get_client_ip(request)
-    
+
     # Check rate limit before processing
     # Explicitly handle empty string API keys (convert to None)
     # This ensures empty strings don't bypass key-based rate limiting
     rate_limit_key = api_key if api_key and api_key.strip() else None
-    _check_rate_limit_or_raise(
-        api_key=rate_limit_key,
-        client_ip=client_ip,
-        request_id=request_id
-    )
-    
+    _check_rate_limit_or_raise(api_key=rate_limit_key, client_ip=client_ip, request_id=request_id)
+
     # Validate model if provided
     if request_obj.model is not None:
         _validate_model_or_raise(request_obj.model)
-    
+
     # Create job in QUEUED status with metadata
     job = await job_repository.create_job(
         description=request_obj.description,
         model=request_obj.model,
-        system_prompt=request_obj.system_prompt
+        system_prompt=request_obj.system_prompt,
     )
-    
+
     # Schedule background task with all parameters
     background_tasks.add_task(
         _background_planner_worker,
@@ -811,14 +795,11 @@ async def create_plan_async(
         description=request_obj.description,
         job_repository=job_repository,
         model=request_obj.model,
-        system_prompt=request_obj.system_prompt
+        system_prompt=request_obj.system_prompt,
     )
-    
+
     # Return immediately with job info
-    return {
-        "job_id": job.job_id,
-        "status": job.status
-    }
+    return {"job_id": job.job_id, "status": job.status}
 
 
 @router.get(
@@ -837,8 +818,8 @@ async def create_plan_async(
                                 "status": "QUEUED",
                                 "created_at": "2025-01-01T12:00:00Z",
                                 "updated_at": "2025-01-01T12:00:00Z",
-                                "result": None
-                            }
+                                "result": None,
+                            },
                         },
                         "running": {
                             "summary": "Running job",
@@ -847,8 +828,8 @@ async def create_plan_async(
                                 "status": "RUNNING",
                                 "created_at": "2025-01-01T12:00:00Z",
                                 "updated_at": "2025-01-01T12:00:02Z",
-                                "result": None
-                            }
+                                "result": None,
+                            },
                         },
                         "succeeded": {
                             "summary": "Succeeded job",
@@ -864,11 +845,11 @@ async def create_plan_async(
                                             "vision": "Build a robust REST API",
                                             "must": ["Implement endpoints"],
                                             "dont": ["Skip validation"],
-                                            "nice": ["Add rate limiting"]
+                                            "nice": ["Add rate limiting"],
                                         }
                                     ]
-                                }
-                            }
+                                },
+                            },
                         },
                         "failed": {
                             "summary": "Failed job",
@@ -878,27 +859,19 @@ async def create_plan_async(
                                 "created_at": "2025-01-01T12:00:00Z",
                                 "updated_at": "2025-01-01T12:00:05Z",
                                 "result": None,
-                                "error": {
-                                    "error": "Planning failed",
-                                    "type": "ValueError"
-                                }
-                            }
-                        }
+                                "error": {"error": "Planning failed", "type": "ValueError"},
+                            },
+                        },
                     }
                 }
-            }
+            },
         },
         404: {
             "description": "Job not found or expired",
             "content": {
-                "application/json": {
-                    "example": {
-                        "error": "Job not found",
-                        "status_code": 404
-                    }
-                }
-            }
-        }
+                "application/json": {"example": {"error": "Job not found", "status_code": 404}}
+            },
+        },
     },
     summary="Get job status and result",
     description="""Retrieve metadata for a specific job including status, timestamps, and result/error when applicable.
@@ -921,48 +894,44 @@ async def create_plan_async(
 **Polling Strategy:**
 Poll this endpoint periodically to check job completion. Jobs are persisted in the database
 and will survive server restarts.
-"""
+""",
 )
 async def get_job_status(
-    job_id: str,
-    job_repository: JobRepository = Depends(get_job_store)
+    job_id: str, job_repository: JobRepository = Depends(get_job_store)
 ) -> dict:
     """Get the status and metadata for a specific job.
-    
+
     Returns job metadata including job_id, status, created_at, updated_at.
     When status is 'SUCCEEDED', includes result with specs.
     When status is 'FAILED', includes error details.
     QUEUED/RUNNING jobs have result=None and no error field.
-    
+
     **Status Transitions:**
     QUEUED → RUNNING → SUCCEEDED/FAILED
-    
+
     **Result Field:**
     - null for QUEUED/RUNNING/FAILED jobs
     - Contains {"specs": [...]} for SUCCEEDED jobs
-    
+
     **Error Field:**
     - Only present for FAILED jobs
     - Contains error message and type
-    
+
     Args:
         job_id: The job identifier to retrieve.
         job_repository: JobRepository instance (injected via dependency).
-        
+
     Returns:
         Dict with job metadata.
-        
+
     Raises:
         HTTPException: 404 if job not found or expired.
     """
     job = await job_repository.get_job(job_id)
-    
+
     if job is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Job not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
     return _format_job_response(job)
 
 
@@ -981,16 +950,14 @@ async def get_job_status(
                                 "status": "SUCCEEDED",
                                 "created_at": "2025-01-01T12:00:00Z",
                                 "updated_at": "2025-01-01T12:00:05Z",
-                                "result": {
-                                    "specs": [{"purpose": "Example"}]
-                                }
+                                "result": {"specs": [{"purpose": "Example"}]},
                             }
                         ],
                         "total": 1,
-                        "limit": 100
+                        "limit": 100,
                     }
                 }
-            }
+            },
         }
     },
     summary="List recent jobs (debug endpoint)",
@@ -1007,48 +974,44 @@ This is a debug/monitoring endpoint for viewing all jobs in the system.
 **Persistence:**
 - Shows all jobs stored in the database
 - Jobs persist across server restarts
-"""
+""",
 )
 async def list_jobs(
     limit: Optional[int] = Query(
         None,
         ge=1,
-        description="Maximum number of jobs to return. Defaults to configured limit if not specified."
+        description="Maximum number of jobs to return. Defaults to configured limit if not specified.",
     ),
-    job_repository: JobRepository = Depends(get_job_store)
+    job_repository: JobRepository = Depends(get_job_store),
 ) -> dict:
     """List recent jobs sorted by most recently updated.
-    
+
     Returns a list of jobs with the same metadata shape as the single job endpoint.
     Jobs are sorted by updated_at in descending order (most recent first).
-    
+
     **Debug Endpoint:**
     This endpoint is intended for debugging and monitoring. It shows all jobs
     currently in the database.
-    
+
     Args:
         limit: Maximum number of jobs to return (optional).
         job_repository: JobRepository instance (injected via dependency).
-        
+
     Returns:
         Dict with jobs list, total count, and applied limit.
     """
     # Apply limit constraints
     effective_limit = limit if limit is not None else settings.default_jobs_list_limit
     effective_limit = min(effective_limit, settings.max_jobs_list_limit)
-    
+
     # Get total count before applying limit
     total_count = await job_repository.count_jobs()
     jobs = await job_repository.list_jobs(limit=effective_limit)
-    
+
     # Format jobs with same structure as single job endpoint
     formatted_jobs = [_format_job_response(job) for job in jobs]
-    
-    return {
-        "jobs": formatted_jobs,
-        "total": total_count,
-        "limit": effective_limit
-    }
+
+    return {"jobs": formatted_jobs, "total": total_count, "limit": effective_limit}
 
 
 @router.get(
@@ -1059,9 +1022,9 @@ async def list_jobs(
             "description": "Prometheus-formatted metrics",
             "content": {
                 "text/plain": {
-                    "example": "# HELP planner_http_requests_total Total HTTP requests\n# TYPE planner_http_requests_total counter\nplanner_http_requests_total{endpoint=\"/api/v1/plans\",method=\"POST\",status=\"202\"} 42.0\n"
+                    "example": '# HELP planner_http_requests_total Total HTTP requests\n# TYPE planner_http_requests_total counter\nplanner_http_requests_total{endpoint="/api/v1/plans",method="POST",status="202"} 42.0\n'
                 }
-            }
+            },
         }
     },
     summary="Prometheus metrics endpoint",
@@ -1080,21 +1043,20 @@ async def list_jobs(
 **Security:**
 - No sensitive data (API keys, prompts) is exposed in metrics
 - Consider protecting this endpoint with authentication in production
-"""
+""",
 )
 def get_metrics() -> Response:
     """Get Prometheus-formatted metrics.
-    
+
     Returns:
         Response with Prometheus text format metrics.
     """
     from fastapi import Response
+
     from app.services.metrics import get_metrics_collector
-    
+
     metrics = get_metrics_collector()
     content = metrics.generate_metrics()
     content_type = metrics.get_content_type()
-    
+
     return Response(content=content, media_type=content_type)
-
-
