@@ -1290,6 +1290,177 @@ INFO: Successfully generated specs - spec_count=2
 
 > **Security Note:** The default CORS configuration (`ALLOWED_ORIGINS=["*"]`) is suitable for development only. In production, set `ALLOWED_ORIGINS` to specific domains and configure `ALLOWED_CREDENTIALS` appropriately.
 
+### Observability: Metrics and Structured Logging
+
+The Software Planner API provides comprehensive observability through Prometheus-compatible metrics and structured logging. This enables monitoring of system health, performance tracking, and debugging.
+
+#### Metrics Collection
+
+**Configuration:**
+
+Metrics collection is disabled by default. Enable it via environment variable:
+
+```bash
+PLANNER_METRICS_ENABLED=true
+```
+
+Or in `.env`:
+
+```bash
+PLANNER_METRICS_ENABLED=true
+```
+
+**Accessing Metrics:**
+
+When enabled, metrics are exposed at the `/api/v1/metrics` endpoint in Prometheus text format:
+
+```bash
+curl http://localhost:8000/api/v1/metrics
+```
+
+**Available Metrics:**
+
+1. **HTTP Request Metrics**
+   - `planner_http_requests_total{endpoint, method, status}` - Total HTTP requests by endpoint and status code
+   - `planner_http_request_duration_seconds{endpoint, method}` - Request duration histogram
+
+2. **Job Lifecycle Metrics**
+   - `planner_job_status_total{status}` - Total jobs by status (QUEUED, RUNNING, SUCCEEDED, FAILED)
+   - `planner_job_duration_seconds{status}` - Job processing duration histogram
+   - `planner_jobs_in_progress` - Current number of jobs being processed
+
+3. **LLM Client Metrics**
+   - `planner_llm_requests_total{provider, model, status}` - Total LLM API requests
+   - `planner_llm_request_duration_seconds{provider, model}` - LLM request latency histogram
+   - `planner_llm_tokens_total{provider, model, token_type}` - Total tokens consumed (prompt/completion)
+
+**Example Prometheus Queries:**
+
+```promql
+# HTTP request rate by endpoint
+rate(planner_http_requests_total[5m])
+
+# 95th percentile job duration
+histogram_quantile(0.95, rate(planner_job_duration_seconds_bucket[5m]))
+
+# LLM error rate
+rate(planner_llm_requests_total{status="error"}[5m])
+
+# Current jobs in progress
+planner_jobs_in_progress
+```
+
+#### Structured Logging
+
+The application emits structured logs with consistent fields for correlation and filtering:
+
+**Common Log Fields:**
+
+- `request_id` - Unique identifier for each HTTP request (also in X-Request-ID header)
+- `job_id` - Job identifier for async planning operations
+- `api_key_hash` - Hashed API key for rate limiting context (never logs actual keys)
+- `model` - LLM model name
+- `status` - Job or request status
+- `error_type` - Exception class name for errors
+- `duration_seconds` - Operation duration
+
+**Log Examples:**
+
+```json
+{
+  "level": "INFO",
+  "message": "Job job-123 transitioned: QUEUED -> RUNNING",
+  "request_id": "req-456",
+  "job_id": "job-123",
+  "from_status": "QUEUED",
+  "to_status": "RUNNING"
+}
+
+{
+  "level": "INFO",
+  "message": "LLM request completed: openai/gpt-4 (success)",
+  "provider": "openai",
+  "model": "gpt-4",
+  "duration_seconds": 2.5,
+  "status": "success",
+  "prompt_tokens": 100,
+  "completion_tokens": 150
+}
+
+{
+  "level": "INFO",
+  "message": "POST /api/v1/plans 202",
+  "method": "POST",
+  "endpoint": "/api/v1/plans",
+  "status": 202,
+  "duration_seconds": 0.05,
+  "api_key_hash": "a1b2c3d4e5f6g7h8"
+}
+```
+
+**Security Considerations:**
+
+- **API Keys**: Never logged in plain text. Only hashed identifiers (first 16 chars of SHA-256) are logged
+- **Prompts**: Project descriptions and system prompts are never logged to prevent data leakage
+- **Secrets**: Database passwords, LLM API keys, and other secrets are never included in logs
+- **Token Counts**: Only aggregate counts are logged, not actual token content
+
+**Log Filtering Examples:**
+
+Using structured logging tools (e.g., jq, Loki, ELK):
+
+```bash
+# Filter logs by job_id
+cat logs.json | jq 'select(.job_id == "job-123")'
+
+# Find all failed LLM requests
+cat logs.json | jq 'select(.provider and .status == "error")'
+
+# Track a request across its lifecycle
+cat logs.json | jq 'select(.request_id == "req-456")'
+```
+
+#### Integration with Monitoring Systems
+
+**Prometheus Setup:**
+
+Add the Software Planner as a scrape target:
+
+```yaml
+scrape_configs:
+  - job_name: 'software-planner'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['localhost:8000']
+    metrics_path: '/api/v1/metrics'
+```
+
+**Grafana Dashboard:**
+
+Create visualizations for:
+- Request rate and latency by endpoint
+- Job success/failure rates over time
+- LLM provider performance comparison
+- Token usage trends
+
+**Alerting Examples:**
+
+```yaml
+# Alert on high error rate
+- alert: HighJobFailureRate
+  expr: rate(planner_job_status_total{status="FAILED"}[5m]) > 0.1
+  for: 5m
+  annotations:
+    summary: "High job failure rate detected"
+
+# Alert on slow LLM responses
+- alert: SlowLLMResponses
+  expr: histogram_quantile(0.95, rate(planner_llm_request_duration_seconds_bucket[5m])) > 30
+  for: 10m
+  annotations:
+    summary: "LLM response times degraded"
+```
+
 ### Testing
 
 The project includes comprehensive tests for all endpoints and functionality.

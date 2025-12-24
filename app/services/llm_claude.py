@@ -205,6 +205,15 @@ class ClaudeClient(BaseLLMClient):
         
         start_time = time.time()
         
+        # Log LLM request start
+        from app.utils.logging_helpers import log_llm_request
+        log_llm_request(
+            logger=logger,
+            provider="anthropic",
+            model=self.model,
+            description_length=len(description)
+        )
+        
         while retry_count <= self.max_retries:
             try:
                 # Log attempt (not on first try to avoid log spam)
@@ -247,6 +256,35 @@ class ClaudeClient(BaseLLMClient):
                 
                 # Log successful response metadata
                 elapsed = time.time() - start_time
+                # Extract token usage
+                prompt_tokens = response.usage.input_tokens if response.usage else None
+                completion_tokens = response.usage.output_tokens if response.usage else None
+                
+                # Record metrics
+                from app.services.metrics import get_metrics_collector
+                from app.utils.logging_helpers import log_llm_response
+                
+                metrics = get_metrics_collector()
+                metrics.record_llm_request(
+                    provider="anthropic",
+                    model=self.model,
+                    status="success",
+                    duration=elapsed,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens
+                )
+                
+                # Log structured response
+                log_llm_response(
+                    logger=logger,
+                    provider="anthropic",
+                    model=self.model,
+                    duration=elapsed,
+                    status="success",
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens
+                )
+                
                 logger.info(
                     "Claude API call succeeded",
                     extra={
@@ -328,6 +366,29 @@ class ClaudeClient(BaseLLMClient):
                 # If we've exhausted retries, raise the error
                 if retry_count >= self.max_retries:
                     elapsed = time.time() - start_time
+                    
+                    # Record failure metrics
+                    from app.services.metrics import get_metrics_collector
+                    from app.utils.logging_helpers import log_llm_response
+                    
+                    metrics = get_metrics_collector()
+                    metrics.record_llm_request(
+                        provider="anthropic",
+                        model=self.model,
+                        status="error",
+                        duration=elapsed
+                    )
+                    
+                    # Log structured error
+                    log_llm_response(
+                        logger=logger,
+                        provider="anthropic",
+                        model=self.model,
+                        duration=elapsed,
+                        status="error",
+                        error_type=type(e).__name__
+                    )
+                    
                     logger.error(
                         "Claude API call failed after all retries",
                         extra={

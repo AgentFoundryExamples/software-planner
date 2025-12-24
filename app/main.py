@@ -48,6 +48,10 @@ def create_app() -> FastAPI:
     # Add request ID middleware (must be added before other middleware)
     app.add_middleware(RequestIDMiddleware)
     
+    # Add metrics middleware for observability
+    from app.middleware.metrics import MetricsMiddleware
+    app.add_middleware(MetricsMiddleware)
+    
     # Configure CORS
     # Note: allow_credentials should only be True when allowed_origins is not ["*"]
     # This can be configured via environment variables

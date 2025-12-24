@@ -16,6 +16,9 @@ asyncpg==0.31.0
 sqlalchemy==2.0.45
 alembic==1.17.2
 
+# Observability
+prometheus-client==0.21.1
+
 # Testing
 pytest==8.3.4
 pytest-asyncio==0.24.0

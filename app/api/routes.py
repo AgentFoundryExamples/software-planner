@@ -16,7 +16,7 @@
 import hashlib
 import logging
 from typing import Optional
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
 
 from app.api.dependencies import require_api_key, get_client_ip
 from app.core.config import settings
@@ -1049,5 +1049,52 @@ async def list_jobs(
         "total": total_count,
         "limit": effective_limit
     }
+
+
+@router.get(
+    "/metrics",
+    status_code=status.HTTP_200_OK,
+    responses={
+        200: {
+            "description": "Prometheus-formatted metrics",
+            "content": {
+                "text/plain": {
+                    "example": "# HELP planner_http_requests_total Total HTTP requests\n# TYPE planner_http_requests_total counter\nplanner_http_requests_total{endpoint=\"/api/v1/plans\",method=\"POST\",status=\"202\"} 42.0\n"
+                }
+            }
+        }
+    },
+    summary="Prometheus metrics endpoint",
+    description="""Expose Prometheus-compatible metrics for monitoring and alerting.
+
+**Metrics Categories:**
+- HTTP: Request counts and durations by endpoint/status
+- Jobs: Status transition counts and processing durations
+- LLM: API call latency, token usage, and error rates
+
+**Configuration:**
+- Metrics collection is disabled by default
+- Enable via `PLANNER_METRICS_ENABLED=true` environment variable
+- When disabled, returns a message indicating metrics are disabled
+
+**Security:**
+- No sensitive data (API keys, prompts) is exposed in metrics
+- Consider protecting this endpoint with authentication in production
+"""
+)
+def get_metrics() -> Response:
+    """Get Prometheus-formatted metrics.
+    
+    Returns:
+        Response with Prometheus text format metrics.
+    """
+    from fastapi import Response
+    from app.services.metrics import get_metrics_collector
+    
+    metrics = get_metrics_collector()
+    content = metrics.generate_metrics()
+    content_type = metrics.get_content_type()
+    
+    return Response(content=content, media_type=content_type)
 
 
