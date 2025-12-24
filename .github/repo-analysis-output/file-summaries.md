@@ -173,9 +173,9 @@ Total files: 44
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm openai  
-**Size:** 13.37 KB  
-**LOC:** 274  
-**TODOs/FIXMEs:** 1  
+**Size:** 15.22 KB  
+**LOC:** 290  
+**TODOs/FIXMEs:** 0  
 
 ## app/services/model_registry.py
 **Language:** Python  
@@ -317,8 +317,8 @@ Total files: 44
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 22.23 KB  
-**LOC:** 424  
+**Size:** 25.87 KB  
+**LOC:** 499  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_main.py

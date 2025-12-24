@@ -263,9 +263,9 @@
       "summary": "Python module for llm openai",
       "summary_text": "Python module for llm openai",
       "metrics": {
-        "size_bytes": 13693,
-        "loc": 274,
-        "todo_count": 1
+        "size_bytes": 15588,
+        "loc": 290,
+        "todo_count": 0
       }
     },
     {
@@ -487,8 +487,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 22759,
-        "loc": 424,
+        "size_bytes": 26489,
+        "loc": 499,
         "todo_count": 0
       }
     },
