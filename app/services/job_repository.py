@@ -149,6 +149,22 @@ class JobRepository:
                     extra={"job_id": job_id, "model": model}
                 )
                 
+                # Record metrics and structured logging
+                from app.services.metrics import get_metrics_collector
+                from app.utils.logging_helpers import log_job_transition
+                
+                metrics = get_metrics_collector()
+                metrics.record_job_status("QUEUED")
+                
+                # Log structured transition
+                log_job_transition(
+                    logger=logger,
+                    job_id=job_id,
+                    from_status=None,
+                    to_status="QUEUED",
+                    model=model
+                )
+                
                 return job
                 
             except IntegrityError as e:
@@ -331,6 +347,22 @@ class JobRepository:
                 extra={"job_id": job_id}
             )
             
+            # Record metrics and structured logging
+            from app.services.metrics import get_metrics_collector
+            from app.utils.logging_helpers import log_job_transition
+            
+            metrics = get_metrics_collector()
+            metrics.record_job_status("RUNNING")
+            metrics.increment_jobs_in_progress()
+            
+            # Log structured transition
+            log_job_transition(
+                logger=logger,
+                job_id=job_id,
+                from_status="QUEUED",
+                to_status="RUNNING"
+            )
+            
             return updated_job
         
         except (JobNotFoundError, JobTransitionError):
@@ -423,6 +455,27 @@ class JobRepository:
             logger.info(
                 "Job marked as SUCCEEDED",
                 extra={"job_id": job_id}
+            )
+            
+            # Record metrics and structured logging
+            from app.services.metrics import get_metrics_collector
+            from app.utils.logging_helpers import log_job_transition
+            
+            metrics = get_metrics_collector()
+            metrics.record_job_status("SUCCEEDED")
+            metrics.decrement_jobs_in_progress()
+            
+            # Calculate and record job duration
+            if updated_job.started_at and updated_job.finished_at:
+                duration = (updated_job.finished_at - updated_job.started_at).total_seconds()
+                metrics.record_job_duration("SUCCEEDED", duration)
+            
+            # Log structured transition
+            log_job_transition(
+                logger=logger,
+                job_id=job_id,
+                from_status="RUNNING",
+                to_status="SUCCEEDED"
             )
             
             return updated_job
@@ -523,7 +576,32 @@ class JobRepository:
             
             logger.info(
                 "Job marked as FAILED",
-                extra={"job_id": job_id}
+                extra={"job_id": job_id, "error_type": error.get("type")}
+            )
+            
+            # Record metrics and structured logging
+            from app.services.metrics import get_metrics_collector
+            from app.utils.logging_helpers import log_job_transition
+            
+            metrics = get_metrics_collector()
+            metrics.record_job_status("FAILED")
+            
+            # Decrement in-progress counter only if was RUNNING
+            if current_status == "RUNNING":
+                metrics.decrement_jobs_in_progress()
+            
+            # Calculate and record job duration if started
+            if updated_job.started_at and updated_job.finished_at:
+                duration = (updated_job.finished_at - updated_job.started_at).total_seconds()
+                metrics.record_job_duration("FAILED", duration)
+            
+            # Log structured transition
+            log_job_transition(
+                logger=logger,
+                job_id=job_id,
+                from_status=current_status,
+                to_status="FAILED",
+                error_type=error.get("type")
             )
             
             return updated_job
