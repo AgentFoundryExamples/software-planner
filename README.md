@@ -37,6 +37,299 @@ pip install -r requirements.txt
 
 > **Note:** If you encounter permission errors when activating scripts on Windows PowerShell, you may need to run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
+## Docker Deployment
+
+The Software Planner API includes a production-ready Dockerfile for containerized deployments. The image is built using a multi-stage process for minimal size and includes a non-root user for security.
+
+### Building the Docker Image
+
+Build the Docker image using the provided Dockerfile:
+
+```bash
+docker build -t software-planner:latest .
+```
+
+**Build Options:**
+
+```bash
+# Build with a specific tag
+docker build -t software-planner:v0.1.0 .
+
+# Build for multiple platforms (requires Docker Buildx)
+docker buildx build --platform linux/amd64,linux/arm64 -t software-planner:latest .
+```
+
+### Running the Container
+
+**Basic Usage:**
+
+```bash
+# Run with default configuration (port 8000, 1 worker)
+docker run -p 8000:8000 software-planner:latest
+```
+
+**Production Configuration with Environment Variables:**
+
+```bash
+docker run -d \
+  --name software-planner \
+  -p 8000:8000 \
+  -e PORT=8000 \
+  -e WORKERS=4 \
+  -e HOST=0.0.0.0 \
+  -e LOG_LEVEL=info \
+  -e LLM_API_KEY=sk-your-openai-api-key \
+  -e LLM_MODEL=gpt-4 \
+  -e DATABASE_URL=postgresql+asyncpg://user:password@db:5432/software_planner \
+  -e PLANNER_API_KEYS='["key1","key2"]' \
+  -e PLANNER_API_KEYS_REQUIRED=true \
+  -e PLANNER_RATE_LIMIT_MAX_REQUESTS=100 \
+  -e PLANNER_RATE_LIMIT_WINDOW_SECONDS=60 \
+  software-planner:latest
+```
+
+**Using Environment File:**
+
+For easier management, create a `.env.production` file with your configuration:
+
+```bash
+# .env.production (NEVER commit this file with real secrets!)
+PORT=8000
+WORKERS=4
+HOST=0.0.0.0
+LOG_LEVEL=info
+
+# LLM Configuration
+LLM_API_KEY=sk-your-actual-openai-api-key
+LLM_MODEL=gpt-4
+LLM_TIMEOUT=90
+
+# Database Configuration
+DATABASE_URL=postgresql+asyncpg://user:password@db.example.com:5432/software_planner
+
+# API Authentication
+PLANNER_API_KEYS=["your-secure-key-1","your-secure-key-2"]
+PLANNER_API_KEYS_REQUIRED=true
+
+# Rate Limiting
+PLANNER_RATE_LIMIT_MAX_REQUESTS=100
+PLANNER_RATE_LIMIT_WINDOW_SECONDS=60
+
+# CORS (Production - specific origins only)
+ALLOWED_ORIGINS=["https://app.example.com","https://admin.example.com"]
+CORS_WILDCARD_ENABLED=false
+
+# Metrics
+PLANNER_METRICS_ENABLED=true
+```
+
+Then run with the environment file:
+
+```bash
+docker run -d \
+  --name software-planner \
+  -p 8000:8000 \
+  --env-file .env.production \
+  software-planner:latest
+```
+
+### Essential Environment Variables
+
+The container is configured entirely through environment variables. **No secrets are hardcoded.**
+
+**Required for Production:**
+
+- `LLM_API_KEY` - OpenAI API key (get from https://platform.openai.com/api-keys)
+- `DATABASE_URL` - PostgreSQL connection string (format: `postgresql+asyncpg://user:pass@host:port/db`)
+- `PLANNER_API_KEYS` - JSON array or comma-separated list of API keys for authentication
+
+**Optional Configuration:**
+
+- `PORT` - Server port (default: 8000)
+- `WORKERS` - Number of uvicorn workers (default: 1, recommended: number of CPU cores)
+- `HOST` - Server host (default: 0.0.0.0)
+- `LOG_LEVEL` - Logging level: debug, info, warning, error, critical (default: info)
+- `LLM_MODEL` - OpenAI model identifier (default: gpt-4)
+- `LLM_TIMEOUT` - LLM request timeout in seconds (default: 60)
+- `PLANNER_RATE_LIMIT_MAX_REQUESTS` - Rate limit per window (default: 10)
+- `PLANNER_RATE_LIMIT_WINDOW_SECONDS` - Rate limit window in seconds (default: 60)
+- `PLANNER_METRICS_ENABLED` - Enable Prometheus metrics (default: false)
+- `ALLOWED_ORIGINS` - CORS allowed origins JSON array (default: ["*"])
+- `DEBUG` - Enable debug mode (default: false, **never enable in production**)
+
+See `.env.example` for a complete list of configuration options with detailed descriptions.
+
+### Docker Compose Example
+
+For local development or testing with a database, use Docker Compose:
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: planner
+      POSTGRES_PASSWORD: planner_dev_password
+      POSTGRES_DB: software_planner
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U planner"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: 8000
+      WORKERS: 2
+      DATABASE_URL: postgresql+asyncpg://planner:planner_dev_password@db:5432/software_planner
+      LLM_API_KEY: ${LLM_API_KEY}  # Set in your .env file
+      LLM_MODEL: gpt-4
+      PLANNER_API_KEYS: '["dev-key-123"]'
+      DEBUG: false
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+      "
+
+volumes:
+  postgres_data:
+```
+
+Run with Docker Compose:
+
+```bash
+# Start services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f app
+
+# Stop services
+docker-compose down
+
+# Stop and remove volumes (careful - deletes data!)
+docker-compose down -v
+```
+
+### Container Security Best Practices
+
+The Dockerfile follows security best practices:
+
+1. **Multi-stage Build**: Separates build dependencies from runtime, reducing attack surface
+2. **Slim Base Image**: Uses `python:3.11-slim` for minimal size (~150MB vs 1GB+ for full image)
+3. **Non-root User**: Runs as user `appuser` (UID 1000) instead of root
+4. **No Secrets in Image**: All configuration via environment variables, no hardcoded secrets
+5. **Minimal Dependencies**: Only installs required runtime system packages
+6. **Health Check**: Built-in health check endpoint for container orchestration
+7. **Dependency Pinning**: Uses `requirements-lock.txt` for reproducible builds
+
+### Health Checks and Readiness
+
+The container includes a built-in health check that verifies the `/health` endpoint:
+
+```bash
+# Check container health
+docker ps --filter name=software-planner
+
+# Manually test health endpoint
+curl http://localhost:8000/health
+```
+
+For Kubernetes deployments, configure liveness and readiness probes:
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+```
+
+### Troubleshooting Container Issues
+
+**Container fails to start:**
+
+Check logs for configuration errors:
+```bash
+docker logs software-planner
+```
+
+**Database connection failed:**
+- Verify `DATABASE_URL` is correctly formatted
+- Ensure PostgreSQL is accessible from container
+- Check network connectivity: `docker exec software-planner ping db`
+- Run migrations: `docker exec software-planner alembic upgrade head`
+
+**LLM authentication failed:**
+- Verify `LLM_API_KEY` is set and starts with "sk-"
+- Check key is valid at https://platform.openai.com/api-keys
+- Ensure no extra whitespace in environment variable
+
+**Permission errors:**
+- Container runs as non-root user (UID 1000)
+- If mounting volumes, ensure proper permissions: `chown -R 1000:1000 /path/to/volume`
+
+**Port already in use:**
+- Change host port: `docker run -p 8080:8000 software-planner:latest`
+- Stop conflicting container: `docker ps -a | grep 8000`
+
+### Production Deployment Considerations
+
+**Worker Configuration:**
+- Set `WORKERS` to number of CPU cores for CPU-bound workloads
+- For I/O-bound workloads (typical for this API), 2-4 workers per core is acceptable
+- Monitor memory usage and adjust accordingly
+- Single worker is fine for low-traffic deployments
+
+**Resource Limits:**
+```bash
+# Run with memory and CPU limits
+docker run -d \
+  --name software-planner \
+  --memory=512m \
+  --cpus=1.0 \
+  -p 8000:8000 \
+  --env-file .env.production \
+  software-planner:latest
+```
+
+**Log Management:**
+- Container logs to stdout/stderr for 12-factor app compliance
+- Collect logs with Docker logging drivers or external log aggregator
+- Configure log rotation to prevent disk space issues
+
+**Orchestration:**
+- Use Docker Swarm, Kubernetes, or ECS for production deployments
+- Configure auto-scaling based on CPU/memory metrics
+- Set up rolling updates for zero-downtime deployments
+- Use secrets management (Docker secrets, Kubernetes secrets, AWS Secrets Manager)
+
 ## Development
 
 This project uses standardized tooling for code quality, formatting, and type checking. All development dependencies are included in `requirements.txt`.

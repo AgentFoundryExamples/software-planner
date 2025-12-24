@@ -1,0 +1,98 @@
+# Multi-stage Dockerfile for production deployment of Software Planner API
+# Optimized for small image size, security, and reproducibility
+
+# ============================================================================
+# Stage 1: Builder - Install dependencies
+# ============================================================================
+FROM python:3.11-slim AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies required for building Python packages
+# Only includes minimal dependencies needed for asyncpg, psycopg2-binary, etc.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy only requirements files first for better layer caching
+# Use requirements.txt (not requirements-lock.txt) as it contains only PyPI packages
+# requirements-lock.txt includes system packages that aren't available on PyPI
+COPY requirements.txt .
+
+# Install Python dependencies in a virtual environment
+# Using --no-cache-dir to reduce image size
+# Using --prefix to install in a custom location that we can copy to runtime stage
+# Using --trusted-host flags to work around SSL certificate issues in CI environments
+RUN pip install --no-cache-dir --prefix=/install \
+    --trusted-host pypi.org --trusted-host files.pythonhosted.org \
+    -r requirements.txt
+
+# ============================================================================
+# Stage 2: Runtime - Minimal production image
+# ============================================================================
+FROM python:3.11-slim
+
+# Set labels for image metadata
+LABEL maintainer="software-planner"
+LABEL description="Production-ready Software Planner API"
+LABEL version="0.1.0"
+
+# Set environment variables for Python
+# PYTHONUNBUFFERED: Ensure Python output is sent straight to terminal
+# PYTHONDONTWRITEBYTECODE: Prevent Python from writing .pyc files
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Install runtime system dependencies
+# Only includes libpq5 for PostgreSQL client library (asyncpg dependency)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for running the application
+# Using high UID/GID to avoid conflicts with host systems
+RUN groupadd -r -g 1000 appuser && \
+    useradd -r -u 1000 -g appuser -m -s /bin/bash appuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy installed Python dependencies from builder stage
+COPY --from=builder /install /usr/local
+
+# Copy application code
+COPY --chown=appuser:appuser app ./app
+COPY --chown=appuser:appuser alembic.ini .
+COPY --chown=appuser:appuser migrations ./migrations
+
+# Switch to non-root user
+USER appuser
+
+# Expose port (default 8000, can be overridden via PORT env var)
+EXPOSE 8000
+
+# Health check configuration
+# Checks if the /health endpoint responds with 200 OK
+# Start checking after 30s, check every 10s, timeout after 5s, retry 3 times
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-8000}/health').read()"
+
+# Default configuration via environment variables
+# These can be overridden when running the container
+# PORT: Server port (default: 8000)
+# HOST: Server host (default: 0.0.0.0 to accept connections from all interfaces)
+# WORKERS: Number of uvicorn workers (default: 1, set higher for production)
+# LOG_LEVEL: Logging level (default: info, options: debug, info, warning, error, critical)
+ENV PORT=8000 \
+    HOST=0.0.0.0 \
+    WORKERS=1 \
+    LOG_LEVEL=info
+
+# Entrypoint using uvicorn with configuration from environment variables
+# --host and --port are sourced from env vars
+# --workers controls the number of worker processes
+# --log-level controls logging verbosity
+# Using exec form to ensure proper signal handling
+ENTRYPOINT ["sh", "-c", "exec uvicorn app.main:app --host ${HOST} --port ${PORT} --workers ${WORKERS} --log-level ${LOG_LEVEL}"]
