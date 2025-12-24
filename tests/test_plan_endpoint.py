@@ -58,9 +58,19 @@ def mock_llm_client():
 @pytest.fixture
 def client(mock_llm_client):
     """Create a test client for the FastAPI app with mocked LLM client."""
-    # Patch the get_llm_client at the source to return our mock
+    from app.services.rate_limiter import RateLimiter
+    
+    # Create a disabled rate limiter for these tests
+    disabled_limiter = RateLimiter(
+        window_seconds=60,
+        max_requests=10,
+        enabled=False  # Disabled
+    )
+    
+    # Patch both the LLM client and rate limiter
     with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm_client):
-        yield TestClient(app)
+        with patch('app.api.routes.get_rate_limiter', return_value=disabled_limiter):
+            yield TestClient(app)
 
 
 class TestPlanEndpointHappyPath:

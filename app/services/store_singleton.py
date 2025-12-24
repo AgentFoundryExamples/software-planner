@@ -30,6 +30,9 @@ from app.services.model_registry import get_model_registry
 
 logger = logging.getLogger(__name__)
 
+# Import rate limiter getter for re-export
+from app.services.rate_limiter import get_rate_limiter  # noqa: E402
+
 # Global job repository instance (lazily initialized)
 _job_repository: Optional[JobRepository] = None
 _job_repository_lock = threading.Lock()
