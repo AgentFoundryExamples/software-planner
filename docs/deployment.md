@@ -1356,17 +1356,19 @@ The CI workflow defined in `.github/workflows/ci.yml` includes three parallel jo
 **Image Tagging Convention**:
 
 ```bash
-# Production tags
-software-planner:v1.0.0          # Semantic version
-software-planner:v1.0            # Minor version alias
-software-planner:v1              # Major version alias
-software-planner:latest          # Latest stable release
+# Production tags (use exact semantic versions for deployments)
+software-planner:v1.0.0          # Semantic version - USE THIS FOR PRODUCTION
 
-# Development tags
+# Development/Reference tags (DO NOT use for production deployments)
+software-planner:v1.0            # Minor version alias - reference only
+software-planner:v1              # Major version alias - reference only
+software-planner:latest          # Latest stable - reference only, can change
 software-planner:main-abc123     # Main branch commit SHA
 software-planner:pr-456-def789   # PR branch commit SHA
 software-planner:staging         # Staging environment
 ```
+
+**⚠️ Production Deployment Best Practice**: Always use exact semantic version tags (e.g., `v1.0.0`) in production. Never use `latest`, major (`v1`), or minor (`v1.0`) aliases as these can point to different images over time, leading to unexpected updates and breaking zero-downtime deployment practices.
 
 **Building Images in CI**:
 
