@@ -83,7 +83,8 @@ EXPOSE 8000
 # Health check configuration
 # Checks if the /health endpoint responds with 200 OK
 # Start checking after 30s, check every 10s, timeout after 5s, retry 3 times
-# Note: Uses sh -c to ensure PORT environment variable is properly expanded
+# Note: Uses Python's urllib instead of curl to avoid adding extra dependencies
+# sh -c ensures PORT environment variable is properly expanded
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
     CMD sh -c 'python -c "import urllib.request; urllib.request.urlopen(\"http://localhost:${PORT:-8000}/health\").read()"'
 
