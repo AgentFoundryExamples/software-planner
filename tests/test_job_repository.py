@@ -463,8 +463,8 @@ class TestJobRepositoryDatabaseErrors:
     """Test cases for database error handling and fallback paths."""
     
     @pytest.mark.asyncio
-    async def test_hash_determinism_for_job_ids(self, job_repository, mock_engine):
-        """Test that job IDs are deterministic based on input parameters."""
+    async def test_job_ids_are_unique_for_same_input(self, job_repository, mock_engine):
+        """Test that creating jobs with identical inputs results in unique job IDs."""
         import uuid
         
         # Mock successful inserts for multiple jobs
@@ -488,10 +488,8 @@ class TestJobRepositoryDatabaseErrors:
             pytest.fail("Job IDs should be valid UUIDs")
     
     @pytest.mark.asyncio
-    async def test_system_prompt_hash_determinism(self, job_repository, mock_engine):
-        """Test that system_prompt_hash is computed deterministically."""
-        import hashlib
-        
+    async def test_system_prompt_is_stored_correctly(self, job_repository, mock_engine):
+        """Test that the system_prompt is stored correctly during job creation."""
         mock_conn = AsyncMock()
         mock_conn.execute = AsyncMock()
         mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
@@ -499,13 +497,11 @@ class TestJobRepositoryDatabaseErrors:
         mock_engine.begin = MagicMock(return_value=mock_conn)
         
         prompt = "Test system prompt"
-        expected_hash = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
         
         job = await job_repository.create_job(
             description="Test",
             system_prompt=prompt
         )
         
-        # Job should store the prompt itself, not the hash
-        # Hash is computed on retrieval
+        # Verify the job object returned from create_job has the correct prompt
         assert job.system_prompt == prompt

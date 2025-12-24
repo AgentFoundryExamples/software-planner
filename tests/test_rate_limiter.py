@@ -517,7 +517,7 @@ class TestRateLimiterRapidRequests:
         
         # Make rapid requests (no sleep between)
         results = []
-        for i in range(10):
+        for i in range(5):  # More than the limit
             allowed, retry_after = limiter.check_rate_limit(
                 api_key="rapid-key",
                 request_id=f"rapid-{i}"
@@ -525,8 +525,14 @@ class TestRateLimiterRapidRequests:
             results.append(allowed)
         
         # Exactly 3 should be allowed, rest denied
-        assert sum(results) == 3
-        assert len([r for r in results if not r]) == 7
+        assert results == [True, True, True, False, False]
+        
+        # Wait for the bucket to replenish one token (20 seconds for 1 token in a 60s/3req window)
+        time.sleep(21)
+        
+        # This request should now be allowed
+        allowed, _ = limiter.check_rate_limit(api_key="rapid-key", request_id="after-wait")
+        assert allowed is True
     
     def test_fingerprint_isolation_api_key_vs_ip(self):
         """Test that API key and IP fingerprints are isolated."""
