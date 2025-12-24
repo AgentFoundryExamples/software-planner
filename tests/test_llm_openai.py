@@ -40,12 +40,11 @@ VALID_RESPONSE = {
 }
 
 
-def create_mock_openai_response(content: str, finish_reason: str = "stop") -> Mock:
+def create_mock_openai_response(content: str) -> Mock:
     """Create a mock OpenAI Responses API response.
     
     Args:
         content: Response content text.
-        finish_reason: Completion finish reason (not used in Responses API but kept for compatibility).
         
     Returns:
         Mock response object matching OpenAI Responses API structure.
@@ -634,6 +633,71 @@ class TestOpenAIClientEdgeCases:
         assert "specs" in result
         assert len(result["specs"]) == 1
         assert result["specs"][0]["purpose"] == "Test Purpose"
+    
+    @patch('app.services.llm_openai.OpenAI')
+    def test_multi_part_content_with_dicts(self, mock_openai_class):
+        """Test that multi-part content with dict format is handled correctly."""
+        # Setup mock
+        mock_client = Mock()
+        mock_openai_class.return_value = mock_client
+        
+        # Create response with content as an array of dict parts
+        response = Mock()
+        output_item = Mock()
+        
+        # Mock content parts as dicts
+        output_item.content = [
+            {"text": '{"specs": ['},
+            {"text": json.dumps({
+                "purpose": "Test Purpose",
+                "vision": "Test Vision",
+                "must": ["requirement1"],
+                "dont": ["avoid1"],
+                "nice": ["feature1"]
+            })},
+            {"text": ']}'}
+        ]
+        response.output = [output_item]
+        response.usage = Mock()
+        response.usage.input_tokens = 50
+        response.usage.output_tokens = 50
+        
+        mock_client.responses.create.return_value = response
+        
+        # Create client and call API
+        client = OpenAIClient(api_key="sk-test", model="gpt-5.1")
+        result = client.generate_specs("Build a REST API")
+        
+        # Verify result was parsed correctly
+        assert "specs" in result
+        assert len(result["specs"]) == 1
+        assert result["specs"][0]["purpose"] == "Test Purpose"
+    
+    @patch('app.services.llm_openai.OpenAI')
+    def test_unsupported_content_type(self, mock_openai_class):
+        """Test that unsupported content types are handled gracefully."""
+        # Setup mock
+        mock_client = Mock()
+        mock_openai_class.return_value = mock_client
+        
+        # Create response with unexpected content type
+        response = Mock()
+        output_item = Mock()
+        output_item.content = 12345  # Numeric content (unsupported)
+        response.output = [output_item]
+        response.usage = Mock()
+        response.usage.input_tokens = 50
+        response.usage.output_tokens = 50
+        
+        mock_client.responses.create.return_value = response
+        
+        # Create client and call API
+        client = OpenAIClient(api_key="sk-test", model="gpt-5.1")
+        
+        with pytest.raises(LLMResponseError) as exc_info:
+            client.generate_specs("Build a REST API")
+        
+        assert "empty content" in str(exc_info.value).lower()
     
     @patch('app.services.llm_openai.OpenAI')
     def test_zero_retries(self, mock_openai_class):

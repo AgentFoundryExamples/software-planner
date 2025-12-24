@@ -252,7 +252,13 @@ class OpenAIClient(BaseLLMClient):
                             text_parts.append(content_item['text'])
                     content = ''.join(text_parts)
                 else:
-                    content = str(output_item.content) if output_item.content else None
+                    # Handle unexpected content types gracefully
+                    if output_item.content is not None:
+                        logger.warning(
+                            "Unsupported content type in OpenAI response",
+                            extra={"content_type": type(output_item.content).__name__}
+                        )
+                    content = None
                 
                 if not content:
                     logger.error("OpenAI API returned empty content")
@@ -268,6 +274,11 @@ class OpenAIClient(BaseLLMClient):
                         total_tokens = response.usage.total_tokens
                     elif hasattr(response.usage, 'input_tokens') and hasattr(response.usage, 'output_tokens'):
                         total_tokens = response.usage.input_tokens + response.usage.output_tokens
+                    else:
+                        logger.debug(
+                            "Token usage information unavailable or in unexpected format",
+                            extra={"usage_attrs": dir(response.usage) if response.usage else None}
+                        )
                 
                 logger.info(
                     "OpenAI API call succeeded",
