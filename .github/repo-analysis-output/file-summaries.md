@@ -146,9 +146,9 @@ Total files: 36
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm openai  
-**Size:** 13.15 KB  
-**LOC:** 266  
-**TODOs/FIXMEs:** 0  
+**Size:** 13.37 KB  
+**LOC:** 274  
+**TODOs/FIXMEs:** 1  
 
 ## app/services/model_registry.py
 **Language:** Python  

@@ -221,9 +221,9 @@
       "summary": "Python module for llm openai",
       "summary_text": "Python module for llm openai",
       "metrics": {
-        "size_bytes": 13464,
-        "loc": 266,
-        "todo_count": 0
+        "size_bytes": 13693,
+        "loc": 274,
+        "todo_count": 1
       }
     },
     {
