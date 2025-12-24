@@ -236,3 +236,51 @@ class JobStore:
             Number of jobs recovered (always 0 for in-memory store).
         """
         return 0
+    
+    async def update_job(
+        self,
+        job_id: str,
+        status: Optional[JobStatus] = None,
+        result: Optional[dict] = None,
+        error: Optional[dict] = None
+    ) -> Optional[Job]:
+        """Update job fields atomically (convenience method for tests).
+        
+        This method provides a simplified interface for updating job fields
+        without going through the specific mark_* methods. It's primarily
+        intended for testing scenarios.
+        
+        Args:
+            job_id: The job identifier to update.
+            status: New status value (if provided).
+            result: New result dictionary (if provided).
+            error: New error dictionary (if provided).
+            
+        Returns:
+            Updated Job instance if found, None if job doesn't exist.
+        """
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                return None
+            
+            # Create updated job with new timestamp
+            updated_data = job.model_dump()
+            updated_data["updated_at"] = datetime.now(timezone.utc)
+            
+            if status is not None:
+                updated_data["status"] = status
+                # Update timestamps based on status
+                if status == "RUNNING" and updated_data.get("started_at") is None:
+                    updated_data["started_at"] = updated_data["updated_at"]
+                elif status in ("SUCCEEDED", "FAILED") and updated_data.get("finished_at") is None:
+                    updated_data["finished_at"] = updated_data["updated_at"]
+            
+            if result is not None:
+                updated_data["result"] = result
+            if error is not None:
+                updated_data["error"] = error
+            
+            updated_job = Job(**updated_data)
+            self._jobs[job_id] = updated_job
+            return updated_job

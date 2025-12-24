@@ -13,6 +13,7 @@
 # limitations under the License.
 """Tests for the JobStore service."""
 
+import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -28,7 +29,7 @@ class TestJobStoreBasicOperations:
     def test_create_job_generates_unique_id(self):
         """Test that create_job generates a unique job ID."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         assert job is not None
         assert job.job_id is not None
@@ -37,7 +38,7 @@ class TestJobStoreBasicOperations:
     def test_create_job_sets_pending_status(self):
         """Test that newly created jobs have pending status."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         assert job.status == "QUEUED"
     
@@ -45,7 +46,7 @@ class TestJobStoreBasicOperations:
         """Test that create_job sets created_at and updated_at."""
         store = JobStore()
         before = datetime.now(timezone.utc)
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         after = datetime.now(timezone.utc)
         
         assert before <= job.created_at <= after
@@ -55,7 +56,7 @@ class TestJobStoreBasicOperations:
     def test_create_job_initializes_result_and_error_to_none(self):
         """Test that new jobs have None for result and error."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         assert job.result is None
         assert job.error is None
@@ -63,9 +64,9 @@ class TestJobStoreBasicOperations:
     def test_get_job_retrieves_existing_job(self):
         """Test that get_job retrieves a job by ID."""
         store = JobStore()
-        created_job = store.create_job()
+        created_job = asyncio.run(store.create_job(description="Test description"))
         
-        retrieved_job = store.get_job(created_job.job_id)
+        retrieved_job = asyncio.run(store.get_job(created_job.job_id))
         
         assert retrieved_job is not None
         assert retrieved_job.job_id == created_job.job_id
@@ -74,16 +75,16 @@ class TestJobStoreBasicOperations:
     def test_get_job_returns_none_for_unknown_id(self):
         """Test that get_job returns None for non-existent job ID."""
         store = JobStore()
-        job = store.get_job("non-existent-id")
+        job = asyncio.run(store.get_job("non-existent-id"))
         
         assert job is None
     
     def test_update_job_changes_status(self):
         """Test that update_job changes the job status."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
-        updated = store.update_job(job.job_id, status="RUNNING")
+        updated = asyncio.run(store.update_job(job.job_id, status="RUNNING"))
         
         assert updated is not None
         assert updated.status == "RUNNING"
@@ -92,11 +93,11 @@ class TestJobStoreBasicOperations:
     def test_update_job_updates_timestamp(self):
         """Test that update_job updates the updated_at timestamp."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         original_updated_at = job.updated_at
         
         time.sleep(0.01)  # Ensure time difference
-        updated = store.update_job(job.job_id, status="RUNNING")
+        updated = asyncio.run(store.update_job(job.job_id, status="RUNNING"))
         
         assert updated is not None
         assert updated.updated_at > original_updated_at
@@ -104,10 +105,10 @@ class TestJobStoreBasicOperations:
     def test_update_job_sets_result(self):
         """Test that update_job can set the result field."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         result = {"specs": [{"purpose": "test"}]}
         
-        updated = store.update_job(job.job_id, result=result)
+        updated = asyncio.run(store.update_job(job.job_id, result=result))
         
         assert updated is not None
         assert updated.result == result
@@ -115,10 +116,10 @@ class TestJobStoreBasicOperations:
     def test_update_job_sets_error(self):
         """Test that update_job can set the error field."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         error = {"error": "Something failed", "type": "ValueError"}
         
-        updated = store.update_job(job.job_id, error=error)
+        updated = asyncio.run(store.update_job(job.job_id, error=error))
         
         assert updated is not None
         assert updated.error == error
@@ -126,21 +127,21 @@ class TestJobStoreBasicOperations:
     def test_update_job_returns_none_for_unknown_id(self):
         """Test that update_job returns None for non-existent job."""
         store = JobStore()
-        updated = store.update_job("non-existent-id", status="RUNNING")
+        updated = asyncio.run(store.update_job("non-existent-id", status="RUNNING"))
         
         assert updated is None
     
     def test_update_job_partial_update(self):
         """Test that update_job only updates specified fields."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         result = {"specs": []}
         
         # Update only status
-        store.update_job(job.job_id, status="RUNNING")
+        asyncio.run(store.update_job(job.job_id, status="RUNNING"))
         
         # Update only result
-        updated = store.update_job(job.job_id, result=result)
+        updated = asyncio.run(store.update_job(job.job_id, result=result))
         
         assert updated is not None
         assert updated.status == "RUNNING"  # Should remain from previous update
@@ -150,18 +151,18 @@ class TestJobStoreBasicOperations:
     def test_list_jobs_empty_store(self):
         """Test that list_jobs returns empty list for empty store."""
         store = JobStore()
-        jobs = store.list_jobs()
+        jobs = asyncio.run(store.list_jobs())
         
         assert jobs == []
     
     def test_list_jobs_returns_all_jobs(self):
         """Test that list_jobs returns all created jobs."""
         store = JobStore()
-        job1 = store.create_job()
-        job2 = store.create_job()
-        job3 = store.create_job()
+        job1 = asyncio.run(store.create_job(description="Test description"))
+        job2 = asyncio.run(store.create_job(description="Test description"))
+        job3 = asyncio.run(store.create_job(description="Test description"))
         
-        jobs = store.list_jobs()
+        jobs = asyncio.run(store.list_jobs())
         
         assert len(jobs) == 3
         job_ids = {job.job_id for job in jobs}
@@ -173,13 +174,13 @@ class TestJobStoreBasicOperations:
         """Test that list_jobs returns jobs sorted by created_at (newest first)."""
         store = JobStore()
         
-        job1 = store.create_job()
+        job1 = asyncio.run(store.create_job(description="Test description"))
         time.sleep(0.01)
-        job2 = store.create_job()
+        job2 = asyncio.run(store.create_job(description="Test description"))
         time.sleep(0.01)
-        job3 = store.create_job()
+        job3 = asyncio.run(store.create_job(description="Test description"))
         
-        jobs = store.list_jobs()
+        jobs = asyncio.run(store.list_jobs())
         
         assert len(jobs) == 3
         # Newest first
@@ -194,7 +195,7 @@ class TestJobStoreEdgeCases:
     def test_create_job_generates_unique_ids(self):
         """Test that multiple jobs get unique IDs."""
         store = JobStore()
-        jobs = [store.create_job() for _ in range(100)]
+        jobs = [asyncio.run(store.create_job(description="Test description")) for _ in range(100)]
         job_ids = [job.job_id for job in jobs]
         
         # All IDs should be unique
@@ -203,17 +204,17 @@ class TestJobStoreEdgeCases:
     def test_update_job_with_all_fields(self):
         """Test updating a job with all fields at once."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         result = {"specs": []}
         error = {"error": "test"}
         
-        updated = store.update_job(
+        updated = asyncio.run(store.update_job(
             job.job_id,
             status="FAILED",
             result=result,
             error=error
-        )
+        ))
         
         assert updated is not None
         assert updated.status == "FAILED"
@@ -223,11 +224,11 @@ class TestJobStoreEdgeCases:
     def test_update_preserves_created_at(self):
         """Test that updates don't change created_at timestamp."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         original_created_at = job.created_at
         
         time.sleep(0.01)
-        updated = store.update_job(job.job_id, status="RUNNING")
+        updated = asyncio.run(store.update_job(job.job_id, status="RUNNING"))
         
         assert updated is not None
         assert updated.created_at == original_created_at
@@ -235,12 +236,12 @@ class TestJobStoreEdgeCases:
     def test_get_job_after_update_returns_latest(self):
         """Test that get_job returns the updated version."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
-        store.update_job(job.job_id, status="RUNNING")
-        store.update_job(job.job_id, status="SUCCEEDED")
+        asyncio.run(store.update_job(job.job_id, status="RUNNING"))
+        asyncio.run(store.update_job(job.job_id, status="SUCCEEDED"))
         
-        retrieved = store.get_job(job.job_id)
+        retrieved = asyncio.run(store.get_job(job.job_id))
         
         assert retrieved is not None
         assert retrieved.status == "SUCCEEDED"
@@ -248,7 +249,7 @@ class TestJobStoreEdgeCases:
     def test_large_result_payload_stored_correctly(self):
         """Test that large result payloads are stored without mutation."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         large_result = {
             "specs": [
@@ -263,7 +264,7 @@ class TestJobStoreEdgeCases:
             ]
         }
         
-        updated = store.update_job(job.job_id, result=large_result)
+        updated = asyncio.run(store.update_job(job.job_id, result=large_result))
         
         assert updated is not None
         assert updated.result == large_result
@@ -280,7 +281,7 @@ class TestJobStoreThreadSafety:
         jobs_per_thread = 10
         
         def create_jobs():
-            return [store.create_job() for _ in range(jobs_per_thread)]
+            return [asyncio.run(store.create_job(description="Test description")) for _ in range(jobs_per_thread)]
         
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             futures = [executor.submit(create_jobs) for _ in range(num_threads)]
@@ -297,34 +298,34 @@ class TestJobStoreThreadSafety:
     def test_concurrent_updates_are_safe(self):
         """Test that concurrent updates don't corrupt job state."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         num_threads = 10
         
         def update_to_running():
-            store.update_job(job.job_id, status="RUNNING")
+            asyncio.run(store.update_job(job.job_id, status="RUNNING"))
         
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             futures = [executor.submit(update_to_running) for _ in range(num_threads)]
             [f.result() for f in futures]
         
         # Job should still be in valid state
-        retrieved = store.get_job(job.job_id)
+        retrieved = asyncio.run(store.get_job(job.job_id))
         assert retrieved is not None
         assert retrieved.status == "RUNNING"
     
     def test_concurrent_read_and_write(self):
         """Test that concurrent reads and writes don't cause errors."""
         store = JobStore()
-        jobs = [store.create_job() for _ in range(5)]
+        jobs = [asyncio.run(store.create_job(description="Test description")) for _ in range(5)]
         
         def read_jobs():
             for job in jobs:
-                store.get_job(job.job_id)
-            store.list_jobs()
+                asyncio.run(store.get_job(job.job_id))
+            asyncio.run(store.list_jobs())
         
         def write_jobs():
             for job in jobs:
-                store.update_job(job.job_id, status="RUNNING")
+                asyncio.run(store.update_job(job.job_id, status="RUNNING"))
         
         with ThreadPoolExecutor(max_workers=10) as executor:
             read_futures = [executor.submit(read_jobs) for _ in range(5)]
@@ -334,111 +335,114 @@ class TestJobStoreThreadSafety:
             [f.result() for f in read_futures + write_futures]
         
         # All jobs should still exist and be in valid state
-        assert len(store.list_jobs()) == 5
+        assert len(asyncio.run(store.list_jobs())) == 5
         for job in jobs:
-            retrieved = store.get_job(job.job_id)
+            retrieved = asyncio.run(store.get_job(job.job_id))
             assert retrieved is not None
     
     def test_no_timestamp_race_condition(self):
         """Test that concurrent updates don't create timestamp inconsistencies."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         num_updates = 20
         
         def update_job():
             time.sleep(0.001)  # Small delay to increase chance of race
-            store.update_job(job.job_id, status="RUNNING")
+            asyncio.run(store.update_job(job.job_id, status="RUNNING"))
         
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = [executor.submit(update_job) for _ in range(num_updates)]
             [f.result() for f in futures]
         
         # Check that updated_at is valid and after created_at
-        retrieved = store.get_job(job.job_id)
+        retrieved = asyncio.run(store.get_job(job.job_id))
         assert retrieved is not None
         assert retrieved.updated_at >= retrieved.created_at
 
 
 class TestJobStoreMetadata:
-    """Test cases for model and system_prompt_hash metadata in JobStore."""
+    """Test cases for model and system_prompt metadata in JobStore."""
     
     def test_create_job_with_model_metadata(self):
         """Test creating a job with model metadata."""
         store = JobStore()
-        job = store.create_job(model="gpt-4-turbo")
+        job = asyncio.run(store.create_job(description="Test description", model="gpt-4-turbo"))
         
         assert job is not None
         assert job.model == "gpt-4-turbo"
-        assert job.system_prompt_hash is None
+        assert job.system_prompt is None
     
-    def test_create_job_with_system_prompt_hash_metadata(self):
-        """Test creating a job with system_prompt_hash metadata."""
+    def test_create_job_with_system_prompt_metadata(self):
+        """Test creating a job with system_prompt metadata."""
         store = JobStore()
-        job = store.create_job(system_prompt_hash="abc123def456")
+        job = asyncio.run(store.create_job(description="Test description", system_prompt="abc123def456"))
         
         assert job is not None
         assert job.model is None
-        assert job.system_prompt_hash == "abc123def456"
+        assert job.system_prompt == "abc123def456"
     
     def test_create_job_with_both_metadata_fields(self):
         """Test creating a job with both metadata fields."""
         store = JobStore()
-        job = store.create_job(
+        job = asyncio.run(store.create_job(
+            description="Test description",
             model="claude-opus",
-            system_prompt_hash="xyz789"
-        )
+            system_prompt="xyz789"
+        ))
         
         assert job is not None
         assert job.model == "claude-opus"
-        assert job.system_prompt_hash == "xyz789"
+        assert job.system_prompt == "xyz789"
     
     def test_create_job_without_metadata(self):
         """Test creating a job without metadata has None values."""
         store = JobStore()
-        job = store.create_job()
+        job = asyncio.run(store.create_job(description="Test description"))
         
         assert job is not None
         assert job.model is None
-        assert job.system_prompt_hash is None
+        assert job.system_prompt is None
     
     def test_get_job_preserves_metadata(self):
         """Test that retrieving a job preserves metadata."""
         store = JobStore()
-        job = store.create_job(
+        job = asyncio.run(store.create_job(
+            description="Test description",
             model="gpt-4-turbo",
-            system_prompt_hash="hash123"
-        )
+            system_prompt="hash123"
+        ))
         
-        retrieved = store.get_job(job.job_id)
+        retrieved = asyncio.run(store.get_job(job.job_id))
         
         assert retrieved is not None
         assert retrieved.model == "gpt-4-turbo"
-        assert retrieved.system_prompt_hash == "hash123"
+        assert retrieved.system_prompt == "hash123"
     
     def test_update_job_preserves_metadata(self):
         """Test that updating a job preserves metadata."""
         store = JobStore()
-        job = store.create_job(
+        job = asyncio.run(store.create_job(
+            description="Test description",
             model="gpt-4-turbo",
-            system_prompt_hash="hash123"
-        )
+            system_prompt="hash123"
+        ))
         
         # Update status
-        updated = store.update_job(job.job_id, status="RUNNING")
+        updated = asyncio.run(store.update_job(job.job_id, status="RUNNING"))
         
         assert updated is not None
         assert updated.status == "RUNNING"
         assert updated.model == "gpt-4-turbo"
-        assert updated.system_prompt_hash == "hash123"
+        assert updated.system_prompt == "hash123"
     
     def test_list_jobs_includes_metadata(self):
         """Test that listing jobs includes metadata."""
         store = JobStore()
-        job1 = store.create_job(model="gpt-4-turbo")
-        job2 = store.create_job(system_prompt_hash="hash123")
-        job3 = store.create_job()  # No metadata
+        job1 = asyncio.run(store.create_job(description="Test description", model="gpt-4-turbo"))
+        job2 = asyncio.run(store.create_job(description="Test description", system_prompt="hash123"))
+        job3 = asyncio.run(store.create_job(description="Test description"))  # No metadata
         
-        jobs = store.list_jobs()
+        jobs = asyncio.run(store.list_jobs())
         
         assert len(jobs) == 3
         
@@ -446,16 +450,16 @@ class TestJobStoreMetadata:
         jobs_by_id = {job.job_id: job for job in jobs}
         
         assert jobs_by_id[job1.job_id].model == "gpt-4-turbo"
-        assert jobs_by_id[job2.job_id].system_prompt_hash == "hash123"
+        assert jobs_by_id[job2.job_id].system_prompt == "hash123"
         assert jobs_by_id[job3.job_id].model is None
-        assert jobs_by_id[job3.job_id].system_prompt_hash is None
+        assert jobs_by_id[job3.job_id].system_prompt is None
     
     def test_concurrent_creation_with_different_metadata(self):
         """Test that concurrent job creation with different metadata is safe."""
         store = JobStore()
         
         def create_with_model(model_name):
-            return store.create_job(model=model_name)
+            return asyncio.run(store.create_job(description="Test description", model=model_name))
         
         models = [f"model-{i}" for i in range(10)]
         
@@ -470,33 +474,35 @@ class TestJobStoreMetadata:
     def test_metadata_with_succeeded_job(self):
         """Test that metadata is preserved when job succeeds."""
         store = JobStore()
-        job = store.create_job(
+        job = asyncio.run(store.create_job(
+            description="Test description",
             model="gpt-4-turbo",
-            system_prompt_hash="hash123"
-        )
+            system_prompt="hash123"
+        ))
         
         result = {"specs": [{"purpose": "Test"}]}
-        updated = store.update_job(job.job_id, status="SUCCEEDED", result=result)
+        updated = asyncio.run(store.update_job(job.job_id, status="SUCCEEDED", result=result))
         
         assert updated is not None
         assert updated.status == "SUCCEEDED"
         assert updated.result == result
         assert updated.model == "gpt-4-turbo"
-        assert updated.system_prompt_hash == "hash123"
+        assert updated.system_prompt == "hash123"
     
     def test_metadata_with_failed_job(self):
         """Test that metadata is preserved when job fails."""
         store = JobStore()
-        job = store.create_job(
+        job = asyncio.run(store.create_job(
+            description="Test description",
             model="claude-opus",
-            system_prompt_hash="hash456"
-        )
+            system_prompt="hash456"
+        ))
         
         error = {"error": "Test error", "type": "ValueError"}
-        updated = store.update_job(job.job_id, status="FAILED", error=error)
+        updated = asyncio.run(store.update_job(job.job_id, status="FAILED", error=error))
         
         assert updated is not None
         assert updated.status == "FAILED"
         assert updated.error == error
         assert updated.model == "claude-opus"
-        assert updated.system_prompt_hash == "hash456"
+        assert updated.system_prompt == "hash456"
