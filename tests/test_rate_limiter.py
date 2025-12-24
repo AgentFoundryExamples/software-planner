@@ -502,3 +502,263 @@ class TestRateLimiterIntegration:
             request_id="post-wait"
         )
         assert allowed is True
+
+
+class TestRateLimiterRapidRequests:
+    """Test cases for rapid repeated requests and fingerprint handling."""
+    
+    def test_rapid_repeated_requests_from_same_fingerprint(self):
+        """Test that rapid requests from same fingerprint are properly limited."""
+        limiter = RateLimiter(
+            window_seconds=60,
+            max_requests=3,
+            enabled=True
+        )
+        
+        # Make rapid requests (no sleep between)
+        results = []
+        for i in range(10):
+            allowed, retry_after = limiter.check_rate_limit(
+                api_key="rapid-key",
+                request_id=f"rapid-{i}"
+            )
+            results.append(allowed)
+        
+        # Exactly 3 should be allowed, rest denied
+        assert sum(results) == 3
+        assert len([r for r in results if not r]) == 7
+    
+    def test_fingerprint_isolation_api_key_vs_ip(self):
+        """Test that API key and IP fingerprints are isolated."""
+        limiter = RateLimiter(
+            window_seconds=60,
+            max_requests=2,
+            enabled=True
+        )
+        
+        # Exhaust quota for API key
+        for i in range(2):
+            allowed, _ = limiter.check_rate_limit(
+                api_key="test-key",
+                client_ip="192.168.1.100",
+                request_id=f"key-{i}"
+            )
+            assert allowed is True
+        
+        # API key quota exhausted
+        allowed, _ = limiter.check_rate_limit(
+            api_key="test-key",
+            client_ip="192.168.1.100",
+            request_id="key-fail"
+        )
+        assert allowed is False
+        
+        # Same IP but no API key should have independent quota
+        allowed, _ = limiter.check_rate_limit(
+            api_key=None,
+            client_ip="192.168.1.100",
+            request_id="ip-1"
+        )
+        assert allowed is True
+    
+    def test_state_isolation_between_different_fingerprints(self):
+        """Test that state is properly isolated between different clients."""
+        limiter = RateLimiter(
+            window_seconds=60,
+            max_requests=2,
+            enabled=True
+        )
+        
+        # Client 1 exhausts quota
+        for i in range(2):
+            allowed, _ = limiter.check_rate_limit(
+                api_key="client1-key",
+                request_id=f"c1-{i}"
+            )
+            assert allowed is True
+        
+        allowed, _ = limiter.check_rate_limit(
+            api_key="client1-key",
+            request_id="c1-fail"
+        )
+        assert allowed is False
+        
+        # Client 2 should have full quota
+        for i in range(2):
+            allowed, _ = limiter.check_rate_limit(
+                api_key="client2-key",
+                request_id=f"c2-{i}"
+            )
+            assert allowed is True
+        
+        # Client 3 with different IP should have full quota
+        for i in range(2):
+            allowed, _ = limiter.check_rate_limit(
+                client_ip="10.0.0.1",
+                request_id=f"c3-{i}"
+            )
+            assert allowed is True
+
+
+class TestRateLimiterStateLeakage:
+    """Test cases to verify no state leakage between tests."""
+    
+    def test_limiter_state_does_not_leak_between_instances(self):
+        """Test that creating new limiter instances have independent state."""
+        limiter1 = RateLimiter(
+            window_seconds=60,
+            max_requests=2,
+            enabled=True
+        )
+        
+        # Exhaust limiter1 quota
+        for i in range(2):
+            limiter1.check_rate_limit(api_key="test-key", request_id=f"req-{i}")
+        
+        allowed, _ = limiter1.check_rate_limit(api_key="test-key", request_id="fail")
+        assert allowed is False
+        
+        # Create new limiter - should have fresh state
+        limiter2 = RateLimiter(
+            window_seconds=60,
+            max_requests=2,
+            enabled=True
+        )
+        
+        # limiter2 should allow requests even though limiter1 is exhausted
+        allowed, _ = limiter2.check_rate_limit(api_key="test-key", request_id="new")
+        assert allowed is True
+    
+    def test_metrics_isolated_per_limiter_instance(self):
+        """Test that metrics are isolated per limiter instance."""
+        limiter1 = RateLimiter(
+            window_seconds=60,
+            max_requests=2,
+            enabled=True
+        )
+        
+        limiter2 = RateLimiter(
+            window_seconds=60,
+            max_requests=2,
+            enabled=True
+        )
+        
+        # Make requests to limiter1
+        limiter1.check_rate_limit(api_key="key1", request_id="req1")
+        limiter1.check_rate_limit(api_key="key1", request_id="req2")
+        limiter1.check_rate_limit(api_key="key1", request_id="req3")  # Denied
+        
+        metrics1 = limiter1.get_metrics()
+        assert metrics1["allow_count"] == 2
+        assert metrics1["deny_count"] == 1
+        
+        # Limiter2 should have clean metrics
+        metrics2 = limiter2.get_metrics()
+        assert metrics2["allow_count"] == 0
+        assert metrics2["deny_count"] == 0
+    
+    def test_bucket_cleanup_does_not_affect_other_keys(self):
+        """Test that modifying buckets for one key doesn't affect others."""
+        limiter = RateLimiter(
+            window_seconds=60,
+            max_requests=5,
+            enabled=True
+        )
+        
+        # Create buckets for multiple keys
+        limiter.check_rate_limit(api_key="key1", request_id="k1-1")
+        limiter.check_rate_limit(api_key="key2", request_id="k2-1")
+        limiter.check_rate_limit(api_key="key3", request_id="k3-1")
+        
+        # Exhaust key1
+        for i in range(5):
+            limiter.check_rate_limit(api_key="key1", request_id=f"k1-exhaust-{i}")
+        
+        # key1 should be denied
+        allowed, _ = limiter.check_rate_limit(api_key="key1", request_id="k1-fail")
+        assert allowed is False
+        
+        # key2 and key3 should still work
+        allowed, _ = limiter.check_rate_limit(api_key="key2", request_id="k2-2")
+        assert allowed is True
+        
+        allowed, _ = limiter.check_rate_limit(api_key="key3", request_id="k3-2")
+        assert allowed is True
+
+
+class TestRateLimiterConcurrentSafety:
+    """Test cases for thread safety with concurrent access."""
+    
+    def test_concurrent_access_no_race_conditions(self):
+        """Test that concurrent access doesn't cause race conditions."""
+        limiter = RateLimiter(
+            window_seconds=60,
+            max_requests=20,  # Higher limit for this test
+            enabled=True
+        )
+        
+        results = []
+        lock = threading.Lock()
+        
+        def make_request(request_id):
+            allowed, _ = limiter.check_rate_limit(
+                api_key="concurrent-key",
+                request_id=request_id
+            )
+            with lock:
+                results.append(allowed)
+        
+        # Create 25 threads (5 should be denied)
+        threads = []
+        for i in range(25):
+            thread = threading.Thread(
+                target=make_request,
+                args=(f"concurrent-req-{i}",)
+            )
+            threads.append(thread)
+            thread.start()
+        
+        for thread in threads:
+            thread.join()
+        
+        # Should have exactly 20 allowed and 5 denied
+        assert sum(results) == 20
+        assert len([r for r in results if not r]) == 5
+    
+    def test_concurrent_different_keys_no_interference(self):
+        """Test that concurrent requests with different keys don't interfere."""
+        limiter = RateLimiter(
+            window_seconds=60,
+            max_requests=3,
+            enabled=True
+        )
+        
+        results = {"key1": [], "key2": [], "key3": []}
+        lock = threading.Lock()
+        
+        def make_requests_for_key(key_name, count):
+            for i in range(count):
+                allowed, _ = limiter.check_rate_limit(
+                    api_key=key_name,
+                    request_id=f"{key_name}-{i}"
+                )
+                with lock:
+                    results[key_name].append(allowed)
+        
+        # Create threads for 3 different keys
+        threads = [
+            threading.Thread(target=make_requests_for_key, args=("key1", 5)),
+            threading.Thread(target=make_requests_for_key, args=("key2", 5)),
+            threading.Thread(target=make_requests_for_key, args=("key3", 5)),
+        ]
+        
+        for thread in threads:
+            thread.start()
+        
+        for thread in threads:
+            thread.join()
+        
+        # Each key should have 3 allowed, 2 denied
+        for key_name in ["key1", "key2", "key3"]:
+            assert sum(results[key_name]) == 3, f"{key_name} should have 3 allowed"
+            assert len([r for r in results[key_name] if not r]) == 2, f"{key_name} should have 2 denied"

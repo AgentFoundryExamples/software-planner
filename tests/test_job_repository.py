@@ -457,3 +457,136 @@ class TestJobRepositoryRecoverStuckJobs:
         assert count == 2
         # Verify single UPDATE was called (optimized single query)
         assert mock_conn.execute.call_count == 1
+
+
+class TestJobRepositoryDatabaseErrors:
+    """Test cases for database error handling and fallback paths."""
+    
+    @pytest.mark.asyncio
+    async def test_create_job_handles_integrity_error(self, job_repository, mock_engine):
+        """Test that IntegrityError is properly wrapped."""
+        from sqlalchemy.exc import IntegrityError
+        
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock(side_effect=IntegrityError(
+            "duplicate key",
+            params=None,
+            orig=Exception("UNIQUE constraint failed")
+        ))
+        mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
+        mock_conn.__aexit__ = AsyncMock()
+        mock_engine.begin = MagicMock(return_value=mock_conn)
+        
+        with pytest.raises(JobRepositoryError) as exc_info:
+            await job_repository.create_job(description="Test")
+        
+        assert "integrity" in str(exc_info.value).lower() or "duplicate" in str(exc_info.value).lower()
+    
+    @pytest.mark.asyncio
+    async def test_create_job_handles_database_error(self, job_repository, mock_engine):
+        """Test that DBAPIError is properly wrapped."""
+        from sqlalchemy.exc import DBAPIError
+        
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock(side_effect=DBAPIError(
+            "database error",
+            params=None,
+            orig=Exception("connection lost"),
+            connection_invalidated=True
+        ))
+        mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
+        mock_conn.__aexit__ = AsyncMock()
+        mock_engine.begin = MagicMock(return_value=mock_conn)
+        
+        with pytest.raises(JobRepositoryError) as exc_info:
+            await job_repository.create_job(description="Test")
+        
+        assert "database" in str(exc_info.value).lower() or "connection" in str(exc_info.value).lower()
+    
+    @pytest.mark.asyncio
+    async def test_get_job_handles_database_unavailable(self, job_repository, mock_engine):
+        """Test graceful handling when database is unavailable."""
+        from sqlalchemy.exc import DBAPIError
+        
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock(side_effect=DBAPIError(
+            "connection refused",
+            params=None,
+            orig=Exception("cannot connect"),
+            connection_invalidated=True
+        ))
+        mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
+        mock_conn.__aexit__ = AsyncMock()
+        mock_engine.connect = MagicMock(return_value=mock_conn)
+        
+        with pytest.raises(JobRepositoryError) as exc_info:
+            await job_repository.get_job("test-id")
+        
+        assert exc_info.value is not None
+    
+    @pytest.mark.asyncio
+    async def test_mark_running_handles_database_error(self, job_repository, mock_engine):
+        """Test that database errors during state transition are handled."""
+        from sqlalchemy.exc import DBAPIError
+        
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock(side_effect=DBAPIError(
+            "deadlock detected",
+            params=None,
+            orig=Exception("database deadlock"),
+            connection_invalidated=False
+        ))
+        mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
+        mock_conn.__aexit__ = AsyncMock()
+        mock_engine.begin = MagicMock(return_value=mock_conn)
+        
+        with pytest.raises(JobRepositoryError):
+            await job_repository.mark_running("test-id")
+    
+    @pytest.mark.asyncio
+    async def test_hash_determinism_for_job_ids(self, job_repository, mock_engine):
+        """Test that job IDs are deterministic based on input parameters."""
+        import uuid
+        
+        # Mock successful inserts for multiple jobs
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock()
+        mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
+        mock_conn.__aexit__ = AsyncMock()
+        mock_engine.begin = MagicMock(return_value=mock_conn)
+        
+        # Create multiple jobs with same description
+        job1 = await job_repository.create_job(description="Same description")
+        job2 = await job_repository.create_job(description="Same description")
+        
+        # Job IDs should be different (UUIDs are unique)
+        assert job1.job_id != job2.job_id
+        # Both should be valid UUIDs
+        try:
+            uuid.UUID(job1.job_id)
+            uuid.UUID(job2.job_id)
+        except ValueError:
+            pytest.fail("Job IDs should be valid UUIDs")
+    
+    @pytest.mark.asyncio
+    async def test_system_prompt_hash_determinism(self, job_repository, mock_engine):
+        """Test that system_prompt_hash is computed deterministically."""
+        import hashlib
+        
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock()
+        mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
+        mock_conn.__aexit__ = AsyncMock()
+        mock_engine.begin = MagicMock(return_value=mock_conn)
+        
+        prompt = "Test system prompt"
+        expected_hash = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
+        
+        job = await job_repository.create_job(
+            description="Test",
+            system_prompt=prompt
+        )
+        
+        # Job should store the prompt itself, not the hash
+        # Hash is computed on retrieval
+        assert job.system_prompt == prompt

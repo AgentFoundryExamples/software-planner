@@ -310,3 +310,210 @@ class TestReadEndpointsNoAuth:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
+
+
+class TestAuthenticationTokenValidation:
+    """Test cases for token/signature validation."""
+    
+    def test_api_key_constant_time_comparison(self, client_with_api_keys):
+        """Test that API key comparison uses constant-time algorithm to prevent timing attacks."""
+        import time
+        
+        # Make requests with valid and invalid keys, measure time
+        # Note: This is a basic test - real timing attacks require many iterations
+        valid_key = "test-key-1234567890"
+        invalid_key_similar = "test-key-1234567891"  # Only last char different
+        invalid_key_different = "completely-different"
+        
+        # Warmup
+        for _ in range(3):
+            client_with_api_keys.post(
+                "/api/v1/plan",
+                json={"description": "Test"},
+                headers={"X-API-Key": valid_key}
+            )
+        
+        # Test with similar invalid key
+        start = time.perf_counter()
+        response1 = client_with_api_keys.post(
+            "/api/v1/plan",
+            json={"description": "Test"},
+            headers={"X-API-Key": invalid_key_similar}
+        )
+        time1 = time.perf_counter() - start
+        
+        # Test with very different invalid key
+        start = time.perf_counter()
+        response2 = client_with_api_keys.post(
+            "/api/v1/plan",
+            json={"description": "Test"},
+            headers={"X-API-Key": invalid_key_different}
+        )
+        time2 = time.perf_counter() - start
+        
+        # Both should fail with 403
+        assert response1.status_code == 403
+        assert response2.status_code == 403
+        
+        # Timing should be similar (within reasonable variance)
+        # This is a weak test but provides basic coverage
+        # Real constant-time comparison is handled by hmac.compare_digest
+        assert abs(time1 - time2) < 0.1  # Within 100ms
+    
+    def test_multiple_api_keys_validated_independently(self, client_with_api_keys):
+        """Test that multiple configured API keys are validated independently."""
+        # Both keys should work
+        response1 = client_with_api_keys.post(
+            "/api/v1/plan",
+            json={"description": "Test"},
+            headers={"X-API-Key": "test-key-1234567890"}
+        )
+        assert response1.status_code == 200
+        
+        response2 = client_with_api_keys.post(
+            "/api/v1/plan",
+            json={"description": "Test"},
+            headers={"X-API-Key": "test-key-0987654321"}
+        )
+        assert response2.status_code == 200
+    
+    def test_api_key_not_logged_in_errors(self, client_with_api_keys):
+        """Test that API keys are never exposed in error responses."""
+        response = client_with_api_keys.post(
+            "/api/v1/plan",
+            json={"description": "Test"},
+            headers={"X-API-Key": "secret-key-12345678"}
+        )
+        
+        # Should fail
+        assert response.status_code == 403
+        
+        # Response should not contain the API key
+        response_text = response.text
+        assert "secret-key-12345678" not in response_text
+        assert "secret-key" not in response_text
+
+
+class TestAuthenticationQuotaExceedance:
+    """Test cases for quota/rate limit exceedance behavior."""
+    
+    def test_rate_limit_per_api_key_quota(self):
+        """Test that rate limiting respects per-API-key quotas."""
+        from app.services.rate_limiter import RateLimiter
+        from app.core.config import Settings
+        from app.main import get_app
+        from unittest.mock import patch, Mock
+        
+        # Create settings with rate limiting enabled
+        test_settings = Settings(
+            planner_api_keys=["quota-key-1234567890"],
+            planner_api_keys_required=True,
+            planner_rate_limit_max_requests=2,  # Very low for testing
+            planner_rate_limit_window_seconds=60,
+            allowed_origins=["*"],
+            cors_wildcard_enabled=True
+        )
+        
+        mock_llm = Mock()
+        mock_llm.generate_specs.return_value = {
+            "specs": [{
+                "purpose": "Test",
+                "vision": "Vision",
+                "must": [],
+                "dont": [],
+                "nice": []
+            }]
+        }
+        
+        with patch('app.core.config.settings', test_settings):
+            with patch('app.api.dependencies.settings', test_settings):
+                with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm):
+                    # Reset rate limiter to use new settings
+                    from app.services import store_singleton
+                    store_singleton._rate_limiter = None
+                    
+                    app = get_app()
+                    from fastapi.testclient import TestClient
+                    client = TestClient(app)
+                    
+                    # First 2 requests should succeed
+                    for i in range(2):
+                        response = client.post(
+                            "/api/v1/plan",
+                            json={"description": "Test"},
+                            headers={"X-API-Key": "quota-key-1234567890"}
+                        )
+                        assert response.status_code == 200, f"Request {i+1} failed"
+                    
+                    # 3rd request should be rate limited
+                    response = client.post(
+                        "/api/v1/plan",
+                        json={"description": "Test"},
+                        headers={"X-API-Key": "quota-key-1234567890"}
+                    )
+                    assert response.status_code == 429
+                    
+                    # Should have Retry-After header
+                    assert "retry-after" in response.headers
+    
+    def test_different_keys_have_independent_quotas(self):
+        """Test that different API keys have independent rate limit quotas."""
+        from app.services.rate_limiter import RateLimiter
+        from app.core.config import Settings
+        from app.main import get_app
+        from unittest.mock import patch, Mock
+        
+        test_settings = Settings(
+            planner_api_keys=["key1-1234567890123456", "key2-1234567890123456"],
+            planner_api_keys_required=True,
+            planner_rate_limit_max_requests=2,
+            planner_rate_limit_window_seconds=60,
+            allowed_origins=["*"],
+            cors_wildcard_enabled=True
+        )
+        
+        mock_llm = Mock()
+        mock_llm.generate_specs.return_value = {
+            "specs": [{
+                "purpose": "Test",
+                "vision": "Vision",
+                "must": [],
+                "dont": [],
+                "nice": []
+            }]
+        }
+        
+        with patch('app.core.config.settings', test_settings):
+            with patch('app.api.dependencies.settings', test_settings):
+                with patch('app.services.store_singleton.get_llm_client', return_value=mock_llm):
+                    from app.services import store_singleton
+                    store_singleton._rate_limiter = None
+                    
+                    app = get_app()
+                    from fastapi.testclient import TestClient
+                    client = TestClient(app)
+                    
+                    # Key1 exhausts its quota
+                    for i in range(2):
+                        response = client.post(
+                            "/api/v1/plan",
+                            json={"description": "Test"},
+                            headers={"X-API-Key": "key1-1234567890123456"}
+                        )
+                        assert response.status_code == 200
+                    
+                    # Key1 is rate limited
+                    response = client.post(
+                        "/api/v1/plan",
+                        json={"description": "Test"},
+                        headers={"X-API-Key": "key1-1234567890123456"}
+                    )
+                    assert response.status_code == 429
+                    
+                    # Key2 should still work
+                    response = client.post(
+                        "/api/v1/plan",
+                        json={"description": "Test"},
+                        headers={"X-API-Key": "key2-1234567890123456"}
+                    )
+                    assert response.status_code == 200
