@@ -23,9 +23,11 @@ from app.core.config import settings
 from app.models.job import Job
 from app.models.request import PlanRequest
 from app.models.response import PlanResponse
+from app.models.error import create_error_response, ErrorCode
 from app.services.planner import generate_plan
 from app.services.job_repository import JobRepository
 from app.services.store_singleton import get_job_store
+from app.utils.sanitization import sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 
@@ -479,6 +481,15 @@ def _background_planner_worker(
         system_prompt: Optional custom system prompt to use.
     """
     try:
+        # Log with sanitized description
+        logger.info(
+            f"Background planner worker starting for job {job_id}",
+            extra={
+                "job_id": job_id,
+                "description_preview": sanitize_for_logging(description, max_length=100)
+            }
+        )
+        
         # Execute planner with job tracking and optional overrides
         # The generate_plan function will update status to "RUNNING" and then "SUCCEEDED"
         generate_plan(
@@ -491,11 +502,20 @@ def _background_planner_worker(
     except Exception as e:
         # Capture any exception and set failed status
         # Don't leak stack traces - only store sanitized error info
-        logger.error(f"Background task for job {job_id} failed: {e}", exc_info=True)
+        logger.error(
+            f"Background task for job {job_id} failed: {type(e).__name__}",
+            extra={
+                "job_id": job_id,
+                "error_type": type(e).__name__,
+                "error_message": str(e)[:200]  # Truncate error message
+            },
+            exc_info=True
+        )
         try:
             import asyncio
+            # Create sanitized error dict without stack trace
             error_dict = {
-                "error": str(e),
+                "error": str(e)[:500],  # Truncate to avoid huge error payloads
                 "type": type(e).__name__
             }
             asyncio.run(job_repository.mark_failed(job_id, error_dict))
@@ -504,8 +524,13 @@ def _background_planner_worker(
             # to avoid masking the original exception and losing all trace of the error.
             logger.critical(
                 f"CRITICAL: Failed to update job {job_id} to 'FAILED' status "
-                f"after planner error. Original error: {e}. "
-                f"Update error: {update_exc}",
+                f"after planner error. Original error: {type(e).__name__}. "
+                f"Update error: {type(update_exc).__name__}",
+                extra={
+                    "job_id": job_id,
+                    "original_error": type(e).__name__,
+                    "update_error": type(update_exc).__name__
+                },
                 exc_info=True
             )
 

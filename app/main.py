@@ -23,6 +23,7 @@ import asyncio
 from app.api.routes import router as plan_router
 from app.core.config import settings
 from app.middleware import RequestIDMiddleware
+from app.models.error import create_error_response, create_validation_error, ErrorCode
 from app.services.store_singleton import get_job_store
 import logging
 
@@ -64,29 +65,61 @@ def create_app() -> FastAPI:
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         """Handle HTTP exceptions with consistent JSON responses."""
+        # Get request ID from middleware
+        request_id = getattr(request.state, 'request_id', None)
+        
+        # Map status code to error code
+        if exc.status_code == 401:
+            code = ErrorCode.MISSING_AUTH
+        elif exc.status_code == 403:
+            code = ErrorCode.INVALID_AUTH
+        elif exc.status_code == 404:
+            code = ErrorCode.NOT_FOUND
+        elif exc.status_code == 429:
+            code = ErrorCode.RATE_LIMIT_EXCEEDED
+        elif exc.status_code >= 500:
+            code = ErrorCode.INTERNAL_ERROR
+        else:
+            code = ErrorCode.VALIDATION_ERROR
+        
+        error_response = create_error_response(
+            code=code,
+            message=exc.detail,
+            request_id=request_id
+        )
+        
         return JSONResponse(
             status_code=exc.status_code,
-            content={
-                "error": exc.detail,
-                "status_code": exc.status_code,
-            },
+            content=error_response,
         )
     
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         """Handle request validation errors with detailed information."""
+        # Get request ID from middleware
+        request_id = getattr(request.state, 'request_id', None)
+        
         # Check if any error is a ValueError (custom validation)
         # Return 400 for custom validation errors, 422 for schema/type errors
         errors = exc.errors()
         
         # Clean error details to ensure JSON serializability
         cleaned_errors = []
+        is_custom_validation = False
+        
         for err in errors:
+            error_type = err.get("type", "")
+            
+            # Check if this is a custom validation error (ValueError from field_validator)
+            if error_type == "value_error":
+                is_custom_validation = True
+            
             cleaned_err = {
                 "loc": err.get("loc", []),
                 "msg": err.get("msg", ""),
-                "type": err.get("type", ""),
+                "type": error_type,
             }
+            
             # Only add input if it's JSON serializable (and not too large)
             input_val = err.get("input")
             if input_val is not None and isinstance(input_val, (str, int, float, bool, type(None))):
@@ -94,33 +127,72 @@ def create_app() -> FastAPI:
                     cleaned_err["input"] = input_val
                 elif not isinstance(input_val, str):
                     cleaned_err["input"] = input_val
+            
             cleaned_errors.append(cleaned_err)
         
-        is_custom_validation = any(
-            err.get("type") == "value_error" for err in errors
-        )
+        # Determine error code based on validation type
+        if is_custom_validation:
+            # Check specific error messages to assign specific codes
+            first_error_msg = errors[0].get("msg", "").lower()
+            
+            if "exceeds maximum length" in first_error_msg or "too large" in first_error_msg:
+                code = ErrorCode.PAYLOAD_TOO_LARGE
+            elif "control character" in first_error_msg:
+                code = ErrorCode.INVALID_DESCRIPTION
+            elif "empty" in first_error_msg or "whitespace" in first_error_msg:
+                code = ErrorCode.INVALID_DESCRIPTION
+            else:
+                code = ErrorCode.VALIDATION_ERROR
+        else:
+            # Schema/type errors
+            if any("missing" in err.get("type", "") for err in errors):
+                code = ErrorCode.MISSING_FIELD
+            elif any("type" in err.get("type", "") for err in errors):
+                code = ErrorCode.INVALID_TYPE
+            else:
+                code = ErrorCode.MALFORMED_REQUEST
         
         status_code = status.HTTP_400_BAD_REQUEST if is_custom_validation else status.HTTP_422_UNPROCESSABLE_ENTITY
         
+        error_response = create_validation_error(
+            message="Validation error",
+            validation_errors=cleaned_errors,
+            request_id=request_id
+        )
+        
         return JSONResponse(
             status_code=status_code,
-            content={
-                "error": "Validation error",
-                "status_code": status_code,
-                "details": cleaned_errors,
-            },
+            content=error_response,
         )
     
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
         """Handle unexpected exceptions with generic error response."""
+        # Get request ID from middleware
+        request_id = getattr(request.state, 'request_id', None)
+        
+        # Log the error with request ID for debugging
+        logger.error(
+            f"Unhandled exception: {exc}",
+            extra={
+                "request_id": request_id,
+                "error_type": type(exc).__name__,
+                "path": request.url.path if hasattr(request, 'url') else None
+            },
+            exc_info=True
+        )
+        
+        error_response = create_error_response(
+            code=ErrorCode.INTERNAL_ERROR,
+            message="Internal server error",
+            request_id=request_id
+        )
+        
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
-                "error": "Internal server error",
-                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-            },
+            content=error_response,
         )
+
     
     # Health check endpoint
     @app.get("/health")
