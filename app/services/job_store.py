@@ -39,16 +39,23 @@ class JobStore:
         self._jobs: Dict[str, Job] = {}
         self._lock = Lock()
     
-    def create_job(self, model: Optional[str] = None, system_prompt_hash: Optional[str] = None, max_retries: int = 10) -> Job:
-        """Create a new job with unique ID and pending status.
+    async def create_job(
+        self,
+        description: str,
+        model: Optional[str] = None,
+        system_prompt: Optional[str] = None,
+        max_retries: int = 10
+    ) -> Job:
+        """Create a new job with unique ID and QUEUED status.
         
         Generates a unique job_id, initializes timestamps, and stores
-        the job with 'pending' status. Retries UUID generation if
+        the job with 'QUEUED' status. Retries UUID generation if
         duplicates are detected (highly unlikely but handles the edge case).
         
         Args:
+            description: Project description for planning.
             model: Optional logical model name for this job.
-            system_prompt_hash: Optional hash of the system prompt used.
+            system_prompt: Optional system prompt used for this job.
             max_retries: Maximum number of attempts to generate unique UUID.
             
         Returns:
@@ -65,13 +72,16 @@ class JobStore:
                 if job_id not in self._jobs:
                     job = Job(
                         job_id=job_id,
-                        status="pending",
+                        status="QUEUED",
+                        description=description,
                         created_at=now,
                         updated_at=now,
+                        started_at=None,
+                        finished_at=None,
                         result=None,
                         error=None,
                         model=model,
-                        system_prompt_hash=system_prompt_hash
+                        system_prompt=system_prompt
                     )
                     self._jobs[job_id] = job
                     return job
@@ -80,7 +90,7 @@ class JobStore:
                 f"Failed to generate unique job_id after {max_retries} attempts"
             )
     
-    def get_job(self, job_id: str) -> Optional[Job]:
+    async def get_job(self, job_id: str) -> Optional[Job]:
         """Retrieve a job by ID.
         
         Args:
@@ -91,49 +101,112 @@ class JobStore:
         """
         with self._lock:
             return self._jobs.get(job_id)
+
     
-    def update_job(
-        self,
-        job_id: str,
-        status: Optional[JobStatus] = None,
-        result: Optional[dict] = None,
-        error: Optional[dict] = None
-    ) -> Optional[Job]:
-        """Update job fields atomically.
+    async def count_jobs(self) -> int:
+        """Count total number of jobs in the store.
         
-        Updates the specified job with new values and refreshes the
-        updated_at timestamp. Only provided fields are updated.
+        Returns:
+            Total count of jobs.
+        """
+        with self._lock:
+            return len(self._jobs)
+    
+    async def mark_running(self, job_id: str) -> Job:
+        """Mark a job as RUNNING with started_at timestamp.
         
         Args:
             job_id: The job identifier to update.
-            status: New status value (if provided).
-            result: New result dictionary (if provided).
-            error: New error dictionary (if provided).
             
         Returns:
-            Updated Job instance if found, None if job doesn't exist.
+            Updated Job instance.
+            
+        Raises:
+            RuntimeError: If job doesn't exist.
         """
+        now = datetime.now(timezone.utc)
+        
         with self._lock:
             job = self._jobs.get(job_id)
             if job is None:
-                return None
+                raise RuntimeError(f"Job not found: {job_id}")
             
-            # Create updated job with new timestamp
+            # Create updated job
             updated_data = job.model_dump()
-            updated_data["updated_at"] = datetime.now(timezone.utc)
-            
-            if status is not None:
-                updated_data["status"] = status
-            if result is not None:
-                updated_data["result"] = result
-            if error is not None:
-                updated_data["error"] = error
+            updated_data["status"] = "RUNNING"
+            updated_data["started_at"] = now
+            updated_data["updated_at"] = now
             
             updated_job = Job(**updated_data)
             self._jobs[job_id] = updated_job
             return updated_job
     
-    def list_jobs(self, limit: Optional[int] = None) -> List[Job]:
+    async def mark_succeeded(self, job_id: str, result: dict) -> Job:
+        """Mark a job as SUCCEEDED with result and finished_at timestamp.
+        
+        Args:
+            job_id: The job identifier to update.
+            result: Planning result dictionary.
+            
+        Returns:
+            Updated Job instance.
+            
+        Raises:
+            RuntimeError: If job doesn't exist.
+        """
+        now = datetime.now(timezone.utc)
+        
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                raise RuntimeError(f"Job not found: {job_id}")
+            
+            # Create updated job
+            updated_data = job.model_dump()
+            updated_data["status"] = "SUCCEEDED"
+            updated_data["result"] = result
+            updated_data["finished_at"] = now
+            updated_data["updated_at"] = now
+            
+            updated_job = Job(**updated_data)
+            self._jobs[job_id] = updated_job
+            return updated_job
+    
+    async def mark_failed(self, job_id: str, error: dict) -> Job:
+        """Mark a job as FAILED with error and finished_at timestamp.
+        
+        Args:
+            job_id: The job identifier to update.
+            error: Error details dictionary.
+            
+        Returns:
+            Updated Job instance.
+            
+        Raises:
+            RuntimeError: If job doesn't exist.
+        """
+        now = datetime.now(timezone.utc)
+        
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                raise RuntimeError(f"Job not found: {job_id}")
+            
+            # Create updated job
+            updated_data = job.model_dump()
+            updated_data["status"] = "FAILED"
+            updated_data["error"] = error
+            # Set started_at if not already set
+            if updated_data.get("started_at") is None:
+                updated_data["started_at"] = now
+            updated_data["finished_at"] = now
+            updated_data["updated_at"] = now
+            
+            updated_job = Job(**updated_data)
+            self._jobs[job_id] = updated_job
+            return updated_job
+    
+    async def list_jobs(self, limit: Optional[int] = None) -> List[Job]:
         """List all jobs in the store.
         
         Args:
@@ -154,11 +227,12 @@ class JobStore:
         
         return jobs
     
-    def count_jobs(self) -> int:
-        """Count total number of jobs in the store.
+    async def recover_stuck_jobs(self) -> int:
+        """Recover jobs stuck in RUNNING state.
+        
+        For in-memory store, just returns 0 since jobs don't persist.
         
         Returns:
-            Total count of jobs.
+            Number of jobs recovered (always 0 for in-memory store).
         """
-        with self._lock:
-            return len(self._jobs)
+        return 0

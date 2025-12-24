@@ -13,6 +13,7 @@
 # limitations under the License.
 """Tests for the async POST /plans endpoint."""
 
+import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import Mock, patch
@@ -84,7 +85,7 @@ class TestPlansEndpointJobCreation:
         
         assert "job_id" in data
         assert "status" in data
-        assert data["status"] == "pending"
+        assert data["status"] == "QUEUED"
         assert len(data["job_id"]) > 0
     
     def test_plans_endpoint_creates_job_in_store(self, client, override_job_store):
@@ -98,11 +99,11 @@ class TestPlansEndpointJobCreation:
         job_id = response.json()["job_id"]
         
         # Verify job exists in store
-        job = override_job_store.get_job(job_id)
+        job = asyncio.run(override_job_store.get_job(job_id))
         assert job is not None
         assert job.job_id == job_id
         # Note: TestClient runs background tasks synchronously, so job may already be succeeded
-        assert job.status in ["pending", "running", "succeeded"]
+        assert job.status in ["QUEUED", "RUNNING", "SUCCEEDED"]
     
     def test_plans_endpoint_response_structure(self, client, override_job_store):
         """Test that response has only job_id and status fields."""
@@ -125,7 +126,7 @@ class TestPlansEndpointJobCreation:
         )
         
         job_id = response.json()["job_id"]
-        job = override_job_store.get_job(job_id)
+        job = asyncio.run(override_job_store.get_job(job_id))
         
         assert job is not None
         assert job.created_at is not None
@@ -152,7 +153,7 @@ class TestPlansEndpointValidationErrors:
     
     def test_plans_endpoint_with_empty_description_returns_400(self, client, override_job_store):
         """Test that empty description returns 400 without creating job."""
-        initial_count = len(override_job_store.list_jobs())
+        initial_count = len(asyncio.run(override_job_store.list_jobs()))
         
         response = client.post(
             "/api/v1/plans",
@@ -162,11 +163,11 @@ class TestPlansEndpointValidationErrors:
         assert response.status_code == 400
         
         # No job should be created
-        assert len(override_job_store.list_jobs()) == initial_count
+        assert len(asyncio.run(override_job_store.list_jobs())) == initial_count
     
     def test_plans_endpoint_with_whitespace_only_returns_400(self, client, override_job_store):
         """Test that whitespace-only description returns 400 without creating job."""
-        initial_count = len(override_job_store.list_jobs())
+        initial_count = len(asyncio.run(override_job_store.list_jobs()))
         
         response = client.post(
             "/api/v1/plans",
@@ -176,13 +177,13 @@ class TestPlansEndpointValidationErrors:
         assert response.status_code == 400
         
         # No job should be created
-        assert len(override_job_store.list_jobs()) == initial_count
+        assert len(asyncio.run(override_job_store.list_jobs())) == initial_count
     
     def test_plans_endpoint_with_oversized_description_returns_400(self, client, override_job_store):
         """Test that oversized description returns 400 without creating job."""
         from app.core.config import settings
         
-        initial_count = len(override_job_store.list_jobs())
+        initial_count = len(asyncio.run(override_job_store.list_jobs()))
         oversized = "a" * (settings.max_description_bytes + 1)
         
         response = client.post(
@@ -193,11 +194,11 @@ class TestPlansEndpointValidationErrors:
         assert response.status_code == 400
         
         # No job should be created
-        assert len(override_job_store.list_jobs()) == initial_count
+        assert len(asyncio.run(override_job_store.list_jobs())) == initial_count
     
     def test_plans_endpoint_with_missing_description_returns_422(self, client, override_job_store):
         """Test that missing description field returns 422 without creating job."""
-        initial_count = len(override_job_store.list_jobs())
+        initial_count = len(asyncio.run(override_job_store.list_jobs()))
         
         response = client.post(
             "/api/v1/plans",
@@ -207,11 +208,11 @@ class TestPlansEndpointValidationErrors:
         assert response.status_code == 422
         
         # No job should be created
-        assert len(override_job_store.list_jobs()) == initial_count
+        assert len(asyncio.run(override_job_store.list_jobs())) == initial_count
     
     def test_plans_endpoint_with_wrong_field_type_returns_422(self, client, override_job_store):
         """Test that wrong field type returns 422 without creating job."""
-        initial_count = len(override_job_store.list_jobs())
+        initial_count = len(asyncio.run(override_job_store.list_jobs()))
         
         response = client.post(
             "/api/v1/plans",
@@ -221,7 +222,7 @@ class TestPlansEndpointValidationErrors:
         assert response.status_code == 422
         
         # No job should be created
-        assert len(override_job_store.list_jobs()) == initial_count
+        assert len(asyncio.run(override_job_store.list_jobs())) == initial_count
 
 
 class TestPlansEndpointBackgroundExecution:
@@ -247,9 +248,9 @@ class TestPlansEndpointBackgroundExecution:
         time.sleep(0.5)
         
         # Check job status
-        job = override_job_store.get_job(job_id)
+        job = asyncio.run(override_job_store.get_job(job_id))
         assert job is not None
-        assert job.status == "succeeded"
+        assert job.status == "SUCCEEDED"
         assert job.result is not None
         assert "specs" in job.result
     
@@ -263,7 +264,7 @@ class TestPlansEndpointBackgroundExecution:
         job_id = response.json()["job_id"]
         time.sleep(0.5)
         
-        job = override_job_store.get_job(job_id)
+        job = asyncio.run(override_job_store.get_job(job_id))
         assert job is not None
         assert job.result is not None
         assert "specs" in job.result
@@ -278,12 +279,12 @@ class TestPlansEndpointBackgroundExecution:
         )
         
         job_id = response.json()["job_id"]
-        initial_job = override_job_store.get_job(job_id)
+        initial_job = asyncio.run(override_job_store.get_job(job_id))
         initial_updated_at = initial_job.updated_at
         
         time.sleep(0.5)
         
-        job = override_job_store.get_job(job_id)
+        job = asyncio.run(override_job_store.get_job(job_id))
         assert job.updated_at >= initial_updated_at
     
     def test_plans_endpoint_preserves_created_at(self, client, override_job_store):
@@ -294,12 +295,12 @@ class TestPlansEndpointBackgroundExecution:
         )
         
         job_id = response.json()["job_id"]
-        initial_job = override_job_store.get_job(job_id)
+        initial_job = asyncio.run(override_job_store.get_job(job_id))
         initial_created_at = initial_job.created_at
         
         time.sleep(0.5)
         
-        job = override_job_store.get_job(job_id)
+        job = asyncio.run(override_job_store.get_job(job_id))
         assert job.created_at == initial_created_at
 
 
@@ -309,9 +310,10 @@ class TestPlansEndpointErrorHandling:
     def test_plans_endpoint_with_simulated_failure(self, client, override_job_store, monkeypatch):
         """Test that exceptions in background worker set failed status."""
         # Mock generate_plan to raise an exception
-        def mock_generate_plan_error(description, job_store=None, job_id=None, llm_client=None, model=None, system_prompt=None):
-            if job_store and job_id:
-                job_store.update_job(job_id, status="running")
+        def mock_generate_plan_error(description, job_repository=None, job_id=None, llm_client=None, model=None, system_prompt=None):
+            if job_repository and job_id:
+                import asyncio
+                asyncio.run(job_repository.mark_running(job_id))
             raise ValueError("Simulated planning error")
         
         monkeypatch.setattr("app.api.routes.generate_plan", mock_generate_plan_error)
@@ -324,16 +326,17 @@ class TestPlansEndpointErrorHandling:
         job_id = response.json()["job_id"]
         time.sleep(0.5)
         
-        job = override_job_store.get_job(job_id)
+        job = asyncio.run(override_job_store.get_job(job_id))
         assert job is not None
-        assert job.status == "failed"
+        assert job.status == "FAILED"
         assert job.error is not None
     
     def test_plans_endpoint_error_does_not_leak_stack_trace(self, client, override_job_store, monkeypatch):
         """Test that error details don't include stack traces."""
-        def mock_generate_plan_error(description, job_store=None, job_id=None, llm_client=None, model=None, system_prompt=None):
-            if job_store and job_id:
-                job_store.update_job(job_id, status="running")
+        def mock_generate_plan_error(description, job_repository=None, job_id=None, llm_client=None, model=None, system_prompt=None):
+            if job_repository and job_id:
+                import asyncio
+                asyncio.run(job_repository.mark_running(job_id))
             raise RuntimeError("Internal error with sensitive data")
         
         monkeypatch.setattr("app.api.routes.generate_plan", mock_generate_plan_error)
@@ -346,7 +349,7 @@ class TestPlansEndpointErrorHandling:
         job_id = response.json()["job_id"]
         time.sleep(0.5)
         
-        job = override_job_store.get_job(job_id)
+        job = asyncio.run(override_job_store.get_job(job_id))
         assert job is not None
         assert job.error is not None
         
@@ -358,9 +361,10 @@ class TestPlansEndpointErrorHandling:
     
     def test_plans_endpoint_error_does_not_crash_server(self, client, override_job_store, monkeypatch):
         """Test that background errors don't crash the server."""
-        def mock_generate_plan_error(description, job_store=None, job_id=None, llm_client=None, model=None, system_prompt=None):
-            if job_store and job_id:
-                job_store.update_job(job_id, status="running")
+        def mock_generate_plan_error(description, job_repository=None, job_id=None, llm_client=None, model=None, system_prompt=None):
+            if job_repository and job_id:
+                import asyncio
+                asyncio.run(job_repository.mark_running(job_id))
             raise Exception("Critical error")
         
         monkeypatch.setattr("app.api.routes.generate_plan", mock_generate_plan_error)
@@ -422,9 +426,9 @@ class TestPlansEndpointConcurrency:
         
         # All jobs should succeed
         for job_id in job_ids:
-            job = override_job_store.get_job(job_id)
+            job = asyncio.run(override_job_store.get_job(job_id))
             assert job is not None
-            assert job.status == "succeeded"
+            assert job.status == "SUCCEEDED"
             assert job.result is not None
 
 
@@ -443,9 +447,9 @@ class TestPlansEndpointEdgeCases:
         
         time.sleep(0.5)
         
-        job = override_job_store.get_job(job_id)
+        job = asyncio.run(override_job_store.get_job(job_id))
         assert job is not None
-        assert job.status == "succeeded"
+        assert job.status == "SUCCEEDED"
     
     def test_plans_endpoint_with_max_length_description(self, client, override_job_store):
         """Test that descriptions at max length work correctly."""
@@ -463,9 +467,9 @@ class TestPlansEndpointEdgeCases:
         
         time.sleep(0.5)
         
-        job = override_job_store.get_job(job_id)
+        job = asyncio.run(override_job_store.get_job(job_id))
         assert job is not None
-        assert job.status == "succeeded"
+        assert job.status == "SUCCEEDED"
     
     def test_plans_endpoint_with_extra_fields(self, client, override_job_store):
         """Test that extra fields are ignored."""
@@ -498,13 +502,13 @@ class TestPlansEndpointModelAndPromptParameters:
         
         if response.status_code == 202:
             job_id = response.json()["job_id"]
-            job = override_job_store.get_job(job_id)
+            job = asyncio.run(override_job_store.get_job(job_id))
             assert job is not None
             # Model should be stored in job metadata
             assert job.model == "gpt-4-turbo"
     
     def test_plans_endpoint_with_system_prompt_parameter(self, client, override_job_store):
-        """Test that system_prompt parameter is hashed and stored in job metadata."""
+        """Test that system_prompt parameter is stored in job metadata."""
         custom_prompt = "You are an expert API architect."
         
         response = client.post(
@@ -517,12 +521,12 @@ class TestPlansEndpointModelAndPromptParameters:
         
         assert response.status_code == 202
         job_id = response.json()["job_id"]
-        job = override_job_store.get_job(job_id)
+        job = asyncio.run(override_job_store.get_job(job_id))
         
         assert job is not None
-        # System prompt should be hashed and stored
-        assert job.system_prompt_hash is not None
-        assert len(job.system_prompt_hash) == 64  # SHA-256 hash is 64 hex chars
+        # System prompt should be stored
+        assert job.system_prompt is not None
+        assert job.system_prompt == custom_prompt
     
     def test_plans_endpoint_with_both_overrides(self, client, override_job_store):
         """Test that both model and system_prompt can be provided together."""
@@ -540,10 +544,10 @@ class TestPlansEndpointModelAndPromptParameters:
         
         if response.status_code == 202:
             job_id = response.json()["job_id"]
-            job = override_job_store.get_job(job_id)
+            job = asyncio.run(override_job_store.get_job(job_id))
             assert job is not None
             assert job.model == "gpt-4-turbo"
-            assert job.system_prompt_hash is not None
+            assert job.system_prompt is not None
     
     def test_plans_endpoint_without_overrides_has_null_metadata(self, client, override_job_store):
         """Test that jobs without overrides have null metadata fields."""
@@ -554,11 +558,11 @@ class TestPlansEndpointModelAndPromptParameters:
         
         assert response.status_code == 202
         job_id = response.json()["job_id"]
-        job = override_job_store.get_job(job_id)
+        job = asyncio.run(override_job_store.get_job(job_id))
         
         assert job is not None
         assert job.model is None
-        assert job.system_prompt_hash is None
+        assert job.system_prompt is None
     
     def test_plans_endpoint_oversized_system_prompt_rejected(self, client, override_job_store):
         """Test that oversized system prompts are rejected."""
@@ -578,7 +582,7 @@ class TestPlansEndpointModelAndPromptParameters:
         data = response.json()
         assert "error" in data or "detail" in data
     
-    def test_plans_endpoint_whitespace_model_rejected(self, client):
+    def test_plans_endpoint_whitespace_model_rejected(self, client, override_job_store):
         """Test that whitespace-only model names are rejected."""
         response = client.post(
             "/api/v1/plans",
@@ -617,8 +621,8 @@ class TestPlansEndpointModelAndPromptParameters:
             
             time.sleep(0.5)
             
-            job1 = override_job_store.get_job(job_id1)
-            job2 = override_job_store.get_job(job_id2)
+            job1 = asyncio.run(override_job_store.get_job(job_id1))
+            job2 = asyncio.run(override_job_store.get_job(job_id2))
             
             assert job1 is not None
             assert job2 is not None
@@ -655,10 +659,12 @@ class TestPlansEndpointModelAndPromptParameters:
         
         time.sleep(0.5)
         
-        job1 = override_job_store.get_job(job_id1)
-        job2 = override_job_store.get_job(job_id2)
+        job1 = asyncio.run(override_job_store.get_job(job_id1))
+        job2 = asyncio.run(override_job_store.get_job(job_id2))
         
         assert job1 is not None
         assert job2 is not None
-        # Prompt hashes should be different
-        assert job1.system_prompt_hash != job2.system_prompt_hash
+        # Prompts should be different
+        assert job1.system_prompt != job2.system_prompt
+        assert job1.system_prompt == prompt1
+        assert job2.system_prompt == prompt2

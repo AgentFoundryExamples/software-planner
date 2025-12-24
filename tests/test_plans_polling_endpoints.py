@@ -14,6 +14,7 @@
 """Tests for the GET /plans and GET /plans/{job_id} polling endpoints."""
 
 import time
+import asyncio
 from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
@@ -74,7 +75,7 @@ class TestGetJobStatusEndpoint:
     def test_get_pending_job(self, client, override_job_store):
         """Test getting status of a pending job."""
         # Create a pending job
-        job = override_job_store.create_job()
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
         
         response = client.get(f"/api/v1/plans/{job.job_id}")
         
@@ -82,7 +83,7 @@ class TestGetJobStatusEndpoint:
         data = response.json()
         
         assert data["job_id"] == job.job_id
-        assert data["status"] == "pending"
+        assert data["status"] == "QUEUED"
         assert "created_at" in data
         assert "updated_at" in data
         assert data["result"] is None
@@ -91,7 +92,7 @@ class TestGetJobStatusEndpoint:
     def test_get_succeeded_job(self, client, override_job_store):
         """Test getting status of a succeeded job with result."""
         # Create a job and update it to succeeded status with result
-        job = override_job_store.create_job()
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
         result = {
             "specs": [
                 {
@@ -103,7 +104,7 @@ class TestGetJobStatusEndpoint:
                 }
             ]
         }
-        override_job_store.update_job(job.job_id, status="succeeded", result=result)
+        asyncio.run(override_job_store.mark_succeeded(job.job_id, result))
         
         response = client.get(f"/api/v1/plans/{job.job_id}")
         
@@ -111,19 +112,19 @@ class TestGetJobStatusEndpoint:
         data = response.json()
         
         assert data["job_id"] == job.job_id
-        assert data["status"] == "succeeded"
+        assert data["status"] == "SUCCEEDED"
         assert data["result"] == result
         assert "error" not in data
     
     def test_get_failed_job(self, client, override_job_store):
         """Test getting status of a failed job with error."""
         # Create a job and update it to failed status with error
-        job = override_job_store.create_job()
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
         error = {
             "error": "Planning failed",
             "type": "ValueError"
         }
-        override_job_store.update_job(job.job_id, status="failed", error=error)
+        asyncio.run(override_job_store.mark_failed(job.job_id, error))
         
         response = client.get(f"/api/v1/plans/{job.job_id}")
         
@@ -131,15 +132,15 @@ class TestGetJobStatusEndpoint:
         data = response.json()
         
         assert data["job_id"] == job.job_id
-        assert data["status"] == "failed"
+        assert data["status"] == "FAILED"
         assert data["result"] is None
         assert data["error"] == error
     
     def test_get_running_job(self, client, override_job_store):
         """Test getting status of a running job."""
         # Create a job and update it to running status
-        job = override_job_store.create_job()
-        override_job_store.update_job(job.job_id, status="running")
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
+        asyncio.run(override_job_store.mark_running(job.job_id))
         
         response = client.get(f"/api/v1/plans/{job.job_id}")
         
@@ -147,7 +148,7 @@ class TestGetJobStatusEndpoint:
         data = response.json()
         
         assert data["job_id"] == job.job_id
-        assert data["status"] == "running"
+        assert data["status"] == "RUNNING"
         assert data["result"] is None
         assert "error" not in data
     
@@ -176,7 +177,7 @@ class TestGetJobStatusEndpoint:
     
     def test_get_job_status_timestamps_are_iso_format(self, client, override_job_store):
         """Test that timestamps are returned in ISO format."""
-        job = override_job_store.create_job()
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
         
         response = client.get(f"/api/v1/plans/{job.job_id}")
         
@@ -192,7 +193,7 @@ class TestGetJobStatusEndpoint:
     
     def test_get_job_status_with_unicode_in_result(self, client, override_job_store):
         """Test that Unicode characters in result are preserved."""
-        job = override_job_store.create_job()
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
         result = {
             "specs": [
                 {
@@ -204,7 +205,7 @@ class TestGetJobStatusEndpoint:
                 }
             ]
         }
-        override_job_store.update_job(job.job_id, status="succeeded", result=result)
+        asyncio.run(override_job_store.mark_succeeded(job.job_id, result))
         
         response = client.get(f"/api/v1/plans/{job.job_id}")
         
@@ -217,7 +218,7 @@ class TestGetJobStatusEndpoint:
     
     def test_get_job_status_with_large_result_payload(self, client, override_job_store):
         """Test that large result payloads are handled correctly."""
-        job = override_job_store.create_job()
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
         
         # Create a large result with many specs
         large_result = {
@@ -232,7 +233,7 @@ class TestGetJobStatusEndpoint:
                 for i in range(10)
             ]
         }
-        override_job_store.update_job(job.job_id, status="succeeded", result=large_result)
+        asyncio.run(override_job_store.mark_succeeded(job.job_id, large_result))
         
         response = client.get(f"/api/v1/plans/{job.job_id}")
         
@@ -262,11 +263,11 @@ class TestListJobsEndpoint:
     def test_list_jobs_returns_all_jobs(self, client, override_job_store):
         """Test listing jobs returns all jobs."""
         # Create several jobs
-        job1 = override_job_store.create_job()
+        job1 = asyncio.run(override_job_store.create_job(description="Test description"))
         time.sleep(0.01)
-        job2 = override_job_store.create_job()
+        job2 = asyncio.run(override_job_store.create_job(description="Test description"))
         time.sleep(0.01)
-        job3 = override_job_store.create_job()
+        job3 = asyncio.run(override_job_store.create_job(description="Test description"))
         
         response = client.get("/api/v1/plans")
         
@@ -285,18 +286,18 @@ class TestListJobsEndpoint:
     def test_list_jobs_sorted_by_updated_at_descending(self, client, override_job_store):
         """Test that jobs are sorted by updated_at (most recent first)."""
         # Create jobs with explicit ordering
-        job1 = override_job_store.create_job()
-        job2 = override_job_store.create_job()
-        job3 = override_job_store.create_job()
+        job1 = asyncio.run(override_job_store.create_job(description="Test description"))
+        job2 = asyncio.run(override_job_store.create_job(description="Test description"))
+        job3 = asyncio.run(override_job_store.create_job(description="Test description"))
         
         # Update job1 to make it most recently updated
         # The update will change updated_at, making job1 the most recent
-        override_job_store.update_job(job1.job_id, status="running")
+        asyncio.run(override_job_store.mark_running(job1.job_id))
         
         # Get all jobs to verify final state (in logical order for readability)
-        final_job1 = override_job_store.get_job(job1.job_id)
-        final_job2 = override_job_store.get_job(job2.job_id)
-        final_job3 = override_job_store.get_job(job3.job_id)
+        final_job1 = asyncio.run(override_job_store.get_job(job1.job_id))
+        final_job2 = asyncio.run(override_job_store.get_job(job2.job_id))
+        final_job3 = asyncio.run(override_job_store.get_job(job3.job_id))
         
         # Verify that job1's updated_at is indeed more recent
         assert final_job1.updated_at > final_job2.updated_at
@@ -317,7 +318,7 @@ class TestListJobsEndpoint:
         """Test listing jobs with a limit parameter."""
         # Create 5 jobs
         for i in range(5):
-            override_job_store.create_job()
+            asyncio.run(override_job_store.create_job(description="Test description"))
             time.sleep(0.01)
         
         response = client.get("/api/v1/plans?limit=3")
@@ -336,7 +337,7 @@ class TestListJobsEndpoint:
         
         # Create some jobs
         for i in range(5):
-            override_job_store.create_job()
+            asyncio.run(override_job_store.create_job(description="Test description"))
         
         # Request more than max
         response = client.get(f"/api/v1/plans?limit={settings.max_jobs_list_limit + 100}")
@@ -353,7 +354,7 @@ class TestListJobsEndpoint:
         
         # Create some jobs
         for i in range(5):
-            override_job_store.create_job()
+            asyncio.run(override_job_store.create_job(description="Test description"))
         
         response = client.get("/api/v1/plans")
         
@@ -364,9 +365,9 @@ class TestListJobsEndpoint:
     
     def test_list_jobs_includes_job_metadata(self, client, override_job_store):
         """Test that listed jobs include all required metadata."""
-        job = override_job_store.create_job()
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
         result = {"specs": [{"purpose": "Test"}]}
-        override_job_store.update_job(job.job_id, status="succeeded", result=result)
+        asyncio.run(override_job_store.mark_succeeded(job.job_id, result))
         
         response = client.get("/api/v1/plans")
         
@@ -377,16 +378,16 @@ class TestListJobsEndpoint:
         job_data = data["jobs"][0]
         
         assert job_data["job_id"] == job.job_id
-        assert job_data["status"] == "succeeded"
+        assert job_data["status"] == "SUCCEEDED"
         assert "created_at" in job_data
         assert "updated_at" in job_data
         assert job_data["result"] == result
     
     def test_list_jobs_includes_errors_for_failed_jobs(self, client, override_job_store):
         """Test that failed jobs include error in list."""
-        job = override_job_store.create_job()
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
         error = {"error": "Test error", "type": "ValueError"}
-        override_job_store.update_job(job.job_id, status="failed", error=error)
+        asyncio.run(override_job_store.mark_failed(job.job_id, error))
         
         response = client.get("/api/v1/plans")
         
@@ -396,31 +397,27 @@ class TestListJobsEndpoint:
         assert len(data["jobs"]) == 1
         job_data = data["jobs"][0]
         
-        assert job_data["status"] == "failed"
+        assert job_data["status"] == "FAILED"
         assert job_data["error"] == error
         assert job_data["result"] is None
     
     def test_list_jobs_with_mixed_statuses(self, client, override_job_store):
         """Test listing jobs with different statuses."""
         # Create jobs with different statuses
-        job1 = override_job_store.create_job()  # pending
+        job1 = asyncio.run(override_job_store.create_job(description="Test description"))  # pending
         
-        job2 = override_job_store.create_job()
-        override_job_store.update_job(job2.job_id, status="running")
+        job2 = asyncio.run(override_job_store.create_job(description="Test description"))
+        asyncio.run(override_job_store.mark_running(job2.job_id))
         
-        job3 = override_job_store.create_job()
-        override_job_store.update_job(
-            job3.job_id,
-            status="succeeded",
-            result={"specs": [{"purpose": "Test"}]}
-        )
+        job3 = asyncio.run(override_job_store.create_job(description="Test description"))
+        asyncio.run(override_job_store.mark_succeeded(
+            job3.job_id, {"specs": [{"purpose": "Test"}]}
+        ))
         
-        job4 = override_job_store.create_job()
-        override_job_store.update_job(
-            job4.job_id,
-            status="failed",
-            error={"error": "Test error", "type": "ValueError"}
-        )
+        job4 = asyncio.run(override_job_store.create_job(description="Test description"))
+        asyncio.run(override_job_store.mark_failed(
+            job4.job_id, {"error": "Test error", "type": "ValueError"}
+        ))
         
         response = client.get("/api/v1/plans")
         
@@ -431,10 +428,10 @@ class TestListJobsEndpoint:
         
         # Verify all statuses are present
         statuses = [job["status"] for job in data["jobs"]]
-        assert "pending" in statuses
-        assert "running" in statuses
-        assert "succeeded" in statuses
-        assert "failed" in statuses
+        assert "QUEUED" in statuses
+        assert "RUNNING" in statuses
+        assert "SUCCEEDED" in statuses
+        assert "FAILED" in statuses
     
     def test_list_jobs_limit_validation_rejects_zero(self, client, override_job_store):
         """Test that limit=0 is rejected."""
@@ -458,7 +455,7 @@ class TestPollingEndpointsConcurrency:
         """Test that concurrent GET requests for same job work correctly."""
         from concurrent.futures import ThreadPoolExecutor
         
-        job = override_job_store.create_job()
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
         
         def get_job():
             return client.get(f"/api/v1/plans/{job.job_id}")
@@ -476,8 +473,8 @@ class TestPollingEndpointsConcurrency:
     
     def test_high_frequency_polling_does_not_mutate_state(self, client, override_job_store):
         """Test that high-frequency polling doesn't mutate job state."""
-        job = override_job_store.create_job()
-        initial_job = override_job_store.get_job(job.job_id)
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
+        initial_job = asyncio.run(override_job_store.get_job(job.job_id))
         
         # Make many requests quickly
         for _ in range(100):
@@ -485,7 +482,7 @@ class TestPollingEndpointsConcurrency:
             assert response.status_code == 200
         
         # Job should not have changed
-        final_job = override_job_store.get_job(job.job_id)
+        final_job = asyncio.run(override_job_store.get_job(job.job_id))
         assert final_job.status == initial_job.status
         assert final_job.updated_at == initial_job.updated_at
     
@@ -495,7 +492,7 @@ class TestPollingEndpointsConcurrency:
         import random
         
         def create_job(i):
-            override_job_store.create_job()
+            asyncio.run(override_job_store.create_job(description="Test description"))
             time.sleep(random.uniform(0.001, 0.01))
         
         def list_jobs(i):
@@ -536,36 +533,34 @@ class TestPollingEndpointsEdgeCases:
         
         assert data["job_id"] == job_id
         # Status could be pending or already running/succeeded due to background task
-        assert data["status"] in ["pending", "running", "succeeded"]
+        assert data["status"] in ["QUEUED", "RUNNING", "SUCCEEDED"]
     
     def test_polling_job_through_lifecycle(self, client, override_job_store):
         """Test polling a job through its complete lifecycle."""
-        job = override_job_store.create_job()
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
         
         # Check pending state
         response = client.get(f"/api/v1/plans/{job.job_id}")
-        assert response.json()["status"] == "pending"
+        assert response.json()["status"] == "QUEUED"
         
         # Update to running
-        override_job_store.update_job(job.job_id, status="running")
+        asyncio.run(override_job_store.mark_running(job.job_id))
         response = client.get(f"/api/v1/plans/{job.job_id}")
-        assert response.json()["status"] == "running"
+        assert response.json()["status"] == "RUNNING"
         
         # Update to succeeded
-        override_job_store.update_job(
-            job.job_id,
-            status="succeeded",
-            result={"specs": [{"purpose": "Test"}]}
-        )
+        asyncio.run(override_job_store.mark_succeeded(
+            job.job_id, {"specs": [{"purpose": "Test"}]}
+        ))
         response = client.get(f"/api/v1/plans/{job.job_id}")
         data = response.json()
-        assert data["status"] == "succeeded"
+        assert data["status"] == "SUCCEEDED"
         assert data["result"] is not None
     
     def test_list_jobs_with_only_pending_jobs(self, client, override_job_store):
         """Test listing when all jobs are pending."""
         for i in range(5):
-            override_job_store.create_job()
+            asyncio.run(override_job_store.create_job(description="Test description"))
         
         response = client.get("/api/v1/plans")
         
@@ -573,17 +568,15 @@ class TestPollingEndpointsEdgeCases:
         data = response.json()
         
         assert data["total"] == 5
-        assert all(job["status"] == "pending" for job in data["jobs"])
+        assert all(job["status"] == "QUEUED" for job in data["jobs"])
         assert all(job["result"] is None for job in data["jobs"])
     
     def test_list_jobs_response_structure_matches_single_job(self, client, override_job_store):
         """Test that jobs in list have same structure as single job endpoint."""
-        job = override_job_store.create_job()
-        override_job_store.update_job(
-            job.job_id,
-            status="succeeded",
-            result={"specs": [{"purpose": "Test"}]}
-        )
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
+        asyncio.run(override_job_store.mark_succeeded(
+            job.job_id, {"specs": [{"purpose": "Test"}]}
+        ))
         
         # Get single job
         single_response = client.get(f"/api/v1/plans/{job.job_id}")
@@ -607,7 +600,7 @@ class TestPollingEndpointsEdgeCases:
     def test_list_jobs_limit_as_string_number(self, client, override_job_store):
         """Test that limit as string number works correctly."""
         for i in range(10):
-            override_job_store.create_job()
+            asyncio.run(override_job_store.create_job(description="Test description"))
         
         response = client.get("/api/v1/plans?limit=5")
         
@@ -625,7 +618,7 @@ class TestJobMetadataExposure:
     
     def test_get_job_with_model_metadata(self, client, override_job_store):
         """Test that job with model metadata exposes it in GET response."""
-        job = override_job_store.create_job(model="gpt-4-turbo")
+        job = asyncio.run(override_job_store.create_job(description="Test description", model="gpt-4-turbo"))
         
         response = client.get(f"/api/v1/plans/{job.job_id}")
         
@@ -636,9 +629,12 @@ class TestJobMetadataExposure:
         assert data["model"] == "gpt-4-turbo"
     
     def test_get_job_with_system_prompt_hash_metadata(self, client, override_job_store):
-        """Test that job with system_prompt_hash exposes it in GET response."""
-        prompt_hash = "abc123def456"
-        job = override_job_store.create_job(system_prompt_hash=prompt_hash)
+        """Test that job with system_prompt exposes hash in GET response."""
+        custom_prompt = "You are a test assistant"
+        import hashlib
+        expected_hash = hashlib.sha256(custom_prompt.encode('utf-8')).hexdigest()
+        
+        job = asyncio.run(override_job_store.create_job(description="Test description", system_prompt=custom_prompt))
         
         response = client.get(f"/api/v1/plans/{job.job_id}")
         
@@ -646,14 +642,18 @@ class TestJobMetadataExposure:
         data = response.json()
         
         assert "system_prompt_hash" in data
-        assert data["system_prompt_hash"] == prompt_hash
+        assert data["system_prompt_hash"] == expected_hash
     
     def test_get_job_with_both_metadata_fields(self, client, override_job_store):
         """Test that job with both metadata fields exposes both."""
-        job = override_job_store.create_job(
+        custom_prompt = "Test prompt xyz"
+        import hashlib
+        expected_hash = hashlib.sha256(custom_prompt.encode('utf-8')).hexdigest()
+        
+        job = asyncio.run(override_job_store.create_job(description="Test description", 
             model="claude-opus",
-            system_prompt_hash="xyz789abc"
-        )
+            system_prompt=custom_prompt
+        ))
         
         response = client.get(f"/api/v1/plans/{job.job_id}")
         
@@ -661,11 +661,11 @@ class TestJobMetadataExposure:
         data = response.json()
         
         assert data["model"] == "claude-opus"
-        assert data["system_prompt_hash"] == "xyz789abc"
+        assert data["system_prompt_hash"] == expected_hash
     
     def test_get_job_without_metadata_omits_fields(self, client, override_job_store):
         """Test that job without metadata doesn't include those fields."""
-        job = override_job_store.create_job()
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
         
         response = client.get(f"/api/v1/plans/{job.job_id}")
         
@@ -678,25 +678,34 @@ class TestJobMetadataExposure:
     
     def test_get_pending_job_with_metadata(self, client, override_job_store):
         """Test that pending jobs expose metadata even before completion."""
-        job = override_job_store.create_job(
+        custom_prompt = "Pending test prompt"
+        import hashlib
+        expected_hash = hashlib.sha256(custom_prompt.encode('utf-8')).hexdigest()
+        
+        job = asyncio.run(override_job_store.create_job(description="Test description", 
             model="gpt-4-turbo",
-            system_prompt_hash="pending123"
-        )
+            system_prompt=custom_prompt
+        ))
         
         response = client.get(f"/api/v1/plans/{job.job_id}")
         
         assert response.status_code == 200
         data = response.json()
         
-        assert data["status"] == "pending"
+        assert data["status"] == "QUEUED"
         assert data["model"] == "gpt-4-turbo"
-        assert data["system_prompt_hash"] == "pending123"
+        assert data["system_prompt_hash"] == expected_hash
     
     def test_list_jobs_includes_metadata(self, client, override_job_store):
         """Test that job list includes metadata fields."""
-        job1 = override_job_store.create_job(model="gpt-4-turbo")
-        job2 = override_job_store.create_job(system_prompt_hash="hash123")
-        job3 = override_job_store.create_job()  # No metadata
+        job1 = asyncio.run(override_job_store.create_job(description="Test description", model="gpt-4-turbo"))
+        
+        custom_prompt2 = "List test prompt"
+        import hashlib
+        expected_hash2 = hashlib.sha256(custom_prompt2.encode('utf-8')).hexdigest()
+        job2 = asyncio.run(override_job_store.create_job(description="Test description", system_prompt=custom_prompt2))
+        
+        job3 = asyncio.run(override_job_store.create_job(description="Test description"))  # No metadata
         
         response = client.get("/api/v1/plans")
         
@@ -710,44 +719,52 @@ class TestJobMetadataExposure:
         
         # Check metadata is included
         assert jobs_by_id[job1.job_id]["model"] == "gpt-4-turbo"
-        assert jobs_by_id[job2.job_id]["system_prompt_hash"] == "hash123"
+        assert jobs_by_id[job2.job_id]["system_prompt_hash"] == expected_hash2
     
     def test_succeeded_job_with_metadata_includes_all_fields(self, client, override_job_store):
         """Test that succeeded job includes metadata alongside result."""
-        job = override_job_store.create_job(
+        custom_prompt = "Success test prompt"
+        import hashlib
+        expected_hash = hashlib.sha256(custom_prompt.encode('utf-8')).hexdigest()
+        
+        job = asyncio.run(override_job_store.create_job(description="Test description", 
             model="gpt-4-turbo",
-            system_prompt_hash="success123"
-        )
+            system_prompt=custom_prompt
+        ))
         
         result = {"specs": [{"purpose": "Test"}]}
-        override_job_store.update_job(job.job_id, status="succeeded", result=result)
+        asyncio.run(override_job_store.mark_succeeded(job.job_id, result))
         
         response = client.get(f"/api/v1/plans/{job.job_id}")
         
         assert response.status_code == 200
         data = response.json()
         
-        assert data["status"] == "succeeded"
+        assert data["status"] == "SUCCEEDED"
         assert data["result"] == result
         assert data["model"] == "gpt-4-turbo"
-        assert data["system_prompt_hash"] == "success123"
+        assert data["system_prompt_hash"] == expected_hash
     
     def test_failed_job_with_metadata_includes_all_fields(self, client, override_job_store):
         """Test that failed job includes metadata alongside error."""
-        job = override_job_store.create_job(
+        custom_prompt = "Failed test prompt"
+        import hashlib
+        expected_hash = hashlib.sha256(custom_prompt.encode('utf-8')).hexdigest()
+        
+        job = asyncio.run(override_job_store.create_job(description="Test description", 
             model="claude-opus",
-            system_prompt_hash="fail123"
-        )
+            system_prompt=custom_prompt
+        ))
         
         error = {"error": "Test error", "type": "ValueError"}
-        override_job_store.update_job(job.job_id, status="failed", error=error)
+        asyncio.run(override_job_store.mark_failed(job.job_id, error))
         
         response = client.get(f"/api/v1/plans/{job.job_id}")
         
         assert response.status_code == 200
         data = response.json()
         
-        assert data["status"] == "failed"
+        assert data["status"] == "FAILED"
         assert data["error"] == error
         assert data["model"] == "claude-opus"
-        assert data["system_prompt_hash"] == "fail123"
+        assert data["system_prompt_hash"] == expected_hash
