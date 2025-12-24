@@ -446,6 +446,7 @@
       "type": "file",
       "external_dependencies": {
         "stdlib": [
+          "asyncio",
           "concurrent.futures.ThreadPoolExecutor",
           "datetime.datetime",
           "datetime.timezone",
@@ -600,6 +601,7 @@
       "type": "file",
       "external_dependencies": {
         "stdlib": [
+          "asyncio",
           "unittest.mock.Mock"
         ],
         "third-party": [
@@ -613,6 +615,7 @@
       "type": "file",
       "external_dependencies": {
         "stdlib": [
+          "asyncio",
           "concurrent.futures.ThreadPoolExecutor",
           "time",
           "unittest.mock.Mock",
@@ -630,9 +633,11 @@
       "type": "file",
       "external_dependencies": {
         "stdlib": [
+          "asyncio",
           "concurrent.futures.ThreadPoolExecutor",
           "datetime.datetime",
           "datetime.timezone",
+          "hashlib",
           "random",
           "time",
           "unittest.mock.Mock",

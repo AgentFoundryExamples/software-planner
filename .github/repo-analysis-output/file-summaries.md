@@ -137,8 +137,8 @@ Total files: 44
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for job store  
-**Size:** 5.66 KB  
-**LOC:** 116  
+**Size:** 10.04 KB  
+**LOC:** 210  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/llm_claude.py
@@ -281,8 +281,8 @@ Total files: 44
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 17.35 KB  
-**LOC:** 359  
+**Size:** 19.30 KB  
+**LOC:** 365  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_llm_claude.py
@@ -371,8 +371,8 @@ Total files: 44
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 18.00 KB  
-**LOC:** 360  
+**Size:** 18.80 KB  
+**LOC:** 361  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_plans_async_endpoint.py
@@ -380,8 +380,8 @@ Total files: 44
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 23.66 KB  
-**LOC:** 472  
+**Size:** 24.21 KB  
+**LOC:** 478  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_plans_polling_endpoints.py
@@ -389,8 +389,8 @@ Total files: 44
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 28.06 KB  
-**LOC:** 509  
+**Size:** 30.47 KB  
+**LOC:** 519  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_store_singleton.py

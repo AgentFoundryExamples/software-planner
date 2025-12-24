@@ -207,8 +207,8 @@
       "summary": "Python module for job store",
       "summary_text": "Python module for job store",
       "metrics": {
-        "size_bytes": 5792,
-        "loc": 116,
+        "size_bytes": 10283,
+        "loc": 210,
         "todo_count": 0
       }
     },
@@ -431,8 +431,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 17763,
-        "loc": 359,
+        "size_bytes": 19765,
+        "loc": 365,
         "todo_count": 0
       }
     },
@@ -571,8 +571,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 18437,
-        "loc": 360,
+        "size_bytes": 19249,
+        "loc": 361,
         "todo_count": 0
       }
     },
@@ -585,8 +585,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 24224,
-        "loc": 472,
+        "size_bytes": 24795,
+        "loc": 478,
         "todo_count": 0
       }
     },
@@ -599,8 +599,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 28730,
-        "loc": 509,
+        "size_bytes": 31202,
+        "loc": 519,
         "todo_count": 0
       }
     },
