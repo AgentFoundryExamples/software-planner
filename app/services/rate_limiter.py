@@ -155,11 +155,18 @@ class RateLimiter:
             max_requests: Maximum requests allowed per window (default limit).
             enabled: Whether rate limiting is enabled (default: True).
             per_key_overrides: Optional dict mapping API keys to custom limits.
+                              Keys should be the original (unhashed) API keys.
         """
         self.window_seconds = window_seconds
         self.max_requests = max_requests
         self.enabled = enabled
-        self.per_key_overrides = per_key_overrides or {}
+        # Store per-key overrides with hashed keys for lookup
+        self.per_key_overrides = {}
+        if per_key_overrides:
+            import hashlib
+            for key, limit in per_key_overrides.items():
+                hashed = f"key:{hashlib.sha256(key.encode()).hexdigest()[:16]}"
+                self.per_key_overrides[hashed] = limit
         
         # Storage for token buckets (keyed by API key or IP address)
         self.buckets: dict[str, TokenBucket] = {}

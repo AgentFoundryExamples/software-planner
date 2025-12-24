@@ -58,6 +58,7 @@ def _check_rate_limit_or_raise(
     
     if not allowed:
         # Create standardized error response
+        # Note: FastAPI will wrap this in {"detail": ...} automatically
         error_response = create_error_response(
             code=ErrorCode.RATE_LIMIT_EXCEEDED,
             message="Rate limit exceeded. Please retry after the specified delay.",
@@ -68,10 +69,12 @@ def _check_rate_limit_or_raise(
         )
         
         # Raise HTTPException with Retry-After header
+        # Pass the error response directly as detail
+        headers = {"Retry-After": str(retry_after)} if retry_after is not None else {}
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=error_response,
-            headers={"Retry-After": str(retry_after)} if retry_after else {}
+            detail=error_response,  # This will be wrapped in {"detail": error_response}
+            headers=headers
         )
 
 

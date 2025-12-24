@@ -68,6 +68,18 @@ def create_app() -> FastAPI:
         # Get request ID from middleware
         request_id = getattr(request.state, 'request_id', None)
         
+        # Check if detail is already a standardized error response
+        if isinstance(exc.detail, dict) and "error" in exc.detail:
+            # Already formatted, just return it
+            # Update request_id if not present
+            if "request_id" not in exc.detail["error"] and request_id:
+                exc.detail["error"]["request_id"] = request_id
+            return JSONResponse(
+                status_code=exc.status_code,
+                content=exc.detail,
+                headers=exc.headers if hasattr(exc, 'headers') else None
+            )
+        
         # Map status code to error code
         if exc.status_code == 401:
             code = ErrorCode.MISSING_AUTH
@@ -84,13 +96,14 @@ def create_app() -> FastAPI:
         
         error_response = create_error_response(
             code=code,
-            message=exc.detail,
+            message=exc.detail if isinstance(exc.detail, str) else str(exc.detail),
             request_id=request_id
         )
         
         return JSONResponse(
             status_code=exc.status_code,
             content=error_response,
+            headers=exc.headers if hasattr(exc, 'headers') else None
         )
     
     @app.exception_handler(RequestValidationError)
