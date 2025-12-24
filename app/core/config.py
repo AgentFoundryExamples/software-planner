@@ -113,6 +113,12 @@ class Settings(BaseSettings):
         ge=1,
         description="Maximum requests allowed per rate limit window"
     )
+    planner_trust_proxy_headers: bool = Field(
+        default=False,
+        description="Trust X-Forwarded-For and X-Real-IP headers for client IP extraction. "
+                    "Only enable if behind a trusted proxy/load balancer. "
+                    "When False (default), only uses direct connection IP to prevent spoofing."
+    )
     
     # Observability: Metrics and logging
     planner_metrics_enabled: bool = Field(

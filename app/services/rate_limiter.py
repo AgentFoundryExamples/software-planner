@@ -206,6 +206,11 @@ class RateLimiter:
     def _get_or_create_bucket(self, identifier: str) -> TokenBucket:
         """Get or create a token bucket for an identifier.
         
+        This method is thread-safe. The bucket is created and stored within
+        the lock, and we return a reference to the bucket. Since TokenBucket
+        operations use their own internal lock, the bucket can be safely
+        used after this method returns.
+        
         Args:
             identifier: API key or IP address.
             
@@ -221,7 +226,9 @@ class RateLimiter:
                     capacity=limit,
                     refill_rate=refill_rate
                 )
-            return self.buckets[identifier]
+            # Return reference to bucket - safe because TokenBucket has its own lock
+            bucket = self.buckets[identifier]
+        return bucket
     
     def check_rate_limit(
         self,

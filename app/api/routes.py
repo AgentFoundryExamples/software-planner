@@ -525,8 +525,11 @@ def create_plan(
     client_ip = get_client_ip(request)
     
     # Check rate limit before processing
+    # Explicitly handle empty string API keys (convert to None)
+    # This ensures empty strings don't bypass key-based rate limiting
+    rate_limit_key = api_key if api_key and api_key.strip() else None
     _check_rate_limit_or_raise(
-        api_key=api_key if api_key else None,
+        api_key=rate_limit_key,
         client_ip=client_ip,
         request_id=request_id
     )
@@ -781,8 +784,11 @@ async def create_plan_async(
     client_ip = get_client_ip(request)
     
     # Check rate limit before processing
+    # Explicitly handle empty string API keys (convert to None)
+    # This ensures empty strings don't bypass key-based rate limiting
+    rate_limit_key = api_key if api_key and api_key.strip() else None
     _check_rate_limit_or_raise(
-        api_key=api_key if api_key else None,
+        api_key=rate_limit_key,
         client_ip=client_ip,
         request_id=request_id
     )

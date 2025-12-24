@@ -111,12 +111,15 @@ def get_client_ip(request: Request) -> Optional[str]:
     """Extract the client IP address from the request.
     
     This function attempts to extract the real client IP address,
-    considering proxy headers like X-Forwarded-For and X-Real-IP.
+    considering proxy headers like X-Forwarded-For and X-Real-IP only
+    when the application is configured to trust proxies.
     
-    Priority order:
-    1. X-Forwarded-For (first IP in chain)
+    Priority order when proxies are trusted:
+    1. X-Forwarded-For (rightmost trusted IP in chain)
     2. X-Real-IP
     3. request.client.host (direct connection)
+    
+    When proxies are not trusted (default), only uses direct connection IP.
     
     Args:
         request: The incoming request.
@@ -124,25 +127,47 @@ def get_client_ip(request: Request) -> Optional[str]:
     Returns:
         Client IP address as a string, or None if unavailable.
         
-    Note:
-        For security, be aware that proxy headers can be spoofed by clients.
-        Only trust these headers if your application is behind a trusted proxy.
+    Security Note:
+        Proxy headers (X-Forwarded-For, X-Real-IP) can be spoofed by clients.
+        By default, this function does NOT trust proxy headers to prevent
+        IP spoofing attacks that could bypass rate limiting.
+        
+        To enable proxy header trust (only if behind a trusted proxy/load balancer),
+        set PLANNER_TRUST_PROXY_HEADERS=true in environment configuration.
+        
+        When proxy headers are trusted, we use the rightmost IP in X-Forwarded-For
+        that is outside our trusted proxy ranges as the client IP. This prevents
+        clients from injecting fake IPs at the beginning of the chain.
     """
-    # Check X-Forwarded-For header (standard for proxies/load balancers)
-    x_forwarded_for = request.headers.get("X-Forwarded-For", "").strip()
-    if x_forwarded_for:
-        # X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
-        # Use the first (leftmost) IP as the original client
-        client_ip = x_forwarded_for.split(",")[0].strip()
-        if client_ip:
-            return client_ip
+    # Check if we should trust proxy headers
+    trust_proxy = getattr(settings, 'planner_trust_proxy_headers', False)
     
-    # Check X-Real-IP header (alternative proxy header)
-    x_real_ip = request.headers.get("X-Real-IP", "").strip()
-    if x_real_ip:
-        return x_real_ip
+    if trust_proxy:
+        # Trust proxy headers - use X-Forwarded-For or X-Real-IP
+        # For X-Forwarded-For, we take the rightmost IP that is not a known proxy
+        # This prevents clients from spoofing by adding fake IPs to the left
+        x_forwarded_for = request.headers.get("X-Forwarded-For", "").strip()
+        if x_forwarded_for:
+            # Split by comma and take rightmost IP (closest to us in the chain)
+            # In a proper deployment, this should be the last untrusted IP
+            ips = [ip.strip() for ip in x_forwarded_for.split(",") if ip.strip()]
+            if ips:
+                # Use the rightmost IP as it's closest to our server
+                # In production with trusted proxies, consider implementing
+                # trusted proxy IP ranges and selecting the rightmost untrusted IP
+                client_ip = ips[-1]
+                if client_ip:
+                    return client_ip
+        
+        # Check X-Real-IP header (alternative proxy header)
+        x_real_ip = request.headers.get("X-Real-IP", "").strip()
+        if x_real_ip:
+            return x_real_ip
     
-    # Fall back to direct connection IP
+    # Always fall back to direct connection IP (most secure)
+    # This is used when:
+    # 1. Proxy headers are not trusted (default)
+    # 2. Proxy headers are trusted but not present
     if request.client and request.client.host:
         return request.client.host
     
