@@ -229,24 +229,24 @@ class TestPlannerWithJobStore:
         store = JobStore()
         job = store.create_job()
         
-        assert job.status == "pending"
+        assert job.status == "QUEUED"
         
-        generate_plan("Build a REST API", job_store=store, job_id=job.job_id, llm_client=mock_llm_client)
+        generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client)
         
         updated_job = store.get_job(job.job_id)
         assert updated_job is not None
-        assert updated_job.status == "succeeded"  # Will be succeeded after completion
+        assert updated_job.status == "SUCCEEDED"  # Will be succeeded after completion
     
     def test_generate_plan_records_success_status(self, mock_llm_client):
         """Test that successful plan generation updates status to succeeded."""
         store = JobStore()
         job = store.create_job()
         
-        response = generate_plan("Build a REST API", job_store=store, job_id=job.job_id, llm_client=mock_llm_client)
+        response = generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client)
         
         updated_job = store.get_job(job.job_id)
         assert updated_job is not None
-        assert updated_job.status == "succeeded"
+        assert updated_job.status == "SUCCEEDED"
         assert response is not None
     
     def test_generate_plan_stores_result_with_specs(self, mock_llm_client):
@@ -254,7 +254,7 @@ class TestPlannerWithJobStore:
         store = JobStore()
         job = store.create_job()
         
-        response = generate_plan("Build a REST API", job_store=store, job_id=job.job_id, llm_client=mock_llm_client)
+        response = generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client)
         
         updated_job = store.get_job(job.job_id)
         assert updated_job is not None
@@ -268,7 +268,7 @@ class TestPlannerWithJobStore:
         store = JobStore()
         job = store.create_job()
         
-        response = generate_plan("Build a REST API", job_store=store, job_id=job.job_id, llm_client=mock_llm_client)
+        response = generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client)
         
         updated_job = store.get_job(job.job_id)
         assert updated_job is not None
@@ -284,7 +284,7 @@ class TestPlannerWithJobStore:
         job = store.create_job()
         original_updated_at = job.updated_at
         
-        generate_plan("Build a REST API", job_store=store, job_id=job.job_id, llm_client=mock_llm_client)
+        generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client)
         
         updated_job = store.get_job(job.job_id)
         assert updated_job is not None
@@ -295,7 +295,7 @@ class TestPlannerWithJobStore:
         store = JobStore()
         
         # Should not raise exception
-        response = generate_plan("Build a REST API", job_store=store, job_id="non-existent", llm_client=mock_llm_client)
+        response = generate_plan("Build a REST API", job_repository=store, job_id="non-existent", llm_client=mock_llm_client)
         
         assert response is not None
         assert hasattr(response, 'specs')
@@ -305,7 +305,7 @@ class TestPlannerWithJobStore:
         store = JobStore()
         job = store.create_job()
         
-        generate_plan("Build a REST API", job_store=store, job_id=job.job_id, llm_client=mock_llm_client)
+        generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client)
         
         updated_job = store.get_job(job.job_id)
         assert updated_job is not None
@@ -320,7 +320,7 @@ class TestPlannerWithJobStore:
         store = JobStore()
         
         # Should not raise exception
-        response = generate_plan("Build a REST API", job_store=store, job_id=None, llm_client=mock_llm_client)
+        response = generate_plan("Build a REST API", job_repository=store, job_id=None, llm_client=mock_llm_client)
         
         assert response is not None
         assert hasattr(response, 'specs')
@@ -328,7 +328,7 @@ class TestPlannerWithJobStore:
     def test_generate_plan_with_job_id_but_no_job_store(self, mock_llm_client):
         """Test that providing job_id without job_store is handled gracefully."""
         # Should not raise exception
-        response = generate_plan("Build a REST API", job_store=None, job_id="some-id", llm_client=mock_llm_client)
+        response = generate_plan("Build a REST API", job_repository=None, job_id="some-id", llm_client=mock_llm_client)
         
         assert response is not None
         assert hasattr(response, 'specs')
@@ -339,16 +339,16 @@ class TestPlannerWithJobStore:
         job1 = store.create_job()
         job2 = store.create_job()
         
-        generate_plan("Build a REST API", job_store=store, job_id=job1.job_id, llm_client=mock_llm_client)
-        generate_plan("Create a web service", job_store=store, job_id=job2.job_id, llm_client=mock_llm_client)
+        generate_plan("Build a REST API", job_repository=store, job_id=job1.job_id, llm_client=mock_llm_client)
+        generate_plan("Create a web service", job_repository=store, job_id=job2.job_id, llm_client=mock_llm_client)
         
         updated_job1 = store.get_job(job1.job_id)
         updated_job2 = store.get_job(job2.job_id)
         
         assert updated_job1 is not None
         assert updated_job2 is not None
-        assert updated_job1.status == "succeeded"
-        assert updated_job2.status == "succeeded"
+        assert updated_job1.status == "SUCCEEDED"
+        assert updated_job2.status == "SUCCEEDED"
         assert updated_job1.result is not None
         assert updated_job2.result is not None
     
@@ -357,7 +357,7 @@ class TestPlannerWithJobStore:
         store = JobStore()
         
         # Should not raise exception and should return a plan
-        response = generate_plan("Build a REST API", job_store=store, job_id="non-existent-id", llm_client=mock_llm_client)
+        response = generate_plan("Build a REST API", job_repository=store, job_id="non-existent-id", llm_client=mock_llm_client)
         
         assert response is not None
         assert hasattr(response, 'specs')
@@ -380,11 +380,11 @@ class TestPlannerErrorHandling:
         mock_client.generate_specs.side_effect = LLMConfigurationError("Missing API key")
         
         with pytest.raises(LLMConfigurationError):
-            generate_plan("Build a REST API", job_store=store, job_id=job.job_id, llm_client=mock_client)
+            generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client)
         
         updated_job = store.get_job(job.job_id)
         assert updated_job is not None
-        assert updated_job.status == "failed"
+        assert updated_job.status == "FAILED"
         assert updated_job.error is not None
         assert "configuration error" in updated_job.error["error"].lower()
     
@@ -397,11 +397,11 @@ class TestPlannerErrorHandling:
         mock_client.generate_specs.side_effect = LLMRequestError("API timeout")
         
         with pytest.raises(LLMRequestError):
-            generate_plan("Build a REST API", job_store=store, job_id=job.job_id, llm_client=mock_client)
+            generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client)
         
         updated_job = store.get_job(job.job_id)
         assert updated_job is not None
-        assert updated_job.status == "failed"
+        assert updated_job.status == "FAILED"
         assert updated_job.error is not None
         assert "request error" in updated_job.error["error"].lower()
     
@@ -414,11 +414,11 @@ class TestPlannerErrorHandling:
         mock_client.generate_specs.side_effect = LLMResponseError("Invalid JSON")
         
         with pytest.raises(LLMResponseError):
-            generate_plan("Build a REST API", job_store=store, job_id=job.job_id, llm_client=mock_client)
+            generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client)
         
         updated_job = store.get_job(job.job_id)
         assert updated_job is not None
-        assert updated_job.status == "failed"
+        assert updated_job.status == "FAILED"
         assert updated_job.error is not None
         assert "response error" in updated_job.error["error"].lower()
     
@@ -431,11 +431,11 @@ class TestPlannerErrorHandling:
         mock_client.generate_specs.return_value = {"specs": []}
         
         with pytest.raises(LLMResponseError, match="empty specs list"):
-            generate_plan("Build a REST API", job_store=store, job_id=job.job_id, llm_client=mock_client)
+            generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client)
         
         updated_job = store.get_job(job.job_id)
         assert updated_job is not None
-        assert updated_job.status == "failed"
+        assert updated_job.status == "FAILED"
     
     def test_generate_plan_handles_unexpected_error(self):
         """Test that unexpected errors are handled and job is marked failed."""
@@ -446,11 +446,11 @@ class TestPlannerErrorHandling:
         mock_client.generate_specs.side_effect = ValueError("Unexpected error")
         
         with pytest.raises(ValueError):
-            generate_plan("Build a REST API", job_store=store, job_id=job.job_id, llm_client=mock_client)
+            generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client)
         
         updated_job = store.get_job(job.job_id)
         assert updated_job is not None
-        assert updated_job.status == "failed"
+        assert updated_job.status == "FAILED"
         assert updated_job.error is not None
         assert "Unexpected error" in updated_job.error["error"]
     
@@ -463,7 +463,7 @@ class TestPlannerErrorHandling:
         mock_client.generate_specs.side_effect = LLMRequestError("Timeout")
         
         with pytest.raises(LLMRequestError):
-            generate_plan("Build a REST API", job_store=store, job_id=job.job_id, llm_client=mock_client)
+            generate_plan("Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client)
         
         updated_job = store.get_job(job.job_id)
         assert updated_job is not None

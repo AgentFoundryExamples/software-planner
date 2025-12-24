@@ -39,7 +39,7 @@ class TestJobStoreBasicOperations:
         store = JobStore()
         job = store.create_job()
         
-        assert job.status == "pending"
+        assert job.status == "QUEUED"
     
     def test_create_job_sets_timestamps(self):
         """Test that create_job sets created_at and updated_at."""
@@ -83,10 +83,10 @@ class TestJobStoreBasicOperations:
         store = JobStore()
         job = store.create_job()
         
-        updated = store.update_job(job.job_id, status="running")
+        updated = store.update_job(job.job_id, status="RUNNING")
         
         assert updated is not None
-        assert updated.status == "running"
+        assert updated.status == "RUNNING"
         assert updated.job_id == job.job_id
     
     def test_update_job_updates_timestamp(self):
@@ -96,7 +96,7 @@ class TestJobStoreBasicOperations:
         original_updated_at = job.updated_at
         
         time.sleep(0.01)  # Ensure time difference
-        updated = store.update_job(job.job_id, status="running")
+        updated = store.update_job(job.job_id, status="RUNNING")
         
         assert updated is not None
         assert updated.updated_at > original_updated_at
@@ -126,7 +126,7 @@ class TestJobStoreBasicOperations:
     def test_update_job_returns_none_for_unknown_id(self):
         """Test that update_job returns None for non-existent job."""
         store = JobStore()
-        updated = store.update_job("non-existent-id", status="running")
+        updated = store.update_job("non-existent-id", status="RUNNING")
         
         assert updated is None
     
@@ -137,13 +137,13 @@ class TestJobStoreBasicOperations:
         result = {"specs": []}
         
         # Update only status
-        store.update_job(job.job_id, status="running")
+        store.update_job(job.job_id, status="RUNNING")
         
         # Update only result
         updated = store.update_job(job.job_id, result=result)
         
         assert updated is not None
-        assert updated.status == "running"  # Should remain from previous update
+        assert updated.status == "RUNNING"  # Should remain from previous update
         assert updated.result == result
         assert updated.error is None
     
@@ -210,13 +210,13 @@ class TestJobStoreEdgeCases:
         
         updated = store.update_job(
             job.job_id,
-            status="failed",
+            status="FAILED",
             result=result,
             error=error
         )
         
         assert updated is not None
-        assert updated.status == "failed"
+        assert updated.status == "FAILED"
         assert updated.result == result
         assert updated.error == error
     
@@ -227,7 +227,7 @@ class TestJobStoreEdgeCases:
         original_created_at = job.created_at
         
         time.sleep(0.01)
-        updated = store.update_job(job.job_id, status="running")
+        updated = store.update_job(job.job_id, status="RUNNING")
         
         assert updated is not None
         assert updated.created_at == original_created_at
@@ -237,13 +237,13 @@ class TestJobStoreEdgeCases:
         store = JobStore()
         job = store.create_job()
         
-        store.update_job(job.job_id, status="running")
-        store.update_job(job.job_id, status="succeeded")
+        store.update_job(job.job_id, status="RUNNING")
+        store.update_job(job.job_id, status="SUCCEEDED")
         
         retrieved = store.get_job(job.job_id)
         
         assert retrieved is not None
-        assert retrieved.status == "succeeded"
+        assert retrieved.status == "SUCCEEDED"
     
     def test_large_result_payload_stored_correctly(self):
         """Test that large result payloads are stored without mutation."""
@@ -301,7 +301,7 @@ class TestJobStoreThreadSafety:
         num_threads = 10
         
         def update_to_running():
-            store.update_job(job.job_id, status="running")
+            store.update_job(job.job_id, status="RUNNING")
         
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             futures = [executor.submit(update_to_running) for _ in range(num_threads)]
@@ -310,7 +310,7 @@ class TestJobStoreThreadSafety:
         # Job should still be in valid state
         retrieved = store.get_job(job.job_id)
         assert retrieved is not None
-        assert retrieved.status == "running"
+        assert retrieved.status == "RUNNING"
     
     def test_concurrent_read_and_write(self):
         """Test that concurrent reads and writes don't cause errors."""
@@ -324,7 +324,7 @@ class TestJobStoreThreadSafety:
         
         def write_jobs():
             for job in jobs:
-                store.update_job(job.job_id, status="running")
+                store.update_job(job.job_id, status="RUNNING")
         
         with ThreadPoolExecutor(max_workers=10) as executor:
             read_futures = [executor.submit(read_jobs) for _ in range(5)]
@@ -347,7 +347,7 @@ class TestJobStoreThreadSafety:
         
         def update_job():
             time.sleep(0.001)  # Small delay to increase chance of race
-            store.update_job(job.job_id, status="running")
+            store.update_job(job.job_id, status="RUNNING")
         
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = [executor.submit(update_job) for _ in range(num_updates)]
@@ -424,10 +424,10 @@ class TestJobStoreMetadata:
         )
         
         # Update status
-        updated = store.update_job(job.job_id, status="running")
+        updated = store.update_job(job.job_id, status="RUNNING")
         
         assert updated is not None
-        assert updated.status == "running"
+        assert updated.status == "RUNNING"
         assert updated.model == "gpt-4-turbo"
         assert updated.system_prompt_hash == "hash123"
     
@@ -476,10 +476,10 @@ class TestJobStoreMetadata:
         )
         
         result = {"specs": [{"purpose": "Test"}]}
-        updated = store.update_job(job.job_id, status="succeeded", result=result)
+        updated = store.update_job(job.job_id, status="SUCCEEDED", result=result)
         
         assert updated is not None
-        assert updated.status == "succeeded"
+        assert updated.status == "SUCCEEDED"
         assert updated.result == result
         assert updated.model == "gpt-4-turbo"
         assert updated.system_prompt_hash == "hash123"
@@ -493,10 +493,10 @@ class TestJobStoreMetadata:
         )
         
         error = {"error": "Test error", "type": "ValueError"}
-        updated = store.update_job(job.job_id, status="failed", error=error)
+        updated = store.update_job(job.job_id, status="FAILED", error=error)
         
         assert updated is not None
-        assert updated.status == "failed"
+        assert updated.status == "FAILED"
         assert updated.error == error
         assert updated.model == "claude-opus"
         assert updated.system_prompt_hash == "hash456"

@@ -18,10 +18,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+import asyncio
 
 from app.api.routes import router as plan_router
 from app.core.config import settings
 from app.services.store_singleton import get_job_store
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def create_app() -> FastAPI:
@@ -130,6 +134,27 @@ def create_app() -> FastAPI:
     
     # Register API routes
     app.include_router(plan_router, prefix=settings.api_prefix, tags=["planning"])
+    
+    # Startup event handler
+    @app.on_event("startup")
+    async def startup_event():
+        """Handle application startup - recover stuck jobs."""
+        logger.info("Application startup - recovering stuck jobs")
+        try:
+            job_repo = get_job_store()
+            recovered_count = await job_repo.recover_stuck_jobs()
+            if recovered_count > 0:
+                logger.warning(
+                    f"Recovered {recovered_count} stuck jobs on startup",
+                    extra={"recovered_count": recovered_count}
+                )
+        except Exception as e:
+            logger.error(
+                f"Failed to recover stuck jobs on startup: {e}",
+                extra={"error": str(e), "error_type": type(e).__name__},
+                exc_info=True
+            )
+            # Don't fail startup if recovery fails
     
     return app
 
