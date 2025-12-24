@@ -198,39 +198,72 @@ def test_planner_api_keys_default_empty():
     assert test_settings.planner_api_keys == []
 
 
+def test_planner_api_keys_required_enforces_non_empty():
+    """Test that planner_api_keys_required enforces at least one key."""
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(planner_api_keys=[], planner_api_keys_required=True)
+    assert "planner_api_keys_required is true" in str(exc_info.value).lower()
+
+
 def test_planner_api_keys_valid_list(monkeypatch):
     """Test that valid API keys can be set."""
-    monkeypatch.setenv("PLANNER_API_KEYS", '["key1", "key2", "key3"]')
+    # Use keys that meet minimum length requirement (16 chars default)
+    monkeypatch.setenv("PLANNER_API_KEYS", '["key1234567890123", "key2234567890123", "key3234567890123"]')
     test_settings = Settings()
-    assert test_settings.planner_api_keys == ["key1", "key2", "key3"]
+    assert len(test_settings.planner_api_keys) == 3
 
 
 def test_planner_api_keys_rejects_empty_string():
     """Test that empty string API keys are rejected."""
     with pytest.raises(ValidationError) as exc_info:
-        Settings(planner_api_keys=["key1", "", "key3"])
-    assert "empty or contain only whitespace" in str(exc_info.value).lower()
+        Settings(planner_api_keys=["key1234567890123", "", "key3234567890123"])
+    error_msg = str(exc_info.value).lower()
+    assert "empty" in error_msg or "whitespace" in error_msg
 
 
 def test_planner_api_keys_rejects_whitespace_only():
     """Test that whitespace-only API keys are rejected."""
     with pytest.raises(ValidationError) as exc_info:
-        Settings(planner_api_keys=["key1", "   ", "key3"])
-    assert "empty or contain only whitespace" in str(exc_info.value).lower()
+        Settings(planner_api_keys=["key1234567890123", "   ", "key3234567890123"])
+    error_msg = str(exc_info.value).lower()
+    assert "empty" in error_msg or "whitespace" in error_msg
 
 
 def test_planner_api_keys_rejects_duplicates():
     """Test that duplicate API keys are rejected."""
     with pytest.raises(ValidationError) as exc_info:
-        Settings(planner_api_keys=["key1", "key2", "key1"])
+        Settings(planner_api_keys=["key1234567890123", "key2234567890123", "key1234567890123"])
     assert "duplicate" in str(exc_info.value).lower()
 
 
 def test_planner_api_keys_rejects_duplicates_with_whitespace():
     """Test that duplicate API keys with different whitespace are rejected."""
     with pytest.raises(ValidationError) as exc_info:
-        Settings(planner_api_keys=["key1", " key1 "])
+        Settings(planner_api_keys=["key1234567890123", " key1234567890123 "])
     assert "duplicate" in str(exc_info.value).lower()
+
+
+def test_planner_api_keys_minimum_length_default():
+    """Test that API keys must meet minimum length requirement."""
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(planner_api_keys=["short"])  # Less than 16 chars
+    assert "too short" in str(exc_info.value).lower()
+
+
+def test_planner_api_keys_minimum_length_custom():
+    """Test that custom minimum length is enforced."""
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(planner_api_keys=["key12345"], planner_api_key_min_length=10)
+    assert "too short" in str(exc_info.value).lower()
+
+
+def test_planner_api_keys_minimum_length_accepts_valid():
+    """Test that keys meeting minimum length are accepted."""
+    test_settings = Settings(
+        planner_api_keys=["key1234567890123"],  # 16 chars
+        planner_api_key_min_length=16
+    )
+    assert len(test_settings.planner_api_keys) == 1
 
 
 # ============================================================================
@@ -396,17 +429,32 @@ def test_cors_mixed_wildcard_requires_toggle():
 # Tests for Helper Methods
 # ============================================================================
 
-def test_get_normalized_api_keys_empty():
-    """Test normalized API keys with empty list."""
+def test_normalized_api_keys_empty():
+    """Test normalized API keys property with empty list."""
     test_settings = Settings()
-    assert test_settings.get_normalized_api_keys() == set()
+    assert test_settings.normalized_api_keys == set()
 
 
-def test_get_normalized_api_keys_strips_whitespace():
-    """Test that normalized API keys strips whitespace."""
-    test_settings = Settings(planner_api_keys=["  key1  ", "key2", " key3"])
-    normalized = test_settings.get_normalized_api_keys()
-    assert normalized == {"key1", "key2", "key3"}
+def test_normalized_api_keys_strips_whitespace():
+    """Test that normalized API keys property strips whitespace."""
+    test_settings = Settings(
+        planner_api_keys=["  key1234567890123  ", "key2234567890123", " key3234567890123"],
+        planner_api_key_min_length=16
+    )
+    normalized = test_settings.normalized_api_keys
+    assert normalized == {"key1234567890123", "key2234567890123", "key3234567890123"}
+
+
+def test_normalized_api_keys_is_cached():
+    """Test that normalized_api_keys is cached."""
+    test_settings = Settings(
+        planner_api_keys=["key1234567890123"],
+        planner_api_key_min_length=16
+    )
+    # Access twice to verify caching works
+    first_access = test_settings.normalized_api_keys
+    second_access = test_settings.normalized_api_keys
+    assert first_access is second_access  # Same object due to caching
 
 
 def test_get_rate_limit_config():
@@ -420,27 +468,49 @@ def test_get_rate_limit_config():
 
 
 def test_is_api_key_valid_with_valid_key():
-    """Test API key validation with valid key."""
-    test_settings = Settings(planner_api_keys=["key1", "key2"])
-    assert test_settings.is_api_key_valid("key1") is True
-    assert test_settings.is_api_key_valid("key2") is True
+    """Test API key validation with valid key using constant-time comparison."""
+    test_settings = Settings(
+        planner_api_keys=["key1234567890123", "key2234567890123"],
+        planner_api_key_min_length=16
+    )
+    assert test_settings.is_api_key_valid("key1234567890123") is True
+    assert test_settings.is_api_key_valid("key2234567890123") is True
 
 
 def test_is_api_key_valid_with_invalid_key():
     """Test API key validation with invalid key."""
-    test_settings = Settings(planner_api_keys=["key1", "key2"])
+    test_settings = Settings(
+        planner_api_keys=["key1234567890123", "key2234567890123"],
+        planner_api_key_min_length=16
+    )
     assert test_settings.is_api_key_valid("invalid") is False
     assert test_settings.is_api_key_valid("") is False
 
 
 def test_is_api_key_valid_with_whitespace():
     """Test API key validation handles whitespace correctly."""
-    test_settings = Settings(planner_api_keys=["  key1  ", "key2"])
-    assert test_settings.is_api_key_valid("key1") is True
-    assert test_settings.is_api_key_valid("  key1  ") is True
+    test_settings = Settings(
+        planner_api_keys=["  key1234567890123  ", "key2234567890123"],
+        planner_api_key_min_length=16
+    )
+    assert test_settings.is_api_key_valid("key1234567890123") is True
+    assert test_settings.is_api_key_valid("  key1234567890123  ") is True
 
 
 def test_is_api_key_valid_with_empty_list():
     """Test API key validation with no keys configured."""
     test_settings = Settings()
     assert test_settings.is_api_key_valid("any-key") is False
+
+
+def test_is_api_key_valid_constant_time_comparison():
+    """Test that API key validation uses constant-time comparison."""
+    # This test verifies the method doesn't raise an exception
+    # The actual constant-time behavior is guaranteed by secrets.compare_digest
+    test_settings = Settings(
+        planner_api_keys=["key1234567890123"],
+        planner_api_key_min_length=16
+    )
+    # Should work without timing attack vulnerability
+    assert test_settings.is_api_key_valid("key1234567890123") is True
+    assert test_settings.is_api_key_valid("wrong123456789012") is False

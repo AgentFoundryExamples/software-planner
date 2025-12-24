@@ -15,6 +15,8 @@
 
 import logging
 import os
+import secrets
+from functools import cached_property
 from typing import Optional
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -82,6 +84,15 @@ class Settings(BaseSettings):
     planner_api_keys: list[str] = Field(
         default_factory=list,
         description="List of valid API keys for planner authentication. Required for production use."
+    )
+    planner_api_keys_required: bool = Field(
+        default=False,
+        description="If True, requires at least one API key to be configured at startup"
+    )
+    planner_api_key_min_length: int = Field(
+        default=16,
+        ge=8,
+        description="Minimum length for API keys (default: 16 characters for security)"
     )
     
     # Security: Request bounds
@@ -196,31 +207,49 @@ class Settings(BaseSettings):
         Ensures:
         - API keys are not empty strings or whitespace-only
         - No duplicate keys
-        - Keys have reasonable format
+        - Keys meet minimum length requirements
+        - At least one key exists if required
         """
+        # Check if API keys are required but none provided
+        if self.planner_api_keys_required and not self.planner_api_keys:
+            raise ValueError(
+                "Planner API key validation failed: planner_api_keys_required is True but no API keys configured. "
+                "Set PLANNER_API_KEYS environment variable with at least one secure API key. "
+                "Generate keys using: openssl rand -hex 32"
+            )
+        
+        # If no keys provided and not required, skip validation
         if not self.planner_api_keys:
-            # Empty list is allowed but will be flagged at runtime when auth is needed
             return self
         
-        # Check for empty or whitespace-only keys
-        invalid_keys = []
+        # Single-pass validation with set for deduplication
+        seen_keys = set()
         for idx, key in enumerate(self.planner_api_keys):
-            if not key or not key.strip():
-                invalid_keys.append(idx)
-        
-        if invalid_keys:
-            raise ValueError(
-                f"Planner API key validation failed: Keys at indices {invalid_keys} are empty or contain only whitespace. "
-                "All API keys must be non-empty strings."
-            )
-        
-        # Check for duplicate keys
-        stripped_keys = [key.strip() for key in self.planner_api_keys]
-        if len(stripped_keys) != len(set(stripped_keys)):
-            raise ValueError(
-                "Planner API key validation failed: Duplicate API keys detected. "
-                "Each API key must be unique."
-            )
+            stripped_key = key.strip() if key else ""
+            
+            # Check for empty or whitespace-only keys
+            if not stripped_key:
+                raise ValueError(
+                    f"Planner API key validation failed: Key at index {idx} is empty or contains only whitespace. "
+                    "All API keys must be non-empty strings."
+                )
+            
+            # Check minimum length
+            if len(stripped_key) < self.planner_api_key_min_length:
+                raise ValueError(
+                    f"Planner API key validation failed: Key at index {idx} is too short ({len(stripped_key)} chars). "
+                    f"Minimum length is {self.planner_api_key_min_length} characters for security. "
+                    "Generate secure keys using: openssl rand -hex 32"
+                )
+            
+            # Check for duplicates
+            if stripped_key in seen_keys:
+                raise ValueError(
+                    "Planner API key validation failed: Duplicate API keys detected. "
+                    f"Duplicate value: '{stripped_key[:8]}...' (showing first 8 chars). "
+                    "Each API key must be unique."
+                )
+            seen_keys.add(stripped_key)
         
         return self
     
@@ -434,11 +463,16 @@ class Settings(BaseSettings):
     
     # Helper methods for downstream dependencies
     
-    def get_normalized_api_keys(self) -> set[str]:
-        """Get normalized set of API keys with whitespace stripped.
+    @cached_property
+    def normalized_api_keys(self) -> set[str]:
+        """Get a cached, normalized set of API keys with whitespace stripped.
         
         Returns:
             Set of normalized (stripped) API keys.
+            
+        Note:
+            This property is cached for performance. The Settings object is
+            typically immutable after initialization, so caching is safe.
         """
         return {key.strip() for key in self.planner_api_keys if key and key.strip()}
     
@@ -454,17 +488,28 @@ class Settings(BaseSettings):
         }
     
     def is_api_key_valid(self, api_key: str) -> bool:
-        """Check if an API key is valid.
+        """Check if an API key is valid using constant-time comparison.
         
         Args:
             api_key: The API key to validate.
             
         Returns:
             True if the key is valid, False otherwise.
+            
+        Note:
+            Uses secrets.compare_digest for constant-time comparison to prevent
+            timing attacks. This is important when validating authentication tokens.
         """
         if not api_key or not api_key.strip():
             return False
-        return api_key.strip() in self.get_normalized_api_keys()
+        
+        stripped_key = api_key.strip()
+        # Use constant-time comparison to prevent timing attacks
+        # Check against each key in the set
+        for valid_key in self.normalized_api_keys:
+            if secrets.compare_digest(stripped_key, valid_key):
+                return True
+        return False
 
 
 # Global settings instance
