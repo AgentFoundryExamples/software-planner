@@ -428,13 +428,14 @@ def _format_job_response(job: Job) -> dict:
 )
 def create_plan(
     request: PlanRequest,
-    api_key: str = Depends(require_api_key)
+    api_key: str = Depends(require_api_key)  # Validates auth; unused in body (validation occurs in dependency)
 ) -> PlanResponse:
     """Generate a software plan based on the provided description.
     
     Args:
         request: PlanRequest containing the project description and optional model/prompt overrides.
         api_key: Validated API key from X-API-Key header (injected via dependency).
+                 Parameter is unused in function body as validation occurs in the dependency itself.
         
     Returns:
         PlanResponse with structured specifications.
@@ -603,7 +604,7 @@ def _background_planner_worker(
 async def create_plan_async(
     request: PlanRequest,
     background_tasks: BackgroundTasks,
-    api_key: str = Depends(require_api_key),
+    api_key: str = Depends(require_api_key),  # Validates auth; unused in body (validation occurs in dependency)
     job_repository: JobRepository = Depends(get_job_store)
 ) -> dict:
     """Create an async planning job that executes in the background.
@@ -628,8 +629,9 @@ async def create_plan_async(
     Args:
         request: PlanRequest containing the project description and optional overrides.
         background_tasks: FastAPI background tasks manager.
-        job_repository: JobRepository instance (injected via dependency).
         api_key: Validated API key from X-API-Key header (injected via dependency).
+                 Parameter is unused in function body as validation occurs in the dependency itself.
+        job_repository: JobRepository instance (injected via dependency).
         
     Returns:
         Dict with job_id and status "QUEUED".

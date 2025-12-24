@@ -22,7 +22,7 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
-async def require_api_key(
+def require_api_key(
     request: Request,
     x_api_key: Optional[str] = Header(None, description="API key for authentication")
 ) -> str:
@@ -34,10 +34,10 @@ async def require_api_key(
     
     Args:
         request: The incoming request (for accessing request_id from state).
-        x_api_key: The API key from X-API-Key header (case-insensitive).
+        x_api_key: The API key from X-API-Key header (case-insensitive header name).
         
     Returns:
-        The validated API key.
+        The validated API key (not stripped - must match exactly).
         
     Raises:
         HTTPException: 401 if header is missing, 403 if key is invalid.
@@ -45,6 +45,8 @@ async def require_api_key(
     Note:
         Uses constant-time comparison to prevent timing attacks.
         Never logs the API key value, only the request ID.
+        Keys must match exactly (no whitespace stripping) to prevent rate-limiting
+        or logging bypass by adding/removing whitespace while still authenticating.
     """
     # Get request ID from request state for logging
     request_id = getattr(request.state, "request_id", "unknown")

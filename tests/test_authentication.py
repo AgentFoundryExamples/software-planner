@@ -236,17 +236,21 @@ class TestAPIKeyHeaderHandling:
     """Test edge cases for API key header handling."""
     
     def test_api_key_with_leading_trailing_spaces(self, client_with_api_keys):
-        """Test that API keys with leading/trailing spaces are handled correctly."""
+        """Test that API keys with leading/trailing spaces are rejected for security.
+        
+        Security rationale: Allowing whitespace-stripped keys could enable rate limiting
+        or logging bypass by making the same key appear different (e.g., 'key' vs ' key ').
+        """
         response = client_with_api_keys.post(
             "/api/v1/plan",
             json={"description": "Build a REST API"},
             headers={"X-API-Key": "  test-key-1234567890  "}
         )
         
-        # Should succeed - spaces should be stripped
-        assert response.status_code == 200
+        # Should fail - spaces make it a different key for security
+        assert response.status_code == 403
         data = response.json()
-        assert "specs" in data
+        assert "error" in data or "detail" in data
     
     def test_api_key_case_sensitivity(self, client_with_api_keys):
         """Test that API keys are case-sensitive."""

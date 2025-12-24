@@ -491,7 +491,7 @@ class Settings(BaseSettings):
         """Check if an API key is valid using constant-time comparison.
         
         Args:
-            api_key: The API key to validate.
+            api_key: The API key to validate (must match exactly, no stripping).
             
         Returns:
             True if the key is valid, False otherwise.
@@ -500,16 +500,21 @@ class Settings(BaseSettings):
             Uses secrets.compare_digest for constant-time comparison to prevent
             timing attacks. Checks all keys to avoid leaking information about
             the number of keys or early match success.
+            
+            The incoming key is NOT stripped to prevent security issues where
+            attackers could add whitespace to bypass rate limiting or logging
+            while still authenticating. Configured keys are normalized (stripped)
+            during initialization to handle configuration mistakes.
         """
-        if not api_key or not api_key.strip():
+        if not api_key:
             return False
         
-        stripped_key = api_key.strip()
+        # Do NOT strip the incoming key for security reasons
         # Use constant-time comparison to prevent timing attacks
         # Check against all keys to avoid timing information leakage
         found = False
         for valid_key in self.normalized_api_keys:
-            if secrets.compare_digest(stripped_key, valid_key):
+            if secrets.compare_digest(api_key, valid_key):
                 found = True
                 # Continue checking remaining keys to maintain constant time
         return found

@@ -53,27 +53,21 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         # Validate and use inbound request ID or generate new one
         if inbound_request_id:
             # Validate that it looks like a reasonable request ID
-            # Allow UUIDs, alphanumeric strings, and common formats
-            # If invalid, generate a new one and log the overwrite
-            try:
-                # Try to parse as UUID for validation
-                uuid.UUID(inbound_request_id)
+            # Allow alphanumeric strings with common separators, and reasonable length (128 chars)
+            # This accepts UUIDs and other tracing formats like "trace-123-span-456"
+            if (len(inbound_request_id) <= 128 and 
+                all(c.isalnum() or c in "-_." for c in inbound_request_id)):
                 request_id = inbound_request_id
-            except ValueError:
-                # If not a valid UUID, accept it if it's alphanumeric with reasonable length
-                if (len(inbound_request_id) <= 128 and 
-                    all(c.isalnum() or c in "-_." for c in inbound_request_id)):
-                    request_id = inbound_request_id
-                else:
-                    # Invalid format - generate new one and log
-                    request_id = str(uuid.uuid4())
-                    logger.warning(
-                        f"Invalid request ID format received, generated new ID",
-                        extra={
-                            "invalid_request_id": inbound_request_id[:64],  # Truncate for safety
-                            "generated_request_id": request_id
-                        }
-                    )
+            else:
+                # Invalid format - generate new one and log
+                request_id = str(uuid.uuid4())
+                logger.warning(
+                    "Invalid request ID format received, generated new ID",
+                    extra={
+                        "invalid_request_id": inbound_request_id[:64],  # Truncate for safety
+                        "generated_request_id": request_id
+                    }
+                )
         else:
             # Generate new UUID for this request
             request_id = str(uuid.uuid4())
