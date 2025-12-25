@@ -652,7 +652,9 @@ pip install -r requirements.txt
   4. Install from requirements.txt: `pip install -r requirements.txt`
   5. Freeze to lockfile: `pip freeze > requirements-lock.txt`
   6. Deactivate and cleanup: `deactivate && rm -rf .venv-clean`
-- **Important:** Never regenerate from an environment with system packages installed. System packages (like `bcc`, `cloud-init`, `python-apt`) often have version strings with `+` symbols (e.g., `2.7.7+ubuntu5`) or are Linux-specific - these aren't on PyPI and will cause CI failures. Always use a clean virtual environment as shown above.
+- **Important:** Never regenerate from an environment with system packages installed. System packages (like `bcc`, `cloud-init`, `python-apt`) often have version strings with `+` symbols (e.g., `2.7.7+ubuntu5`) or are Linux-specific - these aren't on PyPI and will cause CI failures.
+  - Always use a clean virtual environment as shown above
+  - If you see packages with `+` in version numbers after `pip freeze`, you're in an environment with system packages
 
 ### Development Commands
 
