@@ -493,7 +493,7 @@ def _format_job_response(job: Job) -> dict:
     summary="Generate software plan",
     description="Accepts a project description and returns a structured plan with specifications",
 )
-def create_plan(
+async def create_plan(
     request_obj: PlanRequest,
     request: Request,
     api_key: str = Depends(
@@ -533,8 +533,8 @@ def create_plan(
     if request_obj.model is not None:
         _validate_model_or_raise(request_obj.model)
 
-    # Generate plan with optional overrides
-    return generate_plan(
+    # Generate plan with optional overrides - now async
+    return await generate_plan(
         description=request_obj.description,
         model=request_obj.model,
         system_prompt=request_obj.system_prompt,
@@ -572,9 +572,8 @@ async def _background_planner_worker(
 
         # Execute planner with job tracking and optional overrides
         # The generate_plan function will update status to "RUNNING" and then "SUCCEEDED"
-        # Run the blocking generate_plan function in a separate thread
-        await asyncio.to_thread(
-            generate_plan,
+        # Now we can directly await the async function
+        await generate_plan(
             description=description,
             job_repository=job_repository,
             job_id=job_id,

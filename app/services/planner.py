@@ -17,7 +17,6 @@ This module provides the main planning function that uses an LLM client
 to generate software specifications based on project descriptions.
 """
 
-import asyncio
 import logging
 from typing import Any, Optional
 
@@ -41,17 +40,7 @@ MAX_STRING_FIELD_LENGTH = 10000  # Maximum length for purpose/vision fields
 MAX_ARRAY_ITEM_LENGTH = 5000  # Maximum length for items in must/dont/nice arrays
 
 
-def _run_async_safe(coro):
-    """Safely run async code from sync context.
 
-    This uses asyncio.run() which creates a new event loop, runs the coroutine,
-    and properly cleans up. This is safer than trying to reuse existing event loops
-    which can cause deadlocks or resource leaks in multi-threaded contexts.
-
-    Note: Each call creates a fresh event loop. For better performance, consider
-    making the calling code async instead of using this wrapper.
-    """
-    return asyncio.run(coro)
 
 
 def _normalize_specs(data: dict[str, Any]) -> dict[str, Any]:
@@ -175,7 +164,7 @@ def _normalize_specs(data: dict[str, Any]) -> dict[str, Any]:
     return {"specs": normalized_specs}
 
 
-def generate_plan(
+async def generate_plan(
     description: str,
     job_repository: Optional[JobRepository] = None,
     job_id: Optional[str] = None,
@@ -211,9 +200,9 @@ def generate_plan(
     """
     # If job tracking is enabled, validate job exists before updating
     if job_repository and job_id:
-        # Run async operations safely
+        # Run async operations directly
         try:
-            job = _run_async_safe(job_repository.get_job(job_id))
+            job = await job_repository.get_job(job_id)
         except Exception as e:
             logger.error(
                 "Failed to get job during planning",
@@ -236,7 +225,7 @@ def generate_plan(
                 },
             )
             try:
-                _run_async_safe(job_repository.mark_running(job_id))
+                await job_repository.mark_running(job_id)
             except Exception as e:
                 logger.error(
                     "Failed to mark job as running",
@@ -313,7 +302,7 @@ def generate_plan(
             # Convert response to dict preserving top-level 'specs'
             result_dict = response.model_dump()
             try:
-                _run_async_safe(job_repository.mark_succeeded(job_id, result_dict))
+                await job_repository.mark_succeeded(job_id, result_dict)
             except Exception as e:
                 logger.error(
                     "Failed to mark job as succeeded",
@@ -342,7 +331,7 @@ def generate_plan(
         if job_repository and job_id:
             try:
                 error_dict = {"error": error_msg, "type": error_type_name}
-                _run_async_safe(job_repository.mark_failed(job_id, error_dict))
+                await job_repository.mark_failed(job_id, error_dict)
             except Exception as update_exc:
                 logger.error(
                     f"Failed to update job status after {error_category} error",
@@ -367,7 +356,7 @@ def generate_plan(
         if job_repository and job_id:
             try:
                 error_dict = {"error": error_msg, "type": type(e).__name__}
-                _run_async_safe(job_repository.mark_failed(job_id, error_dict))
+                await job_repository.mark_failed(job_id, error_dict)
             except Exception as update_exc:
                 logger.error(
                     "Failed to update job status after unexpected error",

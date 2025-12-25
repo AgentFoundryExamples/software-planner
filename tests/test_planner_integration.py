@@ -188,7 +188,7 @@ class TestPlannerWithLLMMock:
 
     def test_generate_plan_calls_llm_client(self, mock_llm_client):
         """Test that generate_plan calls the LLM client."""
-        response = generate_plan("Build a REST API", llm_client=mock_llm_client)
+        response = asyncio.run(generate_plan("Build a REST API", llm_client=mock_llm_client))
 
         assert response is not None
         assert hasattr(response, "specs")
@@ -198,14 +198,14 @@ class TestPlannerWithLLMMock:
     def test_generate_plan_passes_description_to_llm(self, mock_llm_client):
         """Test that description is passed to LLM client."""
         description = "Build a REST API"
-        generate_plan(description, llm_client=mock_llm_client)
+        asyncio.run(generate_plan(description, llm_client=mock_llm_client))
 
         call_args = mock_llm_client.generate_specs.call_args
         assert call_args[1]["description"] == description
 
     def test_generate_plan_uses_system_prompt(self, mock_llm_client):
         """Test that system prompt is passed to LLM client."""
-        generate_plan("Build a REST API", llm_client=mock_llm_client)
+        asyncio.run(generate_plan("Build a REST API", llm_client=mock_llm_client))
 
         call_args = mock_llm_client.generate_specs.call_args
         assert "system_prompt" in call_args[1]
@@ -222,8 +222,13 @@ class TestPlannerWithJobStore:
 
         assert job.status == "QUEUED"
 
-        generate_plan(
-            "Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client
+        asyncio.run(
+            generate_plan(
+                "Build a REST API",
+                job_repository=store,
+                job_id=job.job_id,
+                llm_client=mock_llm_client,
+            )
         )
 
         updated_job = asyncio.run(store.get_job(job.job_id))
@@ -235,8 +240,13 @@ class TestPlannerWithJobStore:
         store = JobStore()
         job = asyncio.run(store.create_job(description="Test description"))
 
-        response = generate_plan(
-            "Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client
+        response = asyncio.run(
+            generate_plan(
+                "Build a REST API",
+                job_repository=store,
+                job_id=job.job_id,
+                llm_client=mock_llm_client,
+            )
         )
 
         updated_job = asyncio.run(store.get_job(job.job_id))
@@ -249,8 +259,13 @@ class TestPlannerWithJobStore:
         store = JobStore()
         job = asyncio.run(store.create_job(description="Test description"))
 
-        response = generate_plan(
-            "Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client
+        response = asyncio.run(
+            generate_plan(
+                "Build a REST API",
+                job_repository=store,
+                job_id=job.job_id,
+                llm_client=mock_llm_client,
+            )
         )
 
         updated_job = asyncio.run(store.get_job(job.job_id))
@@ -265,8 +280,13 @@ class TestPlannerWithJobStore:
         store = JobStore()
         job = asyncio.run(store.create_job(description="Test description"))
 
-        response = generate_plan(
-            "Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client
+        response = asyncio.run(
+            generate_plan(
+                "Build a REST API",
+                job_repository=store,
+                job_id=job.job_id,
+                llm_client=mock_llm_client,
+            )
         )
 
         updated_job = asyncio.run(store.get_job(job.job_id))
@@ -283,8 +303,13 @@ class TestPlannerWithJobStore:
         job = asyncio.run(store.create_job(description="Test description"))
         original_updated_at = job.updated_at
 
-        generate_plan(
-            "Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client
+        asyncio.run(
+            generate_plan(
+                "Build a REST API",
+                job_repository=store,
+                job_id=job.job_id,
+                llm_client=mock_llm_client,
+            )
         )
 
         updated_job = asyncio.run(store.get_job(job.job_id))
@@ -296,11 +321,13 @@ class TestPlannerWithJobStore:
         store = JobStore()
 
         # Should not raise exception
-        response = generate_plan(
-            "Build a REST API",
-            job_repository=store,
-            job_id="non-existent",
-            llm_client=mock_llm_client,
+        response = asyncio.run(
+            generate_plan(
+                "Build a REST API",
+                job_repository=store,
+                job_id="non-existent",
+                llm_client=mock_llm_client,
+            )
         )
 
         assert response is not None
@@ -311,8 +338,13 @@ class TestPlannerWithJobStore:
         store = JobStore()
         job = asyncio.run(store.create_job(description="Test description"))
 
-        generate_plan(
-            "Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_llm_client
+        asyncio.run(
+            generate_plan(
+                "Build a REST API",
+                job_repository=store,
+                job_id=job.job_id,
+                llm_client=mock_llm_client,
+            )
         )
 
         updated_job = asyncio.run(store.get_job(job.job_id))
@@ -328,8 +360,13 @@ class TestPlannerWithJobStore:
         store = JobStore()
 
         # Should not raise exception
-        response = generate_plan(
-            "Build a REST API", job_repository=store, job_id=None, llm_client=mock_llm_client
+        response = asyncio.run(
+            generate_plan(
+                "Build a REST API",
+                job_repository=store,
+                job_id=None,
+                llm_client=mock_llm_client,
+            )
         )
 
         assert response is not None
@@ -338,8 +375,13 @@ class TestPlannerWithJobStore:
     def test_generate_plan_with_job_id_but_no_job_store(self, mock_llm_client):
         """Test that providing job_id without job_store is handled gracefully."""
         # Should not raise exception
-        response = generate_plan(
-            "Build a REST API", job_repository=None, job_id="some-id", llm_client=mock_llm_client
+        response = asyncio.run(
+            generate_plan(
+                "Build a REST API",
+                job_repository=None,
+                job_id="some-id",
+                llm_client=mock_llm_client,
+            )
         )
 
         assert response is not None
@@ -351,14 +393,21 @@ class TestPlannerWithJobStore:
         job1 = asyncio.run(store.create_job(description="Test description"))
         job2 = asyncio.run(store.create_job(description="Test description"))
 
-        generate_plan(
-            "Build a REST API", job_repository=store, job_id=job1.job_id, llm_client=mock_llm_client
+        asyncio.run(
+            generate_plan(
+                "Build a REST API",
+                job_repository=store,
+                job_id=job1.job_id,
+                llm_client=mock_llm_client,
+            )
         )
-        generate_plan(
-            "Create a web service",
-            job_repository=store,
-            job_id=job2.job_id,
-            llm_client=mock_llm_client,
+        asyncio.run(
+            generate_plan(
+                "Create a web service",
+                job_repository=store,
+                job_id=job2.job_id,
+                llm_client=mock_llm_client,
+            )
         )
 
         updated_job1 = asyncio.run(store.get_job(job1.job_id))
@@ -376,11 +425,13 @@ class TestPlannerWithJobStore:
         store = JobStore()
 
         # Should not raise exception and should return a plan
-        response = generate_plan(
-            "Build a REST API",
-            job_repository=store,
-            job_id="non-existent-id",
-            llm_client=mock_llm_client,
+        response = asyncio.run(
+            generate_plan(
+                "Build a REST API",
+                job_repository=store,
+                job_id="non-existent-id",
+                llm_client=mock_llm_client,
+            )
         )
 
         assert response is not None
@@ -404,8 +455,13 @@ class TestPlannerErrorHandling:
         mock_client.generate_specs.side_effect = LLMConfigurationError("Missing API key")
 
         with pytest.raises(LLMConfigurationError):
-            generate_plan(
-                "Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client
+            asyncio.run(
+                generate_plan(
+                    "Build a REST API",
+                    job_repository=store,
+                    job_id=job.job_id,
+                    llm_client=mock_client,
+                )
             )
 
         updated_job = asyncio.run(store.get_job(job.job_id))
@@ -423,8 +479,13 @@ class TestPlannerErrorHandling:
         mock_client.generate_specs.side_effect = LLMRequestError("API timeout")
 
         with pytest.raises(LLMRequestError):
-            generate_plan(
-                "Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client
+            asyncio.run(
+                generate_plan(
+                    "Build a REST API",
+                    job_repository=store,
+                    job_id=job.job_id,
+                    llm_client=mock_client,
+                )
             )
 
         updated_job = asyncio.run(store.get_job(job.job_id))
@@ -442,8 +503,13 @@ class TestPlannerErrorHandling:
         mock_client.generate_specs.side_effect = LLMResponseError("Invalid JSON")
 
         with pytest.raises(LLMResponseError):
-            generate_plan(
-                "Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client
+            asyncio.run(
+                generate_plan(
+                    "Build a REST API",
+                    job_repository=store,
+                    job_id=job.job_id,
+                    llm_client=mock_client,
+                )
             )
 
         updated_job = asyncio.run(store.get_job(job.job_id))
@@ -461,8 +527,13 @@ class TestPlannerErrorHandling:
         mock_client.generate_specs.return_value = {"specs": []}
 
         with pytest.raises(LLMResponseError, match="empty specs list"):
-            generate_plan(
-                "Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client
+            asyncio.run(
+                generate_plan(
+                    "Build a REST API",
+                    job_repository=store,
+                    job_id=job.job_id,
+                    llm_client=mock_client,
+                )
             )
 
         updated_job = asyncio.run(store.get_job(job.job_id))
@@ -478,8 +549,13 @@ class TestPlannerErrorHandling:
         mock_client.generate_specs.side_effect = ValueError("Unexpected error")
 
         with pytest.raises(ValueError):
-            generate_plan(
-                "Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client
+            asyncio.run(
+                generate_plan(
+                    "Build a REST API",
+                    job_repository=store,
+                    job_id=job.job_id,
+                    llm_client=mock_client,
+                )
             )
 
         updated_job = asyncio.run(store.get_job(job.job_id))
@@ -497,8 +573,13 @@ class TestPlannerErrorHandling:
         mock_client.generate_specs.side_effect = LLMRequestError("Timeout")
 
         with pytest.raises(LLMRequestError):
-            generate_plan(
-                "Build a REST API", job_repository=store, job_id=job.job_id, llm_client=mock_client
+            asyncio.run(
+                generate_plan(
+                    "Build a REST API",
+                    job_repository=store,
+                    job_id=job.job_id,
+                    llm_client=mock_client,
+                )
             )
 
         updated_job = asyncio.run(store.get_job(job.job_id))

@@ -282,8 +282,8 @@ class TestPlansEndpointErrorHandling:
     def test_plans_endpoint_with_simulated_failure(self, client, override_job_store, monkeypatch):
         """Test that exceptions in background worker set failed status."""
 
-        # Mock generate_plan to raise an exception
-        def mock_generate_plan_error(
+        # Mock generate_plan to raise an exception - now async
+        async def mock_generate_plan_error(
             description,
             job_repository=None,
             job_id=None,
@@ -292,9 +292,7 @@ class TestPlansEndpointErrorHandling:
             system_prompt=None,
         ):
             if job_repository and job_id:
-                import asyncio
-
-                asyncio.run(job_repository.mark_running(job_id))
+                await job_repository.mark_running(job_id)
             raise ValueError("Simulated planning error")
 
         monkeypatch.setattr("app.api.routes.generate_plan", mock_generate_plan_error)
@@ -314,7 +312,7 @@ class TestPlansEndpointErrorHandling:
     ):
         """Test that error details don't include stack traces."""
 
-        def mock_generate_plan_error(
+        async def mock_generate_plan_error(
             description,
             job_repository=None,
             job_id=None,
@@ -323,9 +321,7 @@ class TestPlansEndpointErrorHandling:
             system_prompt=None,
         ):
             if job_repository and job_id:
-                import asyncio
-
-                asyncio.run(job_repository.mark_running(job_id))
+                await job_repository.mark_running(job_id)
             raise RuntimeError("Internal error with sensitive data")
 
         monkeypatch.setattr("app.api.routes.generate_plan", mock_generate_plan_error)
@@ -350,7 +346,7 @@ class TestPlansEndpointErrorHandling:
     ):
         """Test that background errors don't crash the server."""
 
-        def mock_generate_plan_error(
+        async def mock_generate_plan_error(
             description,
             job_repository=None,
             job_id=None,
@@ -359,9 +355,7 @@ class TestPlansEndpointErrorHandling:
             system_prompt=None,
         ):
             if job_repository and job_id:
-                import asyncio
-
-                asyncio.run(job_repository.mark_running(job_id))
+                await job_repository.mark_running(job_id)
             raise Exception("Critical error")
 
         monkeypatch.setattr("app.api.routes.generate_plan", mock_generate_plan_error)
