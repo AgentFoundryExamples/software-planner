@@ -41,7 +41,6 @@
       "type": "file",
       "external_dependencies": {
         "stdlib": [
-          "asyncio",
           "hashlib",
           "logging",
           "typing.Optional"
@@ -391,7 +390,6 @@
       "type": "file",
       "external_dependencies": {
         "stdlib": [
-          "asyncio",
           "logging",
           "typing.Any",
           "typing.Optional"
@@ -563,6 +561,24 @@
         ],
         "third-party": [
           "pydantic.ValidationError",
+          "pytest"
+        ]
+      }
+    },
+    {
+      "id": "tests/test_event_loop_management.py",
+      "path": "tests/test_event_loop_management.py",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "asyncio",
+          "concurrent.futures.ThreadPoolExecutor",
+          "time",
+          "unittest.mock.Mock",
+          "unittest.mock.patch"
+        ],
+        "third-party": [
+          "fastapi.testclient.TestClient",
           "pytest"
         ]
       }
@@ -1244,6 +1260,22 @@
     {
       "source": "tests/test_database.py",
       "target": "app/services/db/connection.py"
+    },
+    {
+      "source": "tests/test_event_loop_management.py",
+      "target": "app/main.py"
+    },
+    {
+      "source": "tests/test_event_loop_management.py",
+      "target": "app/services/job_store.py"
+    },
+    {
+      "source": "tests/test_event_loop_management.py",
+      "target": "app/services/rate_limiter.py"
+    },
+    {
+      "source": "tests/test_event_loop_management.py",
+      "target": "app/services/store_singleton.py"
     },
     {
       "source": "tests/test_health_endpoint.py",

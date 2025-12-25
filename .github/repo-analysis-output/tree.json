@@ -314,6 +314,10 @@
         },
         {
           "type": "file",
+          "name": "test_event_loop_management.py"
+        },
+        {
+          "type": "file",
           "name": "test_health_endpoint.py"
         },
         {

@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 63
+Total files: 64
 
 ## app/__init__.py
 **Language:** Python  
@@ -38,8 +38,8 @@ Total files: 63
 **Role:** router  
 **Role Justification:** filename contains routing term  
 **Summary:** Python routing configuration (role: router)  
-**Size:** 39.22 KB  
-**LOC:** 868  
+**Size:** 39.18 KB  
+**LOC:** 866  
 **TODOs/FIXMEs:** 0  
 
 ## app/core/__init__.py
@@ -245,8 +245,8 @@ Total files: 63
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for planner  
-**Size:** 14.41 KB  
-**LOC:** 268  
+**Size:** 13.86 KB  
+**LOC:** 258  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/rate_limiter.py
@@ -355,6 +355,15 @@ Total files: 63
 **Summary:** Python test file (role: test)  
 **Size:** 7.97 KB  
 **LOC:** 131  
+**TODOs/FIXMEs:** 0  
+
+## tests/test_event_loop_management.py
+**Language:** Python  
+**Role:** test  
+**Role Justification:** filename starts with 'test_'  
+**Summary:** Python test file (role: test)  
+**Size:** 11.10 KB  
+**LOC:** 187  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_health_endpoint.py
@@ -506,8 +515,8 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 18.73 KB  
-**LOC:** 396  
+**Size:** 20.40 KB  
+**LOC:** 477  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_plans_async_endpoint.py
@@ -515,7 +524,7 @@ Total files: 63
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 23.00 KB  
+**Size:** 23.30 KB  
 **LOC:** 415  
 **TODOs/FIXMEs:** 0  
 
