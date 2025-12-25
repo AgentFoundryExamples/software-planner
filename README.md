@@ -642,6 +642,12 @@ Development tools (black, isort, flake8, mypy, coverage) are included in the mai
 pip install -r requirements.txt
 ```
 
+**Note on `requirements-lock.txt`:**
+- `requirements-lock.txt` contains frozen versions generated from `requirements.txt`
+- Used by CI and Docker builds for reproducible environments
+- If you regenerate this file (e.g., via `pip freeze`), ensure it does **not** include system packages like `bcc`, `cloud-init`, `python-apt`, or other OS-level packages that aren't available on PyPI
+- These system packages will cause CI failures and should be excluded from the lockfile
+
 ### Development Commands
 
 The project includes a `Makefile` with convenient commands for development. All commands are designed to work consistently across local development and CI environments.
