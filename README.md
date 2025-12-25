@@ -646,13 +646,13 @@ pip install -r requirements.txt
 - `requirements-lock.txt` contains frozen versions generated from `requirements.txt`
 - Used by CI and Docker builds for reproducible environments
 - **To regenerate the lockfile properly:**
-  1. Create a clean virtual environment: `python3 -m venv /tmp/clean-env`
-  2. Activate it: `source /tmp/clean-env/bin/activate`
+  1. Create a clean virtual environment: `python3 -m venv .venv-clean`
+  2. Activate it: `source .venv-clean/bin/activate`
   3. Upgrade pip: `pip install --upgrade pip`
   4. Install from requirements.txt: `pip install -r requirements.txt`
   5. Freeze to lockfile: `pip freeze > requirements-lock.txt`
-  6. Deactivate: `deactivate`
-- **Important:** Never regenerate from an environment with system packages installed (like `bcc`, `cloud-init`, `python-apt`). These aren't on PyPI and will cause CI failures
+  6. Deactivate and cleanup: `deactivate && rm -rf .venv-clean`
+- **Important:** Never regenerate from an environment with system packages installed. System packages (like `bcc`, `cloud-init`, `python-apt`) often have version strings with `+` symbols (e.g., `2.7.7+ubuntu5`) or are Linux-specific - these aren't on PyPI and will cause CI failures. Always use a clean virtual environment as shown above.
 
 ### Development Commands
 
