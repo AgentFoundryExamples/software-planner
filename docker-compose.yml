@@ -29,6 +29,8 @@ services:
 
   # Software Planner API service
   app:
+    env_file:
+      - .env
     build:
       context: .
       dockerfile: Dockerfile
@@ -52,13 +54,13 @@ services:
       DATABASE_URL: postgresql+asyncpg://${DATABASE_USER:-planner}:${DATABASE_PASSWORD:-planner_dev_password}@db:5432/${DATABASE_NAME:-software_planner}
       
       # LLM configuration - required for planning functionality
-      LLM_API_KEY: ${LLM_API_KEY}
-      LLM_MODEL: ${LLM_MODEL:-gpt-4}
-      LLM_TIMEOUT: ${LLM_TIMEOUT:-90}
+      # LLM_API_KEY: ${LLM_API_KEY}
+      # LLM_MODEL: ${LLM_MODEL:-gpt-4}
+      # LLM_TIMEOUT: ${LLM_TIMEOUT:-90}
       
       # Multi-provider model registry (optional - only set if using)
-      # MODELS_REGISTRY: ${MODELS_REGISTRY}
-      # DEFAULT_MODEL: ${DEFAULT_MODEL}
+      MODELS_REGISTRY: ${MODELS_REGISTRY}
+      DEFAULT_MODEL: ${DEFAULT_MODEL}
       # OPENAI_API_KEY: ${OPENAI_API_KEY}
       # ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       # GOOGLE_API_KEY: ${GOOGLE_API_KEY}
