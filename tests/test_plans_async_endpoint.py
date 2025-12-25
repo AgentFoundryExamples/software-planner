@@ -293,6 +293,8 @@ class TestPlansEndpointErrorHandling:
         ):
             if job_repository and job_id:
                 await job_repository.mark_running(job_id)
+                # Yield control to the event loop to better simulate a real async operation
+                await asyncio.sleep(0)
             raise ValueError("Simulated planning error")
 
         monkeypatch.setattr("app.api.routes.generate_plan", mock_generate_plan_error)
@@ -322,6 +324,8 @@ class TestPlansEndpointErrorHandling:
         ):
             if job_repository and job_id:
                 await job_repository.mark_running(job_id)
+                # Yield control to the event loop to better simulate a real async operation
+                await asyncio.sleep(0)
             raise RuntimeError("Internal error with sensitive data")
 
         monkeypatch.setattr("app.api.routes.generate_plan", mock_generate_plan_error)
@@ -356,6 +360,8 @@ class TestPlansEndpointErrorHandling:
         ):
             if job_repository and job_id:
                 await job_repository.mark_running(job_id)
+                # Yield control to the event loop to better simulate a real async operation
+                await asyncio.sleep(0)
             raise Exception("Critical error")
 
         monkeypatch.setattr("app.api.routes.generate_plan", mock_generate_plan_error)
