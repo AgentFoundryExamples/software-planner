@@ -40,9 +40,6 @@ MAX_STRING_FIELD_LENGTH = 10000  # Maximum length for purpose/vision fields
 MAX_ARRAY_ITEM_LENGTH = 5000  # Maximum length for items in must/dont/nice arrays
 
 
-
-
-
 def _normalize_specs(data: dict[str, Any]) -> dict[str, Any]:
     """Normalize LLM response to ensure specs is a list with valid structure.
 

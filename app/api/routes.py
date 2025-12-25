@@ -13,7 +13,6 @@
 # limitations under the License.
 """API route handlers for the planning service."""
 
-import asyncio
 import hashlib
 import logging
 from typing import Optional
