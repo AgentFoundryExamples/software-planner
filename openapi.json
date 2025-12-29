@@ -1,0 +1,764 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Software Planner API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Root",
+        "description": "Root endpoint with API information.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/models": {
+      "get": {
+        "tags": [
+          "planning"
+        ],
+        "summary": "Discover available LLM models",
+        "description": "List all enabled LLM models with their metadata.\n\n**Purpose:**\nThis discovery endpoint allows clients to validate model availability before submitting\nplanning jobs and understand the capabilities and constraints of each model.\n\n**Response Format:**\n- `logical_name`: User-friendly identifier to use in POST /plans requests\n- `provider`: Backend provider (openai, anthropic, google)\n- `model_id`: Provider-specific model identifier\n- `enabled`: Whether the model is currently available for use\n- `timeout`: Request timeout in seconds\n- `max_retries`: Maximum retry attempts for transient failures\n- `description`: Human-readable description of the model\n- `metadata`: Additional model-specific information (context window, etc.)\n\n**Empty Response:**\nReturns an empty list if no models are enabled (still returns 200 OK).\n\n**Usage:**\nCall this endpoint before submitting planning jobs to discover available models\nand their constraints (e.g., timeout expectations, context limits).",
+        "operationId": "list_models_api_v1_models_get",
+        "responses": {
+          "200": {
+            "description": "List of available models with metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response List Models Api V1 Models Get"
+                },
+                "example": {
+                  "models": [
+                    {
+                      "logical_name": "my-gpt-model",
+                      "provider": "openai",
+                      "model_id": "gpt-5.1",
+                      "enabled": true,
+                      "timeout": 60,
+                      "max_retries": 3,
+                      "description": "OpenAI GPT-5.1 model for high-quality software planning",
+                      "metadata": {
+                        "approximate_max_context": 128000,
+                        "supports_streaming": false
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plan": {
+      "post": {
+        "tags": [
+          "planning"
+        ],
+        "summary": "Generate software plan",
+        "description": "Accepts a project description and returns a structured plan with specifications",
+        "operationId": "create_plan_api_v1_plan_post",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "API key for authentication",
+              "title": "X-Api-Key"
+            },
+            "description": "API key for authentication"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully generated plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanResponse"
+                },
+                "example": {
+                  "specs": [
+                    {
+                      "purpose": "Core API Development",
+                      "vision": "Build a robust and scalable REST API",
+                      "must": [
+                        "Implement RESTful endpoints"
+                      ],
+                      "dont": [
+                        "Skip validation"
+                      ],
+                      "nice": [
+                        "Add rate limiting"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request - empty, whitespace-only, or oversized description",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Validation error",
+                  "status_code": 400,
+                  "details": [
+                    {
+                      "loc": [
+                        "body",
+                        "description"
+                      ],
+                      "msg": "Description cannot be empty or whitespace-only",
+                      "type": "value_error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing authentication - X-API-Key header required",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Missing X-API-Key header",
+                  "status_code": 401
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid authentication - API key not recognized",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Invalid API key",
+                  "status_code": 403
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Malformed JSON or missing required fields",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Validation error",
+                  "status_code": 422,
+                  "details": [
+                    {
+                      "loc": [
+                        "body",
+                        "description"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded. Please retry after the specified delay.",
+                    "details": {
+                      "retry_after_seconds": 60
+                    },
+                    "request_id": "550e8400-e29b-41d4-a716-446655440000"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans": {
+      "post": {
+        "tags": [
+          "planning"
+        ],
+        "summary": "Create async software planning job",
+        "description": "Create an asynchronous planning job that executes in the background.\n\n**Async Semantics:**\n- Returns immediately with HTTP 202 Accepted\n- Job starts with 'QUEUED' status and transitions through: QUEUED → RUNNING → SUCCEEDED/FAILED\n- Use returned job_id to poll for status and results via GET /plans/{job_id}\n\n**Storage:**\n- Jobs are stored in PostgreSQL database and persist across server restarts\n- Stuck jobs (in RUNNING state during restart) are automatically marked as FAILED on startup\n\n**Validation:**\n- Description must be non-empty and not whitespace-only\n- Maximum size: 8192 bytes (UTF-8 encoded)",
+        "operationId": "create_plan_async_api_v1_plans_post",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "API key for authentication",
+              "title": "X-Api-Key"
+            },
+            "description": "API key for authentication"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Job created and accepted for processing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Create Plan Async Api V1 Plans Post"
+                },
+                "example": {
+                  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                  "status": "QUEUED"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request - empty, whitespace-only, or oversized description",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Validation error",
+                  "status_code": 400,
+                  "details": [
+                    {
+                      "loc": [
+                        "body",
+                        "description"
+                      ],
+                      "msg": "Description cannot be empty or whitespace-only",
+                      "type": "value_error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing authentication - X-API-Key header required",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Missing X-API-Key header",
+                  "status_code": 401
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid authentication - API key not recognized",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Invalid API key",
+                  "status_code": 403
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Malformed JSON or missing required fields",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Validation error",
+                  "status_code": 422,
+                  "details": [
+                    {
+                      "loc": [
+                        "body",
+                        "description"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded. Please retry after the specified delay.",
+                    "details": {
+                      "retry_after_seconds": 60
+                    },
+                    "request_id": "550e8400-e29b-41d4-a716-446655440000"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "planning"
+        ],
+        "summary": "List recent jobs (debug endpoint)",
+        "description": "List recent jobs sorted by most recently updated. Use limit parameter to control number of results.\n\n**Purpose:**\nThis is a debug/monitoring endpoint for viewing all jobs in the system.\n\n**Features:**\n- Returns jobs sorted by updated_at descending (most recent first)\n- Configurable limit (default: 100, max: 1000)\n- Each job has same metadata structure as GET /plans/{job_id}\n\n**Persistence:**\n- Shows all jobs stored in the database\n- Jobs persist across server restarts",
+        "operationId": "list_jobs_api_v1_plans_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Maximum number of jobs to return. Defaults to configured limit if not specified.",
+              "title": "Limit"
+            },
+            "description": "Maximum number of jobs to return. Defaults to configured limit if not specified."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recent jobs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response List Jobs Api V1 Plans Get"
+                },
+                "example": {
+                  "jobs": [
+                    {
+                      "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                      "status": "SUCCEEDED",
+                      "created_at": "2025-01-01T12:00:00Z",
+                      "updated_at": "2025-01-01T12:00:05Z",
+                      "result": {
+                        "specs": [
+                          {
+                            "purpose": "Example"
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "total": 1,
+                  "limit": 100
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{job_id}": {
+      "get": {
+        "tags": [
+          "planning"
+        ],
+        "summary": "Get job status and result",
+        "description": "Retrieve metadata for a specific job including status, timestamps, and result/error when applicable.\n\n**Status Values:**\n- `QUEUED`: Job created but not yet started\n- `RUNNING`: Job is currently executing\n- `SUCCEEDED`: Job completed successfully, result contains specs\n- `FAILED`: Job failed, error contains details\n\n**Response Fields:**\n- Always present: job_id, status, created_at, updated_at\n- `result`: Present with value when status='SUCCEEDED', null otherwise\n- `error`: Only present when status='FAILED'\n\n**HTTP Status Codes:**\n- 200: Job found and metadata returned (regardless of job status)\n- 404: Job not found (never existed or expired/deleted)\n\n**Polling Strategy:**\nPoll this endpoint periodically to check job completion. Jobs are persisted in the database\nand will survive server restarts.",
+        "operationId": "get_job_status_api_v1_plans__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job metadata retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Job Status Api V1 Plans  Job Id  Get"
+                },
+                "examples": {
+                  "queued": {
+                    "summary": "Queued job",
+                    "value": {
+                      "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                      "status": "QUEUED",
+                      "created_at": "2025-01-01T12:00:00Z",
+                      "updated_at": "2025-01-01T12:00:00Z"
+                    }
+                  },
+                  "running": {
+                    "summary": "Running job",
+                    "value": {
+                      "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                      "status": "RUNNING",
+                      "created_at": "2025-01-01T12:00:00Z",
+                      "updated_at": "2025-01-01T12:00:02Z"
+                    }
+                  },
+                  "succeeded": {
+                    "summary": "Succeeded job",
+                    "value": {
+                      "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                      "status": "SUCCEEDED",
+                      "created_at": "2025-01-01T12:00:00Z",
+                      "updated_at": "2025-01-01T12:00:05Z",
+                      "result": {
+                        "specs": [
+                          {
+                            "purpose": "Core API Development",
+                            "vision": "Build a robust REST API",
+                            "must": [
+                              "Implement endpoints"
+                            ],
+                            "dont": [
+                              "Skip validation"
+                            ],
+                            "nice": [
+                              "Add rate limiting"
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "failed": {
+                    "summary": "Failed job",
+                    "value": {
+                      "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                      "status": "FAILED",
+                      "created_at": "2025-01-01T12:00:00Z",
+                      "updated_at": "2025-01-01T12:00:05Z",
+                      "error": {
+                        "error": "Planning failed",
+                        "type": "ValueError"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job not found or expired",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Job not found",
+                  "status_code": 404
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/metrics": {
+      "get": {
+        "tags": [
+          "planning"
+        ],
+        "summary": "Prometheus metrics endpoint",
+        "description": "Expose Prometheus-compatible metrics for monitoring and alerting.\n\n**Metrics Categories:**\n- HTTP: Request counts and durations by endpoint/status\n- Jobs: Status transition counts and processing durations\n- LLM: API call latency, token usage, and error rates\n\n**Configuration:**\n- Metrics collection is disabled by default\n- Enable via `PLANNER_METRICS_ENABLED=true` environment variable\n- When disabled, returns a message indicating metrics are disabled\n\n**Security:**\n- No sensitive data (API keys, prompts) is exposed in metrics\n- Consider protecting this endpoint with authentication in production",
+        "operationId": "get_metrics_api_v1_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Prometheus-formatted metrics",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              },
+              "text/plain": {
+                "example": "# HELP planner_http_requests_total Total HTTP requests\n# TYPE planner_http_requests_total counter\nplanner_http_requests_total{endpoint=\"/api/v1/plans\",method=\"POST\",status=\"202\"} 42.0\n"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "PlanRequest": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Non-empty project description (max 8192 bytes)",
+            "examples": [
+              "Build a REST API for managing tasks"
+            ]
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "Optional logical model name (e.g., 'gpt-4-turbo', 'claude-opus'). Must match an enabled model in the registry. Defaults to configured default model.",
+            "examples": [
+              "gpt-4-turbo",
+              "claude-opus"
+            ]
+          },
+          "system_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "System Prompt",
+            "description": "Optional custom system prompt to override the default (max 32768 bytes). Used to customize the planning behavior for this request only.",
+            "examples": [
+              "You are a software planning assistant specializing in microservices..."
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "description"
+        ],
+        "title": "PlanRequest",
+        "description": "Request model for the /plan endpoint.\n\nAttributes:\n    description: Project description string with validation for non-empty content\n                and maximum length constraint.\n    model: Optional logical model name to use for this request. Must be enabled in\n           the model registry. If omitted, uses the configured default model.\n    system_prompt: Optional custom system prompt to override the default. Must not\n                  exceed max_system_prompt_bytes (32768 bytes). If omitted, uses the\n                  configured default system prompt."
+      },
+      "PlanResponse": {
+        "properties": {
+          "specs": {
+            "items": {
+              "$ref": "#/components/schemas/SpecItem"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Specs",
+            "description": "List of specification items (at least one required)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "specs"
+        ],
+        "title": "PlanResponse",
+        "description": "Response model for the /plan endpoint.\n\nThis is an immutable contract - field names and types must not change.\n\nAttributes:\n    specs: List of specification items."
+      },
+      "SpecItem": {
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "title": "Purpose",
+            "description": "High-level purpose of this specification"
+          },
+          "vision": {
+            "type": "string",
+            "title": "Vision",
+            "description": "Vision or goal statement"
+          },
+          "must": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Must",
+            "description": "Must-have requirements"
+          },
+          "dont": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dont",
+            "description": "Things to avoid"
+          },
+          "nice": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Nice",
+            "description": "Nice-to-have features"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purpose",
+          "vision"
+        ],
+        "title": "SpecItem",
+        "description": "Individual specification item in the plan response.\n\nThis model represents an immutable contract for specification structure.\nField names and types should not be modified.\n\nAttributes:\n    purpose: High-level purpose of this specification.\n    vision: Vision or goal statement.\n    must: List of must-have requirements.\n    dont: List of things to avoid.\n    nice: List of nice-to-have features."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

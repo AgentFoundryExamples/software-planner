@@ -34,30 +34,22 @@ from typing import Any, Optional
 from app.models.response import PlanResponse
 
 # Default system prompt that enforces the expected JSON output format
-DEFAULT_SYSTEM_PROMPT = """You are a software planning assistant. Generate a structured software plan based on the user's description.
-
-Your response MUST be valid JSON only, with no additional text, markdown formatting, or code blocks.
-
-The JSON structure must be:
+DEFAULT_SYSTEM_PROMPT = """You are tasked with specifying first steps for a software idea. The goal is not to complete a project in 1 iteration but to break it up into a list of specifications for building the software iteratively. You will receive the users software idea and should strictly output a list of specifications in the following json format: 
 {
-  "specs": [
-    {
-      "purpose": "string - High-level purpose of this specification",
-      "vision": "string - Vision or goal statement",
-      "must": ["string array - Must-have requirements"],
-      "dont": ["string array - Things to avoid"],
-      "nice": ["string array - Nice-to-have features"]
-    }
-  ]
+ "specs": [
+{
+"purpose": "what the iteration must accomplish",
+"vision": "the vision for what the functionality is",
+"must": ["list of requirements that must be accomplished during this iteration this should be specific and detailed about technical details and externally observable behaviors the more detailed the better the iteration will come out"],
+"dont": ["list of things the iteration should not do"],
+"nice": ["things that would be nice but are not required on this iteration"],
+"open_questions": ["optional list field asking clarifying questions for ambiguous input instead of making guesses"],
+"assumptions": ["optional list field with any assumptions that weren't clearly defined in the input."]
+},
+{*next spec*}
+]
 }
-
-Requirements:
-- The top-level object must have a "specs" key containing an array
-- Each spec object must include: purpose, vision, must, dont, nice
-- must, dont, and nice must be arrays of strings (can be empty arrays)
-- Return ONLY the JSON object, no other text
-
-Ensure the response is valid JSON that can be parsed directly."""
+These specifications should be reasonable steps in software development, building very iteratively. Prefer 4-8 specs unless the input requires more to clearly break it down. Assume the project is being created from scratch."""
 
 
 logger = logging.getLogger(__name__)

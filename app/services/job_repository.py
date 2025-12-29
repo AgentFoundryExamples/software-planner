@@ -245,9 +245,9 @@ class JobRepository:
                 if row is None:
                     return None
 
-                # Parse JSON fields
-                result_data = json.loads(row.result) if row.result else None
-                error_data = json.loads(row.error) if row.error else None
+                # JSON fields are automatically deserialized by SQLAlchemy
+                result_data = row.result
+                error_data = row.error
 
                 return Job(
                     job_id=row.job_id,
@@ -386,7 +386,7 @@ class JobRepository:
         now = datetime.now(timezone.utc)
 
         try:
-            # Serialize result to JSON
+            # Serialize result to JSON for raw SQL
             result_json = json.dumps(result)
 
             async with self.engine.begin() as conn:
@@ -496,7 +496,7 @@ class JobRepository:
         now = datetime.now(timezone.utc)
 
         try:
-            # Serialize error to JSON
+            # Serialize error to JSON for raw SQL
             error_json = json.dumps(error)
 
             async with self.engine.begin() as conn:
@@ -632,9 +632,9 @@ class JobRepository:
 
                 jobs = []
                 for row in result:
-                    # Parse JSON fields
-                    result_data = json.loads(row.result) if row.result else None
-                    error_data = json.loads(row.error) if row.error else None
+                    # JSON fields are automatically deserialized by SQLAlchemy
+                    result_data = row.result
+                    error_data = row.error
 
                     job = Job(
                         job_id=row.job_id,
@@ -699,6 +699,7 @@ class JobRepository:
         """
         now = datetime.now(timezone.utc)
         error = {"error": "Job interrupted by server restart", "type": "RestartRecoveryError"}
+        # Serialize error to JSON for raw SQL
         error_json = json.dumps(error)
 
         try:

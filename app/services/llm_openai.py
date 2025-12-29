@@ -234,7 +234,7 @@ class OpenAIClient(BaseLLMClient):
                     model=self.model,
                     instructions=system_prompt,
                     input=description,
-                    max_output_tokens=2000,  # Reasonable limit for spec generation
+                    max_output_tokens=15000,  # Reasonable limit for spec generation
                 )
 
                 # Extract response content from Responses API structure
