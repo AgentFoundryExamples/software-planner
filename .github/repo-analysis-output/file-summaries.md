@@ -137,8 +137,8 @@ Total files: 64
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for response  
-**Size:** 1.86 KB  
-**LOC:** 27  
+**Size:** 2.27 KB  
+**LOC:** 35  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/__init__.py
@@ -200,7 +200,7 @@ Total files: 64
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm client  
-**Size:** 19.37 KB  
+**Size:** 19.36 KB  
 **LOC:** 379  
 **TODOs/FIXMEs:** 0  
 
@@ -245,8 +245,8 @@ Total files: 64
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for planner  
-**Size:** 13.86 KB  
-**LOC:** 258  
+**Size:** 14.64 KB  
+**LOC:** 275  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/rate_limiter.py
@@ -506,8 +506,8 @@ Total files: 64
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 27.29 KB  
-**LOC:** 485  
+**Size:** 32.07 KB  
+**LOC:** 592  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_planner_integration.py
@@ -515,8 +515,8 @@ Total files: 64
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 24.78 KB  
-**LOC:** 569  
+**Size:** 32.01 KB  
+**LOC:** 739  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_plans_async_endpoint.py
@@ -533,8 +533,8 @@ Total files: 64
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 29.77 KB  
-**LOC:** 536  
+**Size:** 33.79 KB  
+**LOC:** 624  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_rate_limiter.py

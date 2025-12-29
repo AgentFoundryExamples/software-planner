@@ -207,8 +207,8 @@
       "summary": "Python module for response",
       "summary_text": "Python module for response",
       "metrics": {
-        "size_bytes": 1901,
-        "loc": 27,
+        "size_bytes": 2327,
+        "loc": 35,
         "todo_count": 0
       }
     },
@@ -305,7 +305,7 @@
       "summary": "Python module for llm client",
       "summary_text": "Python module for llm client",
       "metrics": {
-        "size_bytes": 19836,
+        "size_bytes": 19821,
         "loc": 379,
         "todo_count": 0
       }
@@ -375,8 +375,8 @@
       "summary": "Python module for planner",
       "summary_text": "Python module for planner",
       "metrics": {
-        "size_bytes": 14192,
-        "loc": 258,
+        "size_bytes": 14993,
+        "loc": 275,
         "todo_count": 0
       }
     },
@@ -781,8 +781,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 27947,
-        "loc": 485,
+        "size_bytes": 32838,
+        "loc": 592,
         "todo_count": 0
       }
     },
@@ -795,8 +795,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 25372,
-        "loc": 569,
+        "size_bytes": 32775,
+        "loc": 739,
         "todo_count": 0
       }
     },
@@ -823,8 +823,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 30489,
-        "loc": 536,
+        "size_bytes": 34601,
+        "loc": 624,
         "todo_count": 0
       }
     },
