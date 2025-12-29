@@ -353,7 +353,7 @@ def _validate_model_or_raise(model_name: str) -> None:
         )
 
 
-def _format_job_response(job: Job) -> dict:
+def _format_job_response(job: Job, include_result: bool = True) -> dict:
     """Format a job instance into a response dictionary.
 
     Helper function to ensure consistent job response structure across endpoints.
@@ -361,6 +361,8 @@ def _format_job_response(job: Job) -> dict:
 
     Args:
         job: Job instance to format.
+        include_result: If False, omit result payload and add has_result flag.
+                       If True, include full result (default behavior).
 
     Returns:
         Dict with job metadata in API response format.
@@ -381,11 +383,15 @@ def _format_job_response(job: Job) -> dict:
             job.system_prompt.encode("utf-8")
         ).hexdigest()
 
-    # Include result for succeeded jobs, otherwise null
-    if job.status == "SUCCEEDED" and job.result is not None:
+    # Handle result field based on include_result parameter
+    if include_result:
+        # For single-job endpoint, include the full result.
+        # job.result is None for non-succeeded jobs by design.
         response["result"] = job.result
     else:
+        # For list endpoint, omit result payload and add has_result flag.
         response["result"] = None
+        response["has_result"] = job.result is not None
 
     # Include error for failed jobs (omit for non-failed jobs)
     if job.status == "FAILED" and job.error is not None:
@@ -938,7 +944,7 @@ async def get_job_status(
     status_code=status.HTTP_200_OK,
     responses={
         200: {
-            "description": "List of recent jobs",
+            "description": "List of recent jobs (lightweight response)",
             "content": {
                 "application/json": {
                     "example": {
@@ -948,7 +954,8 @@ async def get_job_status(
                                 "status": "SUCCEEDED",
                                 "created_at": "2025-01-01T12:00:00Z",
                                 "updated_at": "2025-01-01T12:00:05Z",
-                                "result": {"specs": [{"purpose": "Example"}]},
+                                "result": None,
+                                "has_result": True,
                             }
                         ],
                         "total": 1,
@@ -958,16 +965,25 @@ async def get_job_status(
             },
         }
     },
-    summary="List recent jobs (debug endpoint)",
-    description="""List recent jobs sorted by most recently updated. Use limit parameter to control number of results.
+    summary="List recent jobs (lightweight response)",
+    description="""List recent jobs sorted by most recently updated. Returns lightweight response without full plan content.
 
 **Purpose:**
-This is a debug/monitoring endpoint for viewing all jobs in the system.
+This is a debug/monitoring endpoint for viewing all jobs in the system. To reduce payload size,
+this endpoint returns `result=null` for all jobs and includes a `has_result` boolean flag.
+
+**Response Format:**
+- `result`: Always null in list responses (use GET /plans/{job_id} to fetch full content)
+- `has_result`: Boolean indicating whether the job has result data available
+- Other fields: job_id, status, timestamps, model, system_prompt_hash (same as single job endpoint)
 
 **Features:**
 - Returns jobs sorted by updated_at descending (most recent first)
 - Configurable limit (default: 100, max: 1000)
-- Each job has same metadata structure as GET /plans/{job_id}
+- Each job has lightweight metadata structure
+
+**To Get Full Plan Content:**
+Use GET /plans/{job_id} to fetch the complete plan with full result payload.
 
 **Persistence:**
 - Shows all jobs stored in the database
@@ -984,8 +1000,14 @@ async def list_jobs(
 ) -> dict:
     """List recent jobs sorted by most recently updated.
 
-    Returns a list of jobs with the same metadata shape as the single job endpoint.
+    Returns a list of jobs with lightweight metadata (result=null, has_result flag).
     Jobs are sorted by updated_at in descending order (most recent first).
+
+    **Lightweight Response:**
+    This endpoint omits the full result payload to reduce response size. Instead:
+    - `result` is always null
+    - `has_result` boolean indicates if result data exists
+    - Use GET /plans/{job_id} to fetch full plan content
 
     **Debug Endpoint:**
     This endpoint is intended for debugging and monitoring. It shows all jobs
@@ -996,7 +1018,7 @@ async def list_jobs(
         job_repository: JobRepository instance (injected via dependency).
 
     Returns:
-        Dict with jobs list, total count, and applied limit.
+        Dict with jobs list (lightweight), total count, and applied limit.
     """
     # Apply limit constraints
     effective_limit = limit if limit is not None else settings.default_jobs_list_limit
@@ -1006,8 +1028,8 @@ async def list_jobs(
     total_count = await job_repository.count_jobs()
     jobs = await job_repository.list_jobs(limit=effective_limit)
 
-    # Format jobs with same structure as single job endpoint
-    formatted_jobs = [_format_job_response(job) for job in jobs]
+    # Format jobs without result payload (lightweight list response)
+    formatted_jobs = [_format_job_response(job, include_result=False) for job in jobs]
 
     return {"jobs": formatted_jobs, "total": total_count, "limit": effective_limit}
 

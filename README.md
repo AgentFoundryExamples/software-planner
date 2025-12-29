@@ -3355,6 +3355,235 @@ All tests should pass. If you encounter any failures, ensure:
 └── pytest.ini              # Pytest configuration
 ```
 
+## API Usage Examples
+
+The Software Planner API provides both synchronous and asynchronous planning endpoints with job polling capabilities.
+
+### Synchronous Planning (POST /plan)
+
+For immediate results (blocks until completion):
+
+```bash
+curl -X POST http://localhost:8000/api/v1/plan \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{
+    "description": "Build a REST API for managing tasks with authentication"
+  }'
+```
+
+Response includes the full plan immediately:
+```json
+{
+  "specs": [
+    {
+      "purpose": "Core API Development",
+      "vision": "Build a robust REST API",
+      "must": ["Implement authentication", "Add CRUD endpoints"],
+      "dont": ["Skip validation", "Hardcode secrets"],
+      "nice": ["Add rate limiting", "Include monitoring"]
+    }
+  ]
+}
+```
+
+### Asynchronous Planning (POST /plans)
+
+For background processing with job tracking:
+
+**1. Create a planning job:**
+```bash
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{
+    "description": "Build a microservices architecture for e-commerce"
+  }'
+```
+
+Response returns immediately with job ID:
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "QUEUED"
+}
+```
+
+**2. Poll for job completion (GET /plans/{job_id}):**
+```bash
+curl http://localhost:8000/api/v1/plans/550e8400-e29b-41d4-a716-446655440000
+```
+
+While running:
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "RUNNING",
+  "created_at": "2025-01-01T12:00:00Z",
+  "updated_at": "2025-01-01T12:00:02Z",
+  "result": null
+}
+```
+
+When completed:
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "SUCCEEDED",
+  "created_at": "2025-01-01T12:00:00Z",
+  "updated_at": "2025-01-01T12:00:05Z",
+  "result": {
+    "specs": [
+      {
+        "purpose": "Microservices Architecture",
+        "vision": "Build scalable e-commerce platform",
+        "must": ["Service discovery", "API gateway"],
+        "dont": ["Tight coupling", "Shared databases"],
+        "nice": ["Event sourcing", "CQRS pattern"]
+      }
+    ]
+  }
+}
+```
+
+### Lightweight Job Listing (GET /plans)
+
+List all jobs with lightweight metadata (omits full result payloads):
+
+```bash
+curl http://localhost:8000/api/v1/plans?limit=10
+```
+
+Response (lightweight - result always null with has_result flag):
+```json
+{
+  "jobs": [
+    {
+      "job_id": "550e8400-e29b-41d4-a716-446655440000",
+      "status": "SUCCEEDED",
+      "created_at": "2025-01-01T12:00:00Z",
+      "updated_at": "2025-01-01T12:00:05Z",
+      "result": null,
+      "has_result": true
+    },
+    {
+      "job_id": "660e8400-e29b-41d4-a716-446655440001",
+      "status": "RUNNING",
+      "created_at": "2025-01-01T12:01:00Z",
+      "updated_at": "2025-01-01T12:01:02Z",
+      "result": null,
+      "has_result": false
+    }
+  ],
+  "total": 2,
+  "limit": 10
+}
+```
+
+**Key Points:**
+- **Lightweight Response**: `/plans` list endpoint always returns `result=null` to reduce payload size
+- **has_result Flag**: Indicates whether a job has result data available (`true` for SUCCEEDED jobs with results)
+- **Full Results**: Use GET `/plans/{job_id}` to fetch the complete plan with full result payload
+- **Reduced Bandwidth**: Large plans with many specs no longer bloat list responses
+
+**Use Case Example:**
+1. List all jobs to see status overview (lightweight)
+2. Check `has_result` flag to identify completed jobs
+3. Fetch full plan for specific job using its `job_id`
+
+```bash
+# Step 1: List all jobs (fast, lightweight)
+curl http://localhost:8000/api/v1/plans
+
+# Step 2: Identify completed job with has_result=true
+
+# Step 3: Fetch full plan for that job
+curl http://localhost:8000/api/v1/plans/{job_id}
+```
+
+### Model Selection and Custom Prompts
+
+Specify which LLM model to use and customize the system prompt:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{
+    "description": "Build a machine learning pipeline",
+    "model": "gpt-4-turbo",
+    "system_prompt": "You are an expert ML architect. Focus on scalability and reproducibility."
+  }'
+```
+
+**Available Models:**
+
+To discover available models and their capabilities:
+```bash
+curl http://localhost:8000/api/v1/models
+```
+
+Response includes model metadata:
+```json
+{
+  "models": [
+    {
+      "logical_name": "gpt-4-turbo",
+      "provider": "openai",
+      "model_id": "gpt-4-turbo-preview",
+      "enabled": true,
+      "timeout": 60,
+      "max_retries": 3,
+      "description": "OpenAI GPT-4 Turbo - Fast variant with extended context",
+      "metadata": {
+        "approximate_max_context": 128000,
+        "supports_streaming": false
+      }
+    }
+  ]
+}
+```
+
+### Error Handling
+
+The API returns standardized error responses with request IDs for tracking:
+
+**Validation Error (400):**
+```json
+{
+  "error": {
+    "code": "invalid_description",
+    "message": "Description cannot be empty or whitespace-only",
+    "request_id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
+```
+
+**Rate Limit Exceeded (429):**
+```json
+{
+  "error": {
+    "code": "rate_limit_exceeded",
+    "message": "Rate limit exceeded. Please retry after the specified delay.",
+    "details": {
+      "retry_after_seconds": 60
+    },
+    "request_id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
+```
+
+**Job Not Found (404):**
+```json
+{
+  "error": {
+    "code": "not_found",
+    "message": "Job not found",
+    "request_id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
+```
+
 ## Development
 
 ### Adding New Routes

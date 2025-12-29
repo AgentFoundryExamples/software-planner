@@ -386,8 +386,8 @@
         "tags": [
           "planning"
         ],
-        "summary": "List recent jobs (debug endpoint)",
-        "description": "List recent jobs sorted by most recently updated. Use limit parameter to control number of results.\n\n**Purpose:**\nThis is a debug/monitoring endpoint for viewing all jobs in the system.\n\n**Features:**\n- Returns jobs sorted by updated_at descending (most recent first)\n- Configurable limit (default: 100, max: 1000)\n- Each job has same metadata structure as GET /plans/{job_id}\n\n**Persistence:**\n- Shows all jobs stored in the database\n- Jobs persist across server restarts",
+        "summary": "List recent jobs (lightweight response)",
+        "description": "List recent jobs sorted by most recently updated. Returns lightweight response without full plan content.\n\n**Purpose:**\nThis is a debug/monitoring endpoint for viewing all jobs in the system. To reduce payload size,\nthis endpoint returns `result=null` for all jobs and includes a `has_result` boolean flag.\n\n**Response Format:**\n- `result`: Always null in list responses (use GET /plans/{job_id} to fetch full content)\n- `has_result`: Boolean indicating whether the job has result data available\n- Other fields: job_id, status, timestamps, model, system_prompt_hash (same as single job endpoint)\n\n**Features:**\n- Returns jobs sorted by updated_at descending (most recent first)\n- Configurable limit (default: 100, max: 1000)\n- Each job has lightweight metadata structure\n\n**To Get Full Plan Content:**\nUse GET /plans/{job_id} to fetch the complete plan with full result payload.\n\n**Persistence:**\n- Shows all jobs stored in the database\n- Jobs persist across server restarts",
         "operationId": "list_jobs_api_v1_plans_get",
         "parameters": [
           {
@@ -412,7 +412,7 @@
         ],
         "responses": {
           "200": {
-            "description": "List of recent jobs",
+            "description": "List of recent jobs (lightweight response)",
             "content": {
               "application/json": {
                 "schema": {
@@ -426,13 +426,8 @@
                       "status": "SUCCEEDED",
                       "created_at": "2025-01-01T12:00:00Z",
                       "updated_at": "2025-01-01T12:00:05Z",
-                      "result": {
-                        "specs": [
-                          {
-                            "purpose": "Example"
-                          }
-                        ]
-                      }
+                      "has_result": true,
+                      "result": null
                     }
                   ],
                   "total": 1,
