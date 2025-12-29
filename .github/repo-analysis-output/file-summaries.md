@@ -218,8 +218,8 @@ Total files: 64
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm openai  
-**Size:** 19.95 KB  
-**LOC:** 398  
+**Size:** 20.14 KB  
+**LOC:** 400  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/metrics.py
