@@ -225,7 +225,7 @@ class TestGetJobStatusEndpoint:
         assert "中文" in data["result"]["specs"][0]["must"][0]
 
     def test_get_job_status_with_large_result_payload(self, client, override_job_store):
-        """Test that large result payloads are handled correctly."""
+        """Test that large result payloads are handled correctly in single job endpoint."""
         job = asyncio.run(override_job_store.create_job(description="Test description"))
 
         # Create a large result with many specs
@@ -250,6 +250,46 @@ class TestGetJobStatusEndpoint:
 
         assert data["result"] == large_result
         assert len(data["result"]["specs"]) == 10
+
+    def test_list_jobs_with_large_result_omits_payload(self, client, override_job_store):
+        """Test that list endpoint omits large result payloads (regression test)."""
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
+
+        # Create a large result with many specs
+        large_result = {
+            "specs": [
+                {
+                    "purpose": f"Purpose {i}",
+                    "vision": f"Vision {i}",
+                    "must": [f"Must {i}-{j}" for j in range(100)],
+                    "dont": [f"Dont {i}-{j}" for j in range(100)],
+                    "nice": [f"Nice {i}-{j}" for j in range(100)],
+                }
+                for i in range(10)
+            ]
+        }
+        asyncio.run(override_job_store.mark_succeeded(job.job_id, large_result))
+
+        # List endpoint should omit the large payload
+        list_response = client.get("/api/v1/plans")
+
+        assert list_response.status_code == 200
+        list_data = list_response.json()
+
+        assert len(list_data["jobs"]) == 1
+        job_data = list_data["jobs"][0]
+
+        # Should not contain the large result
+        assert job_data["result"] is None
+        assert job_data["has_result"] is True
+
+        # Verify response size is small (no specs array included)
+        import json
+
+        response_bytes = len(json.dumps(list_data).encode("utf-8"))
+        # Should be much smaller than the actual result (which would be ~300KB)
+        # Just checking it's reasonably small (< 10KB for metadata)
+        assert response_bytes < 10000, f"Response too large: {response_bytes} bytes"
 
 
 class TestListJobsEndpoint:
@@ -372,7 +412,7 @@ class TestListJobsEndpoint:
         assert data["limit"] == settings.default_jobs_list_limit
 
     def test_list_jobs_includes_job_metadata(self, client, override_job_store):
-        """Test that listed jobs include all required metadata."""
+        """Test that listed jobs include all required metadata with has_result flag."""
         job = asyncio.run(override_job_store.create_job(description="Test description"))
         result = {"specs": [{"purpose": "Test"}]}
         asyncio.run(override_job_store.mark_succeeded(job.job_id, result))
@@ -389,10 +429,13 @@ class TestListJobsEndpoint:
         assert job_data["status"] == "SUCCEEDED"
         assert "created_at" in job_data
         assert "updated_at" in job_data
-        assert job_data["result"] == result
+        # List endpoint should return null result with has_result flag
+        assert job_data["result"] is None
+        assert "has_result" in job_data
+        assert job_data["has_result"] is True
 
     def test_list_jobs_includes_errors_for_failed_jobs(self, client, override_job_store):
-        """Test that failed jobs include error in list."""
+        """Test that failed jobs include error in list with has_result=false."""
         job = asyncio.run(override_job_store.create_job(description="Test description"))
         error = {"error": "Test error", "type": "ValueError"}
         asyncio.run(override_job_store.mark_failed(job.job_id, error))
@@ -408,6 +451,8 @@ class TestListJobsEndpoint:
         assert job_data["status"] == "FAILED"
         assert job_data["error"] == error
         assert job_data["result"] is None
+        assert "has_result" in job_data
+        assert job_data["has_result"] is False
 
     def test_list_jobs_with_mixed_statuses(self, client, override_job_store):
         """Test listing jobs with different statuses."""
@@ -563,7 +608,7 @@ class TestPollingEndpointsEdgeCases:
         assert data["result"] is not None
 
     def test_list_jobs_with_only_pending_jobs(self, client, override_job_store):
-        """Test listing when all jobs are pending."""
+        """Test listing when all jobs are pending with has_result=false."""
         for i in range(5):
             asyncio.run(override_job_store.create_job(description="Test description"))
 
@@ -575,23 +620,30 @@ class TestPollingEndpointsEdgeCases:
         assert data["total"] == 5
         assert all(job["status"] == "QUEUED" for job in data["jobs"])
         assert all(job["result"] is None for job in data["jobs"])
+        assert all(job["has_result"] is False for job in data["jobs"])
 
     def test_list_jobs_response_structure_matches_single_job(self, client, override_job_store):
-        """Test that jobs in list have same structure as single job endpoint."""
+        """Test that jobs in list have lightweight structure vs single job endpoint."""
         job = asyncio.run(override_job_store.create_job(description="Test description"))
         asyncio.run(override_job_store.mark_succeeded(job.job_id, {"specs": [{"purpose": "Test"}]}))
 
-        # Get single job
+        # Get single job (full result)
         single_response = client.get(f"/api/v1/plans/{job.job_id}")
         single_data = single_response.json()
 
-        # Get list
+        # Get list (lightweight)
         list_response = client.get("/api/v1/plans")
         list_data = list_response.json()
 
-        # Structure should match
+        # List should have has_result field, single should not
         job_from_list = list_data["jobs"][0]
-        assert set(job_from_list.keys()) == set(single_data.keys())
+        assert "has_result" in job_from_list
+        assert "has_result" not in single_data
+
+        # List should have null result, single should have full result
+        assert job_from_list["result"] is None
+        assert single_data["result"] is not None
+        assert "specs" in single_data["result"]
 
     def test_get_job_with_invalid_uuid_format(self, client, override_job_store):
         """Test getting job with malformed UUID still returns 404."""
@@ -711,7 +763,7 @@ class TestJobMetadataExposure:
         assert data["system_prompt_hash"] == expected_hash
 
     def test_list_jobs_includes_metadata(self, client, override_job_store):
-        """Test that job list includes metadata fields."""
+        """Test that job list includes metadata fields with has_result flag."""
         job1 = asyncio.run(
             override_job_store.create_job(description="Test description", model="gpt-4-turbo")
         )
@@ -730,6 +782,9 @@ class TestJobMetadataExposure:
             override_job_store.create_job(description="Test description")
         )  # No metadata
 
+        # Mark job1 as succeeded so it has a result
+        asyncio.run(override_job_store.mark_succeeded(job1.job_id, {"specs": [{"purpose": "Test"}]}))
+
         response = client.get("/api/v1/plans")
 
         assert response.status_code == 200
@@ -743,6 +798,16 @@ class TestJobMetadataExposure:
         # Check metadata is included
         assert jobs_by_id[job1.job_id]["model"] == "gpt-4-turbo"
         assert jobs_by_id[job2.job_id]["system_prompt_hash"] == expected_hash2
+
+        # Check has_result flags
+        assert jobs_by_id[job1.job_id]["has_result"] is True  # succeeded with result
+        assert jobs_by_id[job2.job_id]["has_result"] is False  # queued, no result
+        assert jobs_by_id[job3.job_id]["has_result"] is False  # queued, no result
+
+        # All should have null result in list
+        assert jobs_by_id[job1.job_id]["result"] is None
+        assert jobs_by_id[job2.job_id]["result"] is None
+        assert jobs_by_id[job3.job_id]["result"] is None
 
     def test_succeeded_job_with_metadata_includes_all_fields(self, client, override_job_store):
         """Test that succeeded job includes metadata alongside result."""
@@ -867,7 +932,7 @@ class TestJobSerializationWithOptionalFields:
         assert spec["open_questions"] == []
 
     def test_list_jobs_with_optional_fields(self, client, override_job_store):
-        """Test that listing jobs includes optional fields correctly."""
+        """Test that listing jobs omits result but includes has_result flag."""
         # Create and succeed a job with optional fields
         job = asyncio.run(override_job_store.create_job(description="Test description"))
         asyncio.run(override_job_store.mark_running(job.job_id))
@@ -896,8 +961,7 @@ class TestJobSerializationWithOptionalFields:
         assert len(data["jobs"]) == 1
         job_data = data["jobs"][0]
         assert job_data["status"] == "SUCCEEDED"
-        spec = job_data["result"]["specs"][0]
-        assert "assumptions" in spec
-        assert "open_questions" in spec
-        assert len(spec["assumptions"]) == 2
-        assert len(spec["open_questions"]) == 1
+        # List endpoint should omit result but indicate it exists
+        assert job_data["result"] is None
+        assert "has_result" in job_data
+        assert job_data["has_result"] is True
