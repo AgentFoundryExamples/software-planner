@@ -147,9 +147,17 @@ class TestPlanEndpointHappyPath:
         # Contract check: must have exactly "specs" key at top level
         assert list(data.keys()) == ["specs"]
 
-        # Contract check: each spec must have exactly these fields
+        # Contract check: each spec must have exactly these fields (including new optional fields)
         for spec in data["specs"]:
-            assert set(spec.keys()) == {"purpose", "vision", "must", "dont", "nice"}
+            assert set(spec.keys()) == {
+                "purpose",
+                "vision",
+                "must",
+                "dont",
+                "nice",
+                "assumptions",
+                "open_questions",
+            }
 
 
 class TestPlanEndpointValidationErrors:

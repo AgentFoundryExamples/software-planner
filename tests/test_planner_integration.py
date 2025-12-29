@@ -58,7 +58,21 @@ class TestNormalizeSpecs:
             ]
         }
         result = _normalize_specs(data)
-        assert result == data
+        # Check that optional fields are added with empty list defaults
+        expected = {
+            "specs": [
+                {
+                    "purpose": "Test",
+                    "vision": "Vision",
+                    "must": ["item1"],
+                    "dont": ["item2"],
+                    "nice": ["item3"],
+                    "assumptions": [],
+                    "open_questions": [],
+                }
+            ]
+        }
+        assert result == expected
 
     def test_normalize_single_spec_object_to_list(self):
         """Test that single spec object is wrapped in a list."""

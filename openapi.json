@@ -15,9 +15,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-
-                }
+                "schema": {}
               }
             }
           }
@@ -34,9 +32,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-
-                }
+                "schema": {}
               }
             }
           }
@@ -247,7 +243,7 @@
           "planning"
         ],
         "summary": "Create async software planning job",
-        "description": "Create an asynchronous planning job that executes in the background.\n\n**Async Semantics:**\n- Returns immediately with HTTP 202 Accepted\n- Job starts with 'QUEUED' status and transitions through: QUEUED → RUNNING → SUCCEEDED/FAILED\n- Use returned job_id to poll for status and results via GET /plans/{job_id}\n\n**Storage:**\n- Jobs are stored in PostgreSQL database and persist across server restarts\n- Stuck jobs (in RUNNING state during restart) are automatically marked as FAILED on startup\n\n**Validation:**\n- Description must be non-empty and not whitespace-only\n- Maximum size: 8192 bytes (UTF-8 encoded)",
+        "description": "Create an asynchronous planning job that executes in the background.\n\n**Async Semantics:**\n- Returns immediately with HTTP 202 Accepted\n- Job starts with 'QUEUED' status and transitions through: QUEUED \u2192 RUNNING \u2192 SUCCEEDED/FAILED\n- Use returned job_id to poll for status and results via GET /plans/{job_id}\n\n**Storage:**\n- Jobs are stored in PostgreSQL database and persist across server restarts\n- Stuck jobs (in RUNNING state during restart) are automatically marked as FAILED on startup\n\n**Validation:**\n- Description must be non-empty and not whitespace-only\n- Maximum size: 8192 bytes (UTF-8 encoded)",
         "operationId": "create_plan_async_api_v1_plans_post",
         "parameters": [
           {
@@ -585,9 +581,7 @@
             "description": "Prometheus-formatted metrics",
             "content": {
               "application/json": {
-                "schema": {
-
-                }
+                "schema": {}
               },
               "text/plain": {
                 "example": "# HELP planner_http_requests_total Total HTTP requests\n# TYPE planner_http_requests_total counter\nplanner_http_requests_total{endpoint=\"/api/v1/plans\",method=\"POST\",status=\"202\"} 42.0\n"
@@ -716,6 +710,22 @@
             "type": "array",
             "title": "Nice",
             "description": "Nice-to-have features"
+          },
+          "assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Assumptions",
+            "description": "Assumptions made about ambiguous input"
+          },
+          "open_questions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Open Questions",
+            "description": "Clarifying questions for unclear requirements"
           }
         },
         "type": "object",
@@ -724,7 +734,7 @@
           "vision"
         ],
         "title": "SpecItem",
-        "description": "Individual specification item in the plan response.\n\nThis model represents an immutable contract for specification structure.\nField names and types should not be modified.\n\nAttributes:\n    purpose: High-level purpose of this specification.\n    vision: Vision or goal statement.\n    must: List of must-have requirements.\n    dont: List of things to avoid.\n    nice: List of nice-to-have features."
+        "description": "Individual specification item in the plan response.\n\nThis model represents an immutable contract for specification structure.\nField names and types should not be modified.\n\nAttributes:\n    purpose: High-level purpose of this specification.\n    vision: Vision or goal statement.\n    must: List of must-have requirements.\n    dont: List of things to avoid.\n    nice: List of nice-to-have features.\n    assumptions: Optional list of assumptions made about ambiguous input.\n    open_questions: Optional list of clarifying questions for unclear requirements."
       },
       "ValidationError": {
         "properties": {
