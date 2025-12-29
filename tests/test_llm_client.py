@@ -267,15 +267,56 @@ def test_get_default_system_prompt():
 
 def test_default_system_prompt_content():
     """Test that default system prompt has expected content."""
-    assert "JSON" in DEFAULT_SYSTEM_PROMPT
+    assert "json" in DEFAULT_SYSTEM_PROMPT.lower()
     assert '"specs"' in DEFAULT_SYSTEM_PROMPT
     assert "purpose" in DEFAULT_SYSTEM_PROMPT
     assert "vision" in DEFAULT_SYSTEM_PROMPT
     assert "must" in DEFAULT_SYSTEM_PROMPT
     assert "dont" in DEFAULT_SYSTEM_PROMPT
     assert "nice" in DEFAULT_SYSTEM_PROMPT
-    # Verify it mentions arrays
-    assert "array" in DEFAULT_SYSTEM_PROMPT.lower()
+    # Verify it mentions lists (list is the term used in the prompt, not array)
+    assert "list" in DEFAULT_SYSTEM_PROMPT.lower()
+
+
+def test_generate_specs_logs_system_prompt_hash():
+    """Test that system prompt hash is logged for diagnostics."""
+    response_json = {
+        "specs": [
+            {
+                "purpose": "Test Purpose",
+                "vision": "Test Vision",
+                "must": ["requirement1"],
+                "dont": ["avoid1"],
+                "nice": ["feature1"],
+            }
+        ]
+    }
+
+    client = MockLLMClient(
+        api_key="test-key", model="test-model", response_text=json.dumps(response_json)
+    )
+
+    custom_prompt = "Custom system prompt for testing"
+
+    # Patch the logger to verify it's called with the hash
+    with patch("app.services.llm_client.logger") as mock_logger:
+        result = client.generate_specs("Test description", system_prompt=custom_prompt)
+
+        # Verify logger.info was called with system_prompt_hash in extra
+        found_log = False
+        for call in mock_logger.info.call_args_list:
+            # call is a tuple of (args, kwargs)
+            if len(call) >= 2:
+                call_kwargs = call[1]
+                extra = call_kwargs.get("extra", {})
+                if "system_prompt_hash" in extra:
+                    found_log = True
+                    # Verify hash is present and reasonable length
+                    assert len(extra["system_prompt_hash"]) == 16
+                    break
+
+        assert found_log, "Logger was not called with system_prompt_hash in extra"
+        assert result["specs"] is not None
 
 
 def test_base_llm_client_is_abstract():
