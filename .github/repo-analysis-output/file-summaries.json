@@ -263,7 +263,7 @@
       "summary": "Python module for job repository",
       "summary_text": "Python module for job repository",
       "metrics": {
-        "size_bytes": 27074,
+        "size_bytes": 27080,
         "loc": 555,
         "todo_count": 0
       }
@@ -305,8 +305,8 @@
       "summary": "Python module for llm client",
       "summary_text": "Python module for llm client",
       "metrics": {
-        "size_bytes": 18512,
-        "loc": 369,
+        "size_bytes": 18909,
+        "loc": 365,
         "todo_count": 0
       }
     },
@@ -333,7 +333,7 @@
       "summary": "Python module for llm openai",
       "summary_text": "Python module for llm openai",
       "metrics": {
-        "size_bytes": 17468,
+        "size_bytes": 17469,
         "loc": 333,
         "todo_count": 0
       }

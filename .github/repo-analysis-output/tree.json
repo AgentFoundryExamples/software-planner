@@ -456,6 +456,10 @@
     },
     {
       "type": "file",
+      "name": "openapi.json"
+    },
+    {
+      "type": "file",
       "name": "pyproject.toml"
     },
     {

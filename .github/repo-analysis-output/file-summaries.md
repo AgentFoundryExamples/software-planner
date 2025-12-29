@@ -173,7 +173,7 @@ Total files: 64
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for job repository  
-**Size:** 26.44 KB  
+**Size:** 26.45 KB  
 **LOC:** 555  
 **TODOs/FIXMEs:** 0  
 
@@ -200,8 +200,8 @@ Total files: 64
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm client  
-**Size:** 18.08 KB  
-**LOC:** 369  
+**Size:** 18.47 KB  
+**LOC:** 365  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/llm_gemini.py

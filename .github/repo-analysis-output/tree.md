@@ -105,6 +105,7 @@
 ├── LICENSE
 ├── LLMs.md
 ├── Makefile
+├── openapi.json
 ├── pyproject.toml
 ├── pytest.ini
 ├── README.md
