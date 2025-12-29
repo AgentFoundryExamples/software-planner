@@ -45,6 +45,62 @@ INITIAL_BACKOFF = 1.0  # seconds
 MAX_BACKOFF = 10.0  # seconds
 BACKOFF_MULTIPLIER = 2.0
 
+# JSON schema for response format enforcement
+# This schema matches the expected output structure for software specifications
+# open_questions and assumptions are optional fields (not in required array)
+RESPONSE_JSON_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "software_specifications",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "specs": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "purpose": {"type": "string"},
+                            "vision": {"type": "string"},
+                            "must": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                            "dont": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                            "nice": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                            "open_questions": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                            "assumptions": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                        },
+                        "required": [
+                            "purpose",
+                            "vision",
+                            "must",
+                            "dont",
+                            "nice",
+                        ],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+            "required": ["specs"],
+            "additionalProperties": False,
+        },
+    },
+}
+
 
 class OpenAIClient(BaseLLMClient):
     """OpenAI implementation of the LLM client.
@@ -237,58 +293,7 @@ class OpenAIClient(BaseLLMClient):
                     instructions=system_prompt,
                     input=description,
                     max_output_tokens=15000,  # Reasonable limit for spec generation
-                    response_format={
-                        "type": "json_schema",
-                        "json_schema": {
-                            "name": "software_specifications",
-                            "strict": True,
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "specs": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object",
-                                            "properties": {
-                                                "purpose": {"type": "string"},
-                                                "vision": {"type": "string"},
-                                                "must": {
-                                                    "type": "array",
-                                                    "items": {"type": "string"},
-                                                },
-                                                "dont": {
-                                                    "type": "array",
-                                                    "items": {"type": "string"},
-                                                },
-                                                "nice": {
-                                                    "type": "array",
-                                                    "items": {"type": "string"},
-                                                },
-                                                "open_questions": {
-                                                    "type": "array",
-                                                    "items": {"type": "string"},
-                                                },
-                                                "assumptions": {
-                                                    "type": "array",
-                                                    "items": {"type": "string"},
-                                                },
-                                            },
-                                            "required": [
-                                                "purpose",
-                                                "vision",
-                                                "must",
-                                                "dont",
-                                                "nice",
-                                            ],
-                                            "additionalProperties": False,
-                                        },
-                                    }
-                                },
-                                "required": ["specs"],
-                                "additionalProperties": False,
-                            },
-                        },
-                    },
+                    response_format=RESPONSE_JSON_SCHEMA,
                 )
 
                 # Extract response content from Responses API structure

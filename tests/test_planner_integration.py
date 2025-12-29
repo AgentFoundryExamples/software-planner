@@ -669,17 +669,18 @@ class TestPlannerWithCustomSystemPrompts:
 
         custom_prompt = "Custom system prompt for testing"
 
-        # Mock the client to track generate_specs calls
-        with patch("app.services.llm_client.logger") as mock_logger:
-            result = asyncio.run(
-                generate_plan(
-                    "Build a REST API", llm_client=mock_llm_client, system_prompt=custom_prompt
-                )
+        # Since generate_specs is mocked, we verify it was called with the prompt
+        # The actual logging happens inside the real client's generate_specs method
+        asyncio.run(
+            generate_plan(
+                "Build a REST API", llm_client=mock_llm_client, system_prompt=custom_prompt
             )
+        )
 
-            # Verify system prompt was used
-            mock_llm_client.generate_specs.assert_called_once()
-            assert result.specs is not None
+        # Verify the mock client's generate_specs was called with the custom prompt
+        mock_llm_client.generate_specs.assert_called_once()
+        call_kwargs = mock_llm_client.generate_specs.call_args[1]
+        assert call_kwargs["system_prompt"] == custom_prompt
 
     def test_empty_custom_prompt_falls_back_to_default(self, mock_llm_client):
         """Test that empty custom prompts fall back to default."""

@@ -336,11 +336,29 @@ class ClaudeClient(BaseLLMClient):
 
             except anthropic.BadRequestError as e:
                 # Invalid request - check if it's a JSON mode error
+                # Anthropic error responses may include type information in the body
+                error_type = None
+                if hasattr(e, "body") and isinstance(e.body, dict):
+                    error_type = e.body.get("type")
+
                 error_msg = str(e)
-                if "json" in error_msg.lower() or "format" in error_msg.lower():
+
+                # More specific detection for JSON format violations
+                # Check for error type and message content to reduce false positives
+                is_json_error = (
+                    (error_type == "invalid_request_error" and "json" in error_msg.lower())
+                    or "response_format" in error_msg.lower()
+                    or ("response" in error_msg.lower() and "format" in error_msg.lower())
+                )
+
+                if is_json_error:
                     logger.error(
                         "Claude JSON format validation failed",
-                        extra={"error": str(e), "retry_count": retry_count},
+                        extra={
+                            "error": str(e),
+                            "retry_count": retry_count,
+                            "error_type": error_type,
+                        },
                     )
                     raise LLMResponseError(
                         f"Claude rejected response due to JSON format violation: {e}. "
