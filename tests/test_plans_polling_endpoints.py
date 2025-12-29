@@ -14,6 +14,8 @@
 """Tests for the GET /plans and GET /plans/{job_id} polling endpoints."""
 
 import asyncio
+import hashlib
+import json
 import time
 from datetime import datetime, timezone
 from unittest.mock import Mock, patch
@@ -284,8 +286,6 @@ class TestGetJobStatusEndpoint:
         assert job_data["has_result"] is True
 
         # Verify response size is small (no specs array included)
-        import json
-
         response_bytes = len(json.dumps(list_data).encode("utf-8"))
         # Should be much smaller than the actual result (which would be ~300KB)
         # Just checking it's reasonably small (< 10KB for metadata)
@@ -688,8 +688,6 @@ class TestJobMetadataExposure:
     def test_get_job_with_system_prompt_hash_metadata(self, client, override_job_store):
         """Test that job with system_prompt exposes hash in GET response."""
         custom_prompt = "You are a test assistant"
-        import hashlib
-
         expected_hash = hashlib.sha256(custom_prompt.encode("utf-8")).hexdigest()
 
         job = asyncio.run(
@@ -709,7 +707,6 @@ class TestJobMetadataExposure:
     def test_get_job_with_both_metadata_fields(self, client, override_job_store):
         """Test that job with both metadata fields exposes both."""
         custom_prompt = "Test prompt xyz"
-        import hashlib
 
         expected_hash = hashlib.sha256(custom_prompt.encode("utf-8")).hexdigest()
 
@@ -743,7 +740,6 @@ class TestJobMetadataExposure:
     def test_get_pending_job_with_metadata(self, client, override_job_store):
         """Test that pending jobs expose metadata even before completion."""
         custom_prompt = "Pending test prompt"
-        import hashlib
 
         expected_hash = hashlib.sha256(custom_prompt.encode("utf-8")).hexdigest()
 
@@ -769,7 +765,6 @@ class TestJobMetadataExposure:
         )
 
         custom_prompt2 = "List test prompt"
-        import hashlib
 
         expected_hash2 = hashlib.sha256(custom_prompt2.encode("utf-8")).hexdigest()
         job2 = asyncio.run(
@@ -814,7 +809,6 @@ class TestJobMetadataExposure:
     def test_succeeded_job_with_metadata_includes_all_fields(self, client, override_job_store):
         """Test that succeeded job includes metadata alongside result."""
         custom_prompt = "Success test prompt"
-        import hashlib
 
         expected_hash = hashlib.sha256(custom_prompt.encode("utf-8")).hexdigest()
 
@@ -840,7 +834,6 @@ class TestJobMetadataExposure:
     def test_failed_job_with_metadata_includes_all_fields(self, client, override_job_store):
         """Test that failed job includes metadata alongside error."""
         custom_prompt = "Failed test prompt"
-        import hashlib
 
         expected_hash = hashlib.sha256(custom_prompt.encode("utf-8")).hexdigest()
 
