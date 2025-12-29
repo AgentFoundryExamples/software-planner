@@ -971,7 +971,7 @@ async def get_job_status(
     description="""List recent jobs sorted by most recently updated. Returns lightweight response without full plan content.
 
 **Purpose:**
-This is a debug/monitoring endpoint for viewing all jobs in the system. To reduce payload size, 
+This is a debug/monitoring endpoint for viewing all jobs in the system. To reduce payload size,
 this endpoint returns `result=null` for all jobs and includes a `has_result` boolean flag.
 
 **Response Format:**

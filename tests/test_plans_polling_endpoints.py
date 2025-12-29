@@ -783,7 +783,9 @@ class TestJobMetadataExposure:
         )  # No metadata
 
         # Mark job1 as succeeded so it has a result
-        asyncio.run(override_job_store.mark_succeeded(job1.job_id, {"specs": [{"purpose": "Test"}]}))
+        asyncio.run(
+            override_job_store.mark_succeeded(job1.job_id, {"specs": [{"purpose": "Test"}]})
+        )
 
         response = client.get("/api/v1/plans")
 
