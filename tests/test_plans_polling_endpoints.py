@@ -795,3 +795,109 @@ class TestJobMetadataExposure:
         assert data["error"] == error
         assert data["model"] == "claude-opus"
         assert data["system_prompt_hash"] == expected_hash
+
+
+class TestJobSerializationWithOptionalFields:
+    """Test cases for job serialization with optional assumptions and open_questions fields."""
+
+    def test_get_succeeded_job_with_optional_fields(self, client, override_job_store):
+        """Test that jobs with optional fields are serialized correctly."""
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
+        asyncio.run(override_job_store.mark_running(job.job_id))
+
+        result = {
+            "specs": [
+                {
+                    "purpose": "Test Purpose",
+                    "vision": "Test Vision",
+                    "must": ["Requirement 1"],
+                    "dont": ["Avoid 1"],
+                    "nice": ["Nice 1"],
+                    "assumptions": ["Using PostgreSQL", "RESTful conventions"],
+                    "open_questions": ["What auth method?", "Support pagination?"],
+                }
+            ]
+        }
+        asyncio.run(override_job_store.mark_succeeded(job.job_id, result))
+
+        response = client.get(f"/api/v1/plans/{job.job_id}")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["status"] == "SUCCEEDED"
+        assert "result" in data
+        assert "specs" in data["result"]
+        spec = data["result"]["specs"][0]
+        assert "assumptions" in spec
+        assert "open_questions" in spec
+        assert len(spec["assumptions"]) == 2
+        assert len(spec["open_questions"]) == 2
+        assert spec["assumptions"][0] == "Using PostgreSQL"
+        assert spec["open_questions"][0] == "What auth method?"
+
+    def test_get_succeeded_job_without_optional_fields(self, client, override_job_store):
+        """Test that jobs without optional fields are serialized with empty lists."""
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
+        asyncio.run(override_job_store.mark_running(job.job_id))
+
+        result = {
+            "specs": [
+                {
+                    "purpose": "Test Purpose",
+                    "vision": "Test Vision",
+                    "must": ["Requirement 1"],
+                    "dont": ["Avoid 1"],
+                    "nice": ["Nice 1"],
+                    "assumptions": [],
+                    "open_questions": [],
+                }
+            ]
+        }
+        asyncio.run(override_job_store.mark_succeeded(job.job_id, result))
+
+        response = client.get(f"/api/v1/plans/{job.job_id}")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["status"] == "SUCCEEDED"
+        spec = data["result"]["specs"][0]
+        assert spec["assumptions"] == []
+        assert spec["open_questions"] == []
+
+    def test_list_jobs_with_optional_fields(self, client, override_job_store):
+        """Test that listing jobs includes optional fields correctly."""
+        # Create and succeed a job with optional fields
+        job = asyncio.run(override_job_store.create_job(description="Test description"))
+        asyncio.run(override_job_store.mark_running(job.job_id))
+
+        result = {
+            "specs": [
+                {
+                    "purpose": "Test Purpose",
+                    "vision": "Test Vision",
+                    "must": ["Requirement 1"],
+                    "dont": ["Avoid 1"],
+                    "nice": ["Nice 1"],
+                    "assumptions": ["Assumption 1", "Assumption 2"],
+                    "open_questions": ["Question 1"],
+                }
+            ]
+        }
+        asyncio.run(override_job_store.mark_succeeded(job.job_id, result))
+
+        response = client.get("/api/v1/plans")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert "jobs" in data
+        assert len(data["jobs"]) == 1
+        job_data = data["jobs"][0]
+        assert job_data["status"] == "SUCCEEDED"
+        spec = job_data["result"]["specs"][0]
+        assert "assumptions" in spec
+        assert "open_questions" in spec
+        assert len(spec["assumptions"]) == 2
+        assert len(spec["open_questions"]) == 1

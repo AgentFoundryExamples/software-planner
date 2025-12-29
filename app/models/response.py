@@ -28,6 +28,8 @@ class SpecItem(BaseModel):
         must: List of must-have requirements.
         dont: List of things to avoid.
         nice: List of nice-to-have features.
+        assumptions: Optional list of assumptions made about ambiguous input.
+        open_questions: Optional list of clarifying questions for unclear requirements.
     """
 
     purpose: str = Field(..., description="High-level purpose of this specification")
@@ -35,6 +37,12 @@ class SpecItem(BaseModel):
     must: list[str] = Field(default_factory=list, description="Must-have requirements")
     dont: list[str] = Field(default_factory=list, description="Things to avoid")
     nice: list[str] = Field(default_factory=list, description="Nice-to-have features")
+    assumptions: list[str] = Field(
+        default_factory=list, description="Assumptions made about ambiguous input"
+    )
+    open_questions: list[str] = Field(
+        default_factory=list, description="Clarifying questions for unclear requirements"
+    )
 
 
 class PlanResponse(BaseModel):

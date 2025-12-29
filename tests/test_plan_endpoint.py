@@ -713,3 +713,128 @@ class TestPlanEndpointCombinedParameters:
         # Response should not include model/system_prompt in top level
         assert "model" not in data
         assert "system_prompt" not in data
+
+
+class TestPlanEndpointOptionalFields:
+    """Test cases for optional assumptions and open_questions fields."""
+
+    def test_plan_endpoint_with_assumptions_and_questions(self, mock_llm_client):
+        """Test that assumptions and open_questions are properly serialized."""
+        # Mock LLM to return specs with optional fields
+        mock_llm_client.generate_specs.return_value = {
+            "specs": [
+                {
+                    "purpose": "Core API Development",
+                    "vision": "Build a robust REST API",
+                    "must": ["Implement endpoints"],
+                    "dont": ["Skip validation"],
+                    "nice": ["Add rate limiting"],
+                    "assumptions": [
+                        "Using PostgreSQL as the database",
+                        "RESTful conventions will be followed",
+                    ],
+                    "open_questions": [
+                        "What authentication method should be used?",
+                        "Should we support pagination from the start?",
+                    ],
+                }
+            ]
+        }
+
+        from app.services.rate_limiter import RateLimiter
+
+        disabled_limiter = RateLimiter(window_seconds=60, max_requests=10, enabled=False)
+
+        with patch("app.services.store_singleton.get_llm_client", return_value=mock_llm_client):
+            with patch("app.api.routes.get_rate_limiter", return_value=disabled_limiter):
+                client = TestClient(app)
+                response = client.post(
+                    "/api/v1/plan", json={"description": "Build a REST API for managing tasks"}
+                )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "specs" in data
+        assert len(data["specs"]) == 1
+
+        spec = data["specs"][0]
+        assert "assumptions" in spec
+        assert "open_questions" in spec
+        assert isinstance(spec["assumptions"], list)
+        assert isinstance(spec["open_questions"], list)
+        assert len(spec["assumptions"]) == 2
+        assert len(spec["open_questions"]) == 2
+        assert spec["assumptions"][0] == "Using PostgreSQL as the database"
+        assert spec["open_questions"][0] == "What authentication method should be used?"
+
+    def test_plan_endpoint_without_optional_fields(self, mock_llm_client):
+        """Test that specs without optional fields default to empty lists."""
+        # Mock LLM to return specs without optional fields
+        mock_llm_client.generate_specs.return_value = {
+            "specs": [
+                {
+                    "purpose": "Core API Development",
+                    "vision": "Build a robust REST API",
+                    "must": ["Implement endpoints"],
+                    "dont": ["Skip validation"],
+                    "nice": ["Add rate limiting"],
+                }
+            ]
+        }
+
+        from app.services.rate_limiter import RateLimiter
+
+        disabled_limiter = RateLimiter(window_seconds=60, max_requests=10, enabled=False)
+
+        with patch("app.services.store_singleton.get_llm_client", return_value=mock_llm_client):
+            with patch("app.api.routes.get_rate_limiter", return_value=disabled_limiter):
+                client = TestClient(app)
+                response = client.post(
+                    "/api/v1/plan", json={"description": "Build a REST API for managing tasks"}
+                )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "specs" in data
+        assert len(data["specs"]) == 1
+
+        spec = data["specs"][0]
+        # Optional fields should default to empty lists
+        assert "assumptions" in spec
+        assert "open_questions" in spec
+        assert spec["assumptions"] == []
+        assert spec["open_questions"] == []
+
+    def test_plan_endpoint_with_empty_optional_fields(self, mock_llm_client):
+        """Test that empty optional fields are handled correctly."""
+        # Mock LLM to return specs with empty optional fields
+        mock_llm_client.generate_specs.return_value = {
+            "specs": [
+                {
+                    "purpose": "Core API Development",
+                    "vision": "Build a robust REST API",
+                    "must": ["Implement endpoints"],
+                    "dont": ["Skip validation"],
+                    "nice": ["Add rate limiting"],
+                    "assumptions": [],
+                    "open_questions": [],
+                }
+            ]
+        }
+
+        from app.services.rate_limiter import RateLimiter
+
+        disabled_limiter = RateLimiter(window_seconds=60, max_requests=10, enabled=False)
+
+        with patch("app.services.store_singleton.get_llm_client", return_value=mock_llm_client):
+            with patch("app.api.routes.get_rate_limiter", return_value=disabled_limiter):
+                client = TestClient(app)
+                response = client.post(
+                    "/api/v1/plan", json={"description": "Build a REST API for managing tasks"}
+                )
+
+        assert response.status_code == 200
+        data = response.json()
+        spec = data["specs"][0]
+        assert spec["assumptions"] == []
+        assert spec["open_questions"] == []

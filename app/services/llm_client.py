@@ -43,8 +43,8 @@ DEFAULT_SYSTEM_PROMPT = """You are tasked with specifying first steps for a soft
 "must": ["list of requirements that must be accomplished during this iteration this should be specific and detailed about technical details and externally observable behaviors the more detailed the better the iteration will come out"],
 "dont": ["list of things the iteration should not do"],
 "nice": ["things that would be nice but are not required on this iteration"],
-"open_questions": ["optional list field asking clarifying questions for ambiguous input instead of making guesses"],
-"assumptions": ["optional list field with any assumptions that weren't clearly defined in the input."]
+"assumptions": ["optional list of any assumptions that weren't clearly defined in the input"],
+"open_questions": ["optional list asking clarifying questions for ambiguous input instead of making guesses"]
 },
 {*next spec*}
 ]

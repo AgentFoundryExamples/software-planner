@@ -100,7 +100,7 @@ def _normalize_specs(data: dict[str, Any]) -> dict[str, Any]:
 
             normalized_spec[field] = value
 
-        # Normalize array fields
+        # Normalize required array fields
         for field in ["must", "dont", "nice"]:
             if field not in spec:
                 raise LLMResponseError(f"Spec at index {idx} missing required field '{field}'")
@@ -147,6 +147,56 @@ def _normalize_specs(data: dict[str, Any]) -> dict[str, Any]:
                     normalized_items.append(item)
 
             normalized_spec[field] = normalized_items
+
+        # Normalize optional array fields (assumptions, open_questions)
+        for field in ["assumptions", "open_questions"]:
+            if field in spec:
+                value = spec[field]
+
+                # Wrap single strings in a list
+                if isinstance(value, str):
+                    logger.info(
+                        f"Normalizing single string to list",
+                        extra={"spec_index": idx, "field": field},
+                    )
+                    value = [value]
+
+                if not isinstance(value, list):
+                    raise LLMResponseError(
+                        f"Spec at index {idx}: field '{field}' must be an array or string"
+                    )
+
+                # Normalize each item in the array (strip whitespace, ensure strings)
+                normalized_items = []
+                for item_idx, item in enumerate(value):
+                    if not isinstance(item, str):
+                        raise LLMResponseError(
+                            f"Spec at index {idx}: field '{field}' item {item_idx} must be a string"
+                        )
+
+                    item = item.strip()
+
+                    # Guard against oversized items
+                    if len(item) > MAX_ARRAY_ITEM_LENGTH:
+                        logger.warning(
+                            f"Truncating oversized array item",
+                            extra={
+                                "spec_index": idx,
+                                "field": field,
+                                "item_index": item_idx,
+                                "original_length": len(item),
+                            },
+                        )
+                        item = item[:MAX_ARRAY_ITEM_LENGTH]
+
+                    # Only include non-empty items
+                    if item:
+                        normalized_items.append(item)
+
+                normalized_spec[field] = normalized_items
+            else:
+                # Optional field not present - default to empty list
+                normalized_spec[field] = []
 
         # Validate that at least 'must' field has content
         # The 'must' field should contain actual requirements

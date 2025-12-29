@@ -706,3 +706,172 @@ class TestPlannerWithCustomSystemPrompts:
         # Verify generate_specs was called (it will use default prompt internally)
         mock_llm_client.generate_specs.assert_called_once()
         assert result.specs is not None
+
+
+class TestNormalizeOptionalFields:
+    """Test cases for normalizing optional assumptions and open_questions fields."""
+
+    def test_normalize_specs_with_optional_fields(self):
+        """Test that specs with optional fields are normalized correctly."""
+        data = {
+            "specs": [
+                {
+                    "purpose": "Test",
+                    "vision": "Vision",
+                    "must": ["item1"],
+                    "dont": ["item2"],
+                    "nice": ["item3"],
+                    "assumptions": ["Using PostgreSQL", "RESTful conventions"],
+                    "open_questions": ["What auth method?", "Support pagination?"],
+                }
+            ]
+        }
+        result = _normalize_specs(data)
+        assert "assumptions" in result["specs"][0]
+        assert "open_questions" in result["specs"][0]
+        assert len(result["specs"][0]["assumptions"]) == 2
+        assert len(result["specs"][0]["open_questions"]) == 2
+        assert result["specs"][0]["assumptions"][0] == "Using PostgreSQL"
+        assert result["specs"][0]["open_questions"][0] == "What auth method?"
+
+    def test_normalize_specs_without_optional_fields(self):
+        """Test that specs without optional fields get empty list defaults."""
+        data = {
+            "specs": [
+                {
+                    "purpose": "Test",
+                    "vision": "Vision",
+                    "must": ["item1"],
+                    "dont": ["item2"],
+                    "nice": ["item3"],
+                }
+            ]
+        }
+        result = _normalize_specs(data)
+        assert "assumptions" in result["specs"][0]
+        assert "open_questions" in result["specs"][0]
+        assert result["specs"][0]["assumptions"] == []
+        assert result["specs"][0]["open_questions"] == []
+
+    def test_normalize_optional_fields_strips_whitespace(self):
+        """Test that optional fields have whitespace stripped."""
+        data = {
+            "specs": [
+                {
+                    "purpose": "Test",
+                    "vision": "Vision",
+                    "must": ["item1"],
+                    "dont": ["item2"],
+                    "nice": ["item3"],
+                    "assumptions": ["  Using PostgreSQL  ", " RESTful conventions "],
+                    "open_questions": [" What auth? ", "  Pagination?  "],
+                }
+            ]
+        }
+        result = _normalize_specs(data)
+        assert result["specs"][0]["assumptions"][0] == "Using PostgreSQL"
+        assert result["specs"][0]["assumptions"][1] == "RESTful conventions"
+        assert result["specs"][0]["open_questions"][0] == "What auth?"
+        assert result["specs"][0]["open_questions"][1] == "Pagination?"
+
+    def test_normalize_optional_fields_wraps_single_string(self):
+        """Test that single strings in optional fields are wrapped in lists."""
+        data = {
+            "specs": [
+                {
+                    "purpose": "Test",
+                    "vision": "Vision",
+                    "must": ["item1"],
+                    "dont": ["item2"],
+                    "nice": ["item3"],
+                    "assumptions": "Single assumption string",
+                    "open_questions": "Single question string",
+                }
+            ]
+        }
+        result = _normalize_specs(data)
+        assert isinstance(result["specs"][0]["assumptions"], list)
+        assert isinstance(result["specs"][0]["open_questions"], list)
+        assert len(result["specs"][0]["assumptions"]) == 1
+        assert len(result["specs"][0]["open_questions"]) == 1
+        assert result["specs"][0]["assumptions"][0] == "Single assumption string"
+        assert result["specs"][0]["open_questions"][0] == "Single question string"
+
+    def test_normalize_optional_fields_empty_strings_removed(self):
+        """Test that empty strings are removed from optional fields."""
+        data = {
+            "specs": [
+                {
+                    "purpose": "Test",
+                    "vision": "Vision",
+                    "must": ["item1"],
+                    "dont": ["item2"],
+                    "nice": ["item3"],
+                    "assumptions": ["Valid", "", "  ", "Another valid"],
+                    "open_questions": ["Valid question", "", "Another question"],
+                }
+            ]
+        }
+        result = _normalize_specs(data)
+        assert len(result["specs"][0]["assumptions"]) == 2
+        assert result["specs"][0]["assumptions"] == ["Valid", "Another valid"]
+        assert len(result["specs"][0]["open_questions"]) == 2
+        assert result["specs"][0]["open_questions"] == ["Valid question", "Another question"]
+
+    def test_normalize_optional_fields_truncates_oversized(self):
+        """Test that oversized items in optional fields are truncated."""
+        from app.services.planner import MAX_ARRAY_ITEM_LENGTH
+
+        oversized_assumption = "x" * (MAX_ARRAY_ITEM_LENGTH + 100)
+        oversized_question = "y" * (MAX_ARRAY_ITEM_LENGTH + 100)
+
+        data = {
+            "specs": [
+                {
+                    "purpose": "Test",
+                    "vision": "Vision",
+                    "must": ["item1"],
+                    "dont": ["item2"],
+                    "nice": ["item3"],
+                    "assumptions": [oversized_assumption],
+                    "open_questions": [oversized_question],
+                }
+            ]
+        }
+        result = _normalize_specs(data)
+        assert len(result["specs"][0]["assumptions"][0]) == MAX_ARRAY_ITEM_LENGTH
+        assert len(result["specs"][0]["open_questions"][0]) == MAX_ARRAY_ITEM_LENGTH
+
+    def test_normalize_optional_fields_rejects_non_strings(self):
+        """Test that non-string items in optional fields raise errors."""
+        data = {
+            "specs": [
+                {
+                    "purpose": "Test",
+                    "vision": "Vision",
+                    "must": ["item1"],
+                    "dont": ["item2"],
+                    "nice": ["item3"],
+                    "assumptions": ["Valid", 123],  # Invalid: number instead of string
+                }
+            ]
+        }
+        with pytest.raises(LLMResponseError, match="must be a string"):
+            _normalize_specs(data)
+
+    def test_normalize_optional_fields_rejects_non_list(self):
+        """Test that non-list values in optional fields raise errors."""
+        data = {
+            "specs": [
+                {
+                    "purpose": "Test",
+                    "vision": "Vision",
+                    "must": ["item1"],
+                    "dont": ["item2"],
+                    "nice": ["item3"],
+                    "assumptions": {"invalid": "object"},  # Invalid: object instead of array
+                }
+            ]
+        }
+        with pytest.raises(LLMResponseError, match="must be an array or string"):
+            _normalize_specs(data)
