@@ -118,9 +118,11 @@ class TestEventLoopStability:
                 if job and job.status == "SUCCEEDED":
                     break
                 time.sleep(0.1)
-            
+
             assert job is not None
-            assert job.status == "SUCCEEDED", f"Job {job_id} did not succeed in time. Final status: {job.status if job else 'None'}"
+            assert (
+                job.status == "SUCCEEDED"
+            ), f"Job {job_id} did not succeed in time. Final status: {job.status if job else 'None'}"
             assert job.result is not None
 
     def test_job_repository_works_across_endpoints(self, client, override_job_store):
@@ -150,7 +152,9 @@ class TestEventLoopStability:
 
         # Verify async job completed successfully
         assert job is not None
-        assert job.status == "SUCCEEDED", f"Job did not succeed in time. Final status: {job.status if job else 'None'}"
+        assert (
+            job.status == "SUCCEEDED"
+        ), f"Job did not succeed in time. Final status: {job.status if job else 'None'}"
 
     def test_repeated_sync_calls_no_loop_leak(self, client):
         """Test that repeated sync endpoint calls don't leak event loops.
@@ -159,9 +163,7 @@ class TestEventLoopStability:
         """
         # Make many requests to detect potential loop leaks
         for i in range(10):
-            response = client.post(
-                "/api/v1/plan", json={"description": f"Project iteration {i}"}
-            )
+            response = client.post("/api/v1/plan", json={"description": f"Project iteration {i}"})
             assert response.status_code == 200, f"Request {i} failed"
             assert "specs" in response.json()
 
@@ -205,11 +207,15 @@ class TestEventLoopStability:
                 if job and job.status == "SUCCEEDED":
                     break
                 time.sleep(0.1)
-            
-            assert job is not None
-            assert job.status == "SUCCEEDED", f"Async job {job_id} did not succeed in time. Final status: {job.status if job else 'None'}"
 
-    def test_error_propagation_preserves_loop_integrity(self, client, override_job_store, monkeypatch):
+            assert job is not None
+            assert (
+                job.status == "SUCCEEDED"
+            ), f"Async job {job_id} did not succeed in time. Final status: {job.status if job else 'None'}"
+
+    def test_error_propagation_preserves_loop_integrity(
+        self, client, override_job_store, monkeypatch
+    ):
         """Test that errors in planner don't break loop management.
 
         Ensures that exceptions during planning don't leave loops in invalid states.
@@ -248,7 +254,9 @@ class TestEventLoopStability:
 
         # Verify job failed but didn't break loop management
         assert job is not None
-        assert job.status == "FAILED", f"Job did not fail in time. Final status: {job.status if job else 'None'}"
+        assert (
+            job.status == "FAILED"
+        ), f"Job did not fail in time. Final status: {job.status if job else 'None'}"
 
         # Verify subsequent requests still work (loop wasn't corrupted)
         response2 = client.post("/api/v1/plans", json={"description": "Recovery project"})
@@ -267,7 +275,7 @@ class TestEventLoopStability:
         assert response.status_code == 202
 
         job_id = response.json()["job_id"]
-        
+
         # Poll for job completion
         job = None
         for _ in range(10):  # Poll for up to 1 second
@@ -275,7 +283,11 @@ class TestEventLoopStability:
             if job and job.status in ["SUCCEEDED", "FAILED"]:
                 break
             time.sleep(0.1)
-        
+
         assert job is not None
         # If we got here without RuntimeError, the test passes
-        assert job.status in ["QUEUED", "RUNNING", "SUCCEEDED"], f"Unexpected job status: {job.status if job else 'None'}"
+        assert job.status in [
+            "QUEUED",
+            "RUNNING",
+            "SUCCEEDED",
+        ], f"Unexpected job status: {job.status if job else 'None'}"

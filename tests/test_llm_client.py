@@ -267,15 +267,15 @@ def test_get_default_system_prompt():
 
 def test_default_system_prompt_content():
     """Test that default system prompt has expected content."""
-    assert "JSON" in DEFAULT_SYSTEM_PROMPT
+    assert "json" in DEFAULT_SYSTEM_PROMPT.lower()
     assert '"specs"' in DEFAULT_SYSTEM_PROMPT
     assert "purpose" in DEFAULT_SYSTEM_PROMPT
     assert "vision" in DEFAULT_SYSTEM_PROMPT
     assert "must" in DEFAULT_SYSTEM_PROMPT
     assert "dont" in DEFAULT_SYSTEM_PROMPT
     assert "nice" in DEFAULT_SYSTEM_PROMPT
-    # Verify it mentions arrays
-    assert "array" in DEFAULT_SYSTEM_PROMPT.lower()
+    # Verify it mentions lists (list is the term used in the prompt, not array)
+    assert "list" in DEFAULT_SYSTEM_PROMPT.lower()
 
 
 def test_base_llm_client_is_abstract():

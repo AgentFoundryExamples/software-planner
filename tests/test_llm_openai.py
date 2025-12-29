@@ -688,7 +688,7 @@ class TestOpenAIJSONModeEnforcement:
         assert call_args[1]["response_format"]["type"] == "json_schema"
         assert "json_schema" in call_args[1]["response_format"]
         assert call_args[1]["response_format"]["json_schema"]["strict"] is True
-        
+
         # Verify schema structure
         schema = call_args[1]["response_format"]["json_schema"]["schema"]
         assert schema["type"] == "object"
@@ -712,12 +712,12 @@ class TestOpenAIJSONModeEnforcement:
 
         # Verify result is still valid JSON despite custom prompt
         assert "specs" in result
-        
+
         # Verify response_format was still enforced
         call_args = mock_client.responses.create.call_args
         assert "response_format" in call_args[1]
         assert call_args[1]["response_format"]["type"] == "json_schema"
-        
+
         # Verify custom prompt was passed
         assert call_args[1]["instructions"] == custom_prompt
 
@@ -732,7 +732,7 @@ class TestOpenAIJSONModeEnforcement:
         mock_client.responses.create.side_effect = openai.BadRequestError(
             "JSON schema validation failed: response does not match schema",
             response=Mock(status_code=400),
-            body=None
+            body=None,
         )
 
         # Create client and call API
@@ -744,7 +744,7 @@ class TestOpenAIJSONModeEnforcement:
         # Verify error message mentions schema violation
         assert "schema violation" in str(exc_info.value).lower()
         assert "json" in str(exc_info.value).lower()
-        
+
         # Verify it's not retried (schema errors are not transient)
         assert mock_client.responses.create.call_count == 1
 
@@ -766,14 +766,14 @@ class TestOpenAIJSONModeEnforcement:
         call_args = mock_client.responses.create.call_args
         schema = call_args[1]["response_format"]["json_schema"]["schema"]
         item_properties = schema["properties"]["specs"]["items"]["properties"]
-        
+
         # Required fields
         assert "purpose" in item_properties
         assert "vision" in item_properties
         assert "must" in item_properties
         assert "dont" in item_properties
         assert "nice" in item_properties
-        
+
         # Optional fields
         assert "open_questions" in item_properties
         assert "assumptions" in item_properties

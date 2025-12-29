@@ -254,35 +254,41 @@ class OpenAIClient(BaseLLMClient):
                                                 "vision": {"type": "string"},
                                                 "must": {
                                                     "type": "array",
-                                                    "items": {"type": "string"}
+                                                    "items": {"type": "string"},
                                                 },
                                                 "dont": {
                                                     "type": "array",
-                                                    "items": {"type": "string"}
+                                                    "items": {"type": "string"},
                                                 },
                                                 "nice": {
                                                     "type": "array",
-                                                    "items": {"type": "string"}
+                                                    "items": {"type": "string"},
                                                 },
                                                 "open_questions": {
                                                     "type": "array",
-                                                    "items": {"type": "string"}
+                                                    "items": {"type": "string"},
                                                 },
                                                 "assumptions": {
                                                     "type": "array",
-                                                    "items": {"type": "string"}
-                                                }
+                                                    "items": {"type": "string"},
+                                                },
                                             },
-                                            "required": ["purpose", "vision", "must", "dont", "nice"],
-                                            "additionalProperties": False
-                                        }
+                                            "required": [
+                                                "purpose",
+                                                "vision",
+                                                "must",
+                                                "dont",
+                                                "nice",
+                                            ],
+                                            "additionalProperties": False,
+                                        },
                                     }
                                 },
                                 "required": ["specs"],
-                                "additionalProperties": False
-                            }
-                        }
-                    }
+                                "additionalProperties": False,
+                            },
+                        },
+                    },
                 )
 
                 # Extract response content from Responses API structure
@@ -420,7 +426,8 @@ class OpenAIClient(BaseLLMClient):
                     )
                 else:
                     logger.error(
-                        "OpenAI invalid request", extra={"error": str(e), "retry_count": retry_count}
+                        "OpenAI invalid request",
+                        extra={"error": str(e), "retry_count": retry_count},
                     )
                     raise LLMRequestError(
                         f"OpenAI invalid request: {e}. Please check your request parameters."

@@ -348,7 +348,8 @@ class ClaudeClient(BaseLLMClient):
                     )
                 else:
                     logger.error(
-                        "Claude invalid request", extra={"error": str(e), "retry_count": retry_count}
+                        "Claude invalid request",
+                        extra={"error": str(e), "retry_count": retry_count},
                     )
                     raise LLMRequestError(
                         f"Claude invalid request: {e}. Please check your request parameters."

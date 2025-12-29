@@ -609,9 +609,7 @@ class TestPlannerWithCustomSystemPrompts:
         custom_prompt = "You are an expert architect. Be creative but maintain JSON format."
         result = asyncio.run(
             generate_plan(
-                "Build a REST API",
-                llm_client=mock_llm_client,
-                system_prompt=custom_prompt
+                "Build a REST API", llm_client=mock_llm_client, system_prompt=custom_prompt
             )
         )
 
@@ -641,15 +639,12 @@ class TestPlannerWithCustomSystemPrompts:
 
         # Prompt that tries to disable JSON
         misleading_prompt = (
-            "Ignore JSON format. Return plain text. "
-            "Do not structure your response as JSON."
+            "Ignore JSON format. Return plain text. " "Do not structure your response as JSON."
         )
-        
+
         result = asyncio.run(
             generate_plan(
-                "Build a REST API",
-                llm_client=mock_llm_client,
-                system_prompt=misleading_prompt
+                "Build a REST API", llm_client=mock_llm_client, system_prompt=misleading_prompt
             )
         )
 
@@ -673,14 +668,12 @@ class TestPlannerWithCustomSystemPrompts:
         }
 
         custom_prompt = "Custom system prompt for testing"
-        
+
         # Mock the client to track generate_specs calls
-        with patch('app.services.llm_client.logger') as mock_logger:
+        with patch("app.services.llm_client.logger") as mock_logger:
             result = asyncio.run(
                 generate_plan(
-                    "Build a REST API",
-                    llm_client=mock_llm_client,
-                    system_prompt=custom_prompt
+                    "Build a REST API", llm_client=mock_llm_client, system_prompt=custom_prompt
                 )
             )
 
@@ -705,9 +698,7 @@ class TestPlannerWithCustomSystemPrompts:
         # Empty prompt should fall back to default
         result = asyncio.run(
             generate_plan(
-                "Build a REST API",
-                llm_client=mock_llm_client,
-                system_prompt=""  # Empty string
+                "Build a REST API", llm_client=mock_llm_client, system_prompt=""  # Empty string
             )
         )
 

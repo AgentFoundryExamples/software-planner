@@ -875,10 +875,13 @@ curl -X POST http://localhost:8000/api/v1/plans \
   }'
 ```
 
+**Important:** JSON mode is enforced at the provider level regardless of custom system prompts. The API will always return structured JSON even if a custom prompt attempts to disable formatting. This guarantees reliable plan storage and parsing.
+
 **Validation:**
 - If you specify an unknown model name, you'll get a 400 Bad Request error listing available models
 - If you specify a disabled model, you'll get a 400 Bad Request error
 - System prompts must not exceed 32768 bytes
+- Models must support JSON mode enforcement (all configured models in MODELS_REGISTRY are verified compatible)
 
 **Viewing Model Used in Job Results:**
 
@@ -2620,6 +2623,8 @@ The application logs detailed error messages on startup if database connection f
 
 The Software Planner API uses OpenAI's GPT models to generate structured software specifications from project descriptions. The background planning service calls the LLM API and transforms responses into actionable specs with must-have requirements, things to avoid, and nice-to-have features.
 
+**JSON Mode Enforcement:** All LLM providers are configured with provider-level JSON mode enforcement to guarantee structured output regardless of custom system prompts. This ensures reliable plan storage and async job polling even when callers override the system prompt.
+
 #### How It Works
 
 When you submit a planning request via the asynchronous API (`POST /api/v1/plans`), the system:
@@ -2627,10 +2632,11 @@ When you submit a planning request via the asynchronous API (`POST /api/v1/plans
 1. **Creates a Job**: Immediately returns a job ID and sets status to `pending`
 2. **Queues the Request**: A background worker picks up the job and sets status to `running`
 3. **Calls the LLM**: The planner service sends your description to the configured LLM model along with a system prompt that defines the expected JSON structure
-4. **Retries on Failure**: Implements automatic retry logic with exponential backoff for transient errors (timeouts, rate limits, 5xx server errors)
-5. **Validates Response**: Parses and validates the LLM's JSON response against the expected schema
-6. **Normalizes Data**: Handles edge cases like single-spec objects, oversized fields, and whitespace
-7. **Updates Job**: Sets status to `succeeded` with results, or `failed` with error details
+4. **Enforces JSON Mode**: Provider-level JSON enforcement (OpenAI json_schema, Claude response_format) guarantees valid JSON output
+5. **Retries on Failure**: Implements automatic retry logic with exponential backoff for transient errors (timeouts, rate limits, 5xx server errors)
+6. **Validates Response**: Parses and validates the LLM's JSON response against the expected schema
+7. **Normalizes Data**: Handles edge cases like single-spec objects, oversized fields, and whitespace
+8. **Updates Job**: Sets status to `succeeded` with results, or `failed` with error details
 
 #### LLM Configuration
 
@@ -2654,7 +2660,9 @@ When you submit a planning request via the asynchronous API (`POST /api/v1/plans
   - Recommended range: 30-120 seconds
 - `LLM_SYSTEM_PROMPT`: Custom system prompt to override the default
   - Default prompt enforces JSON-only output with specific structure
-  - Advanced users only - improper prompts may break response parsing
+  - **Important:** JSON mode is enforced at provider level regardless of prompt content
+  - Custom prompts cannot disable JSON formatting - output will always be valid JSON
+  - Advanced users only - test thoroughly before deploying custom prompts
 
 **Example `.env` Configuration:**
 
@@ -2692,16 +2700,59 @@ LLM_TIMEOUT=90
 
 #### Dependencies
 
-The LLM integration requires the official OpenAI Python SDK:
+The LLM integration requires the official provider SDKs:
 
 ```bash
-pip install openai==2.14.0
+pip install openai==2.14.0      # For OpenAI GPT models
+pip install anthropic==0.75.0   # For Anthropic Claude models
+pip install google-genai==1.56.0  # For Google Gemini models
 ```
 
-This is included in `requirements.txt` and will be installed automatically. The implementation uses:
+These are included in `requirements.txt` and will be installed automatically. The implementation uses:
 - **OpenAI Responses API** (recommended for GPT-5+ models, replacing Chat Completions API)
+- **Anthropic Messages API** with JSON mode enforcement (beta feature)
+- **Google Gemini API** with JSON mime type enforcement
+- **Provider-level JSON schema validation** to guarantee structured output
 - **Automatic retry logic** for transient failures
 - **Structured logging** without exposing API keys
+
+#### JSON Mode Enforcement
+
+**Why JSON Mode Matters:**
+
+Custom system prompts could potentially instruct the LLM to return non-JSON output (e.g., "ignore all formatting and return plain text"). Without provider-level JSON enforcement, this would break plan storage and async job polling.
+
+**How It Works:**
+
+Each LLM provider implementation configures JSON mode at the API level:
+
+- **OpenAI (GPT-5+)**: Uses `response_format` with `json_schema` type and `strict: true`
+  - Defines complete JSON schema matching expected output structure
+  - OpenAI validates and rejects responses that don't match schema before returning
+  - Custom system prompts cannot override this enforcement
+  
+- **Anthropic (Claude 4+)**: Uses `response_format` with `{"type": "json_object"}` (beta)
+  - Ensures Claude always returns valid JSON object structure
+  - Custom system prompts cannot disable JSON formatting
+  
+- **Google (Gemini 3+)**: Uses `generationConfig` with `response_mime_type="application/json"`
+  - Enforces JSON output format at generation time
+  - Can optionally provide JSON schema for stricter validation
+
+**Model Compatibility:**
+
+Only models supporting JSON mode enforcement are compatible with this API:
+- ✅ OpenAI GPT-5.1, GPT-4, GPT-4-turbo (with Responses API or Chat Completions API)
+- ✅ Anthropic Claude Sonnet 4.5, Claude Opus 4 (with Messages API)
+- ✅ Google Gemini 3.0 Pro (with generationConfig)
+- ❌ Legacy models without JSON mode support will fail at configuration time
+
+**Testing JSON Enforcement:**
+
+The test suite includes specific tests (`TestOpenAIJSONModeEnforcement`, `TestClaudeJSONModeEnforcement`) that verify:
+- JSON mode is configured in API calls
+- Custom prompts attempting to disable JSON still return structured data
+- Schema violations are detected and reported with actionable errors
 
 #### Retry and Timeout Behavior
 
@@ -2734,7 +2785,7 @@ The default system prompt instructs the LLM to generate specs in a specific JSON
 - You want to emphasize certain types of requirements
 - You're experimenting with prompt engineering
 
-**Warning**: Custom prompts may break response parsing if they don't enforce valid JSON output matching the expected schema. Test thoroughly before deploying custom prompts.
+**Important:** Custom prompts cannot disable JSON formatting. Provider-level JSON mode enforcement guarantees valid JSON output regardless of prompt content. Even prompts explicitly requesting plain text will result in structured JSON output.
 
 ### Troubleshooting LLM Issues
 

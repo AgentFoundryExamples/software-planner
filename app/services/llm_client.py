@@ -34,7 +34,7 @@ from typing import Any, Optional
 from app.models.response import PlanResponse
 
 # Default system prompt that enforces the expected JSON output format
-DEFAULT_SYSTEM_PROMPT = """You are tasked with specifying first steps for a software idea. The goal is not to complete a project in 1 iteration but to break it up into a list of specifications for building the software iteratively. You will receive the users software idea and should strictly output a list of specifications in the following json format: 
+DEFAULT_SYSTEM_PROMPT = """You are tasked with specifying first steps for a software idea. The goal is not to complete a project in 1 iteration but to break it up into a list of specifications for building the software iteratively. You will receive the users software idea and should strictly output a list of specifications in the following json format:
 {
  "specs": [
 {
@@ -144,13 +144,13 @@ class BaseLLMClient(ABC):
         """Call the LLM provider's API and return the raw response text.
 
         This is the provider-specific implementation that must be overridden.
-        
+
         **JSON Mode Enforcement:**
         Implementations MUST configure their provider's JSON mode enforcement
         to guarantee valid JSON output regardless of system_prompt content.
         This ensures malformed responses are rejected at the provider level
         before reaching the parser.
-        
+
         For example:
         - OpenAI: Use response_format with json_schema and strict=True
         - Anthropic: Use response_format={"type": "json_object"}
@@ -273,8 +273,9 @@ class BaseLLMClient(ABC):
         # Log request metadata (not the description itself, which may be sensitive)
         # Include system prompt hash for debugging without exposing content
         import hashlib
-        prompt_hash = hashlib.sha256(prompt.encode('utf-8')).hexdigest()[:16]
-        
+
+        prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16]
+
         logger.info(
             "Generating specs via LLM",
             extra={

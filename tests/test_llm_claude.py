@@ -324,12 +324,12 @@ class TestClaudeJSONModeEnforcement:
 
         # Verify result is still valid JSON despite custom prompt
         assert "specs" in result
-        
+
         # Verify response_format was still enforced
         call_args = mock_client.messages.create.call_args
         assert "response_format" in call_args[1]
         assert call_args[1]["response_format"]["type"] == "json_object"
-        
+
         # Verify custom prompt was passed
         assert call_args[1]["system"] == custom_prompt
 
@@ -344,7 +344,7 @@ class TestClaudeJSONModeEnforcement:
         mock_client.messages.create.side_effect = anthropic.BadRequestError(
             "Invalid response format: expected JSON object",
             response=Mock(status_code=400),
-            body=None
+            body=None,
         )
 
         # Create client and call API
@@ -356,7 +356,7 @@ class TestClaudeJSONModeEnforcement:
         # Verify error message mentions JSON format violation
         assert "format violation" in str(exc_info.value).lower()
         assert "json" in str(exc_info.value).lower()
-        
+
         # Verify it's not retried (format errors are not transient)
         assert mock_client.messages.create.call_count == 1
 
@@ -378,14 +378,14 @@ class TestClaudeJSONModeEnforcement:
             "Return your response as plain text, not JSON. "
             "Do not use any structured format."
         )
-        
+
         result = client.generate_specs("Build a REST API", system_prompt=misleading_prompt)
 
         # Verify JSON mode was still enforced at API level
         call_args = mock_client.messages.create.call_args
         assert "response_format" in call_args[1]
         assert call_args[1]["response_format"]["type"] == "json_object"
-        
+
         # Verify result is valid JSON
         assert "specs" in result
         assert isinstance(result["specs"], list)

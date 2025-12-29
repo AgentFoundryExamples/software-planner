@@ -4,6 +4,8 @@ The following is instructions for implementing with LLM APIs. The models that ar
 
 **Important:** Always use the latest stable API versions and official SDKs. Avoid deprecated endpoints and legacy APIs.
 
+**JSON Mode Enforcement:** All LLM implementations MUST enforce JSON mode at the provider level to guarantee structured output regardless of system prompt content. This prevents malformed responses and ensures reliable parsing.
+
 ## OpenAI GPT5
 
 When implementing OpenAI integration, the target API should be the **Responses API** since it is the recommended most long term compatible option. The GPT 5 series models are supportive of the responses API and these are the models we want to use when implementing AI integration. Do not use completions it is not recommended moving forward.
@@ -11,6 +13,10 @@ When implementing OpenAI integration, the target API should be the **Responses A
 - Target model: `gpt-5.1`
 - Use the official `openai` Python package or equivalent SDK for your language
 - **API Endpoint:** Responses API (replaces Chat Completions for GPT-5+ models)
+- **JSON Mode Enforcement:** Use `response_format` parameter with `json_schema` type and `strict: true` to enforce schema validation at the API level
+  - Define complete JSON schema matching the expected output structure
+  - OpenAI will reject responses that don't match the schema before returning
+  - Custom system prompts cannot override JSON enforcement
 - **Required Environment Variables:**
   - `OPENAI_API_KEY` or `LLM_API_KEY` - API key from https://platform.openai.com/api-keys
   - Optional: `LLM_BASE_URL` - Custom base URL for Azure OpenAI or proxies
@@ -57,6 +63,10 @@ When implementing Anthropic integration, the target API should be the **Messages
 - Target model: Sonnet 4.5
 - Use the official `anthropic` Python package or `@anthropic-ai/sdk` for JS/TS
 - **API Endpoint:** Messages API (v2023-06-01 or newer)
+- **JSON Mode Enforcement:** Use `response_format` parameter with `{"type": "json_object"}` to enforce JSON output
+  - This is a beta feature in Anthropic's API
+  - Ensures Claude always returns valid JSON regardless of system prompt
+  - Custom system prompts cannot disable JSON formatting
 - **Required Environment Variables:**
   - `ANTHROPIC_API_KEY` - API key from https://console.anthropic.com/settings/keys
   - Optional: Timeout, retry, and base URL configuration similar to OpenAI
@@ -85,6 +95,10 @@ When implementing Google integration, the target API should be the **Gemini API*
 - Use the official `google-genai` Python package or `@google/genai` for JS/TS
 - Ex. `from google import genai`
 - **API Endpoint:** Gemini API (https://generativelanguage.googleapis.com/v1)
+- **JSON Mode Enforcement:** Use `generationConfig` parameter with `response_mime_type="application/json"` to enforce JSON output
+  - Gemini will validate output conforms to JSON format
+  - Can optionally provide JSON schema for stricter validation
+  - Custom system prompts cannot disable JSON formatting
 - **Required Environment Variables:**
   - `GOOGLE_API_KEY` - API key from https://makersuite.google.com/app/apikey
   - Optional: `base_url` configuration for custom endpoints
@@ -114,3 +128,6 @@ When implementing Google integration, the target API should be the **Gemini API*
 - Implement proper error handling and rate limiting
 - Use streaming responses when available for better UX
 - Keep SDKs updated to the latest stable versions
+- **Enforce JSON mode at provider level:** Always use provider-specific JSON enforcement mechanisms (response_format, json_schema, response_mime_type) to guarantee structured output
+- **Test with custom prompts:** Verify JSON enforcement works even when system prompts attempt to override formatting
+- **Handle schema violations:** Catch and report provider-level validation errors with actionable messages
