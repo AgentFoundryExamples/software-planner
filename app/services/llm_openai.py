@@ -225,16 +225,64 @@ class OpenAIClient(BaseLLMClient):
                         },
                     )
 
-                # Make the API call using Responses API
+                # Make the API call using Responses API with JSON schema enforcement
                 # The Responses API uses 'instructions' for system context
                 # and 'input' for the user message
                 # Note: GPT-5 models do not support the temperature parameter.
                 # Use reasoning_effort and verbosity for output control instead.
+                #
+                # response_format enforces strict JSON output according to the schema
                 response = self.client.responses.create(
                     model=self.model,
                     instructions=system_prompt,
                     input=description,
                     max_output_tokens=15000,  # Reasonable limit for spec generation
+                    response_format={
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "software_specifications",
+                            "strict": True,
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "specs": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "purpose": {"type": "string"},
+                                                "vision": {"type": "string"},
+                                                "must": {
+                                                    "type": "array",
+                                                    "items": {"type": "string"}
+                                                },
+                                                "dont": {
+                                                    "type": "array",
+                                                    "items": {"type": "string"}
+                                                },
+                                                "nice": {
+                                                    "type": "array",
+                                                    "items": {"type": "string"}
+                                                },
+                                                "open_questions": {
+                                                    "type": "array",
+                                                    "items": {"type": "string"}
+                                                },
+                                                "assumptions": {
+                                                    "type": "array",
+                                                    "items": {"type": "string"}
+                                                }
+                                            },
+                                            "required": ["purpose", "vision", "must", "dont", "nice"],
+                                            "additionalProperties": False
+                                        }
+                                    }
+                                },
+                                "required": ["specs"],
+                                "additionalProperties": False
+                            }
+                        }
+                    }
                 )
 
                 # Extract response content from Responses API structure
@@ -359,13 +407,24 @@ class OpenAIClient(BaseLLMClient):
                 )
 
             except openai.BadRequestError as e:
-                # Invalid request - not retryable
-                logger.error(
-                    "OpenAI invalid request", extra={"error": str(e), "retry_count": retry_count}
-                )
-                raise LLMRequestError(
-                    f"OpenAI invalid request: {e}. Please check your request parameters."
-                )
+                # Invalid request - check if it's a schema validation error
+                error_msg = str(e)
+                if "json_schema" in error_msg.lower() or "schema" in error_msg.lower():
+                    logger.error(
+                        "OpenAI JSON schema validation failed",
+                        extra={"error": str(e), "retry_count": retry_count},
+                    )
+                    raise LLMResponseError(
+                        f"OpenAI rejected response due to JSON schema violation: {e}. "
+                        f"The model output did not match the required structure."
+                    )
+                else:
+                    logger.error(
+                        "OpenAI invalid request", extra={"error": str(e), "retry_count": retry_count}
+                    )
+                    raise LLMRequestError(
+                        f"OpenAI invalid request: {e}. Please check your request parameters."
+                    )
 
             except Exception as e:
                 last_error = e

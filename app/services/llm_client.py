@@ -144,16 +144,28 @@ class BaseLLMClient(ABC):
         """Call the LLM provider's API and return the raw response text.
 
         This is the provider-specific implementation that must be overridden.
+        
+        **JSON Mode Enforcement:**
+        Implementations MUST configure their provider's JSON mode enforcement
+        to guarantee valid JSON output regardless of system_prompt content.
+        This ensures malformed responses are rejected at the provider level
+        before reaching the parser.
+        
+        For example:
+        - OpenAI: Use response_format with json_schema and strict=True
+        - Anthropic: Use response_format={"type": "json_object"}
+        - Google: Use generationConfig with response_mime_type="application/json"
 
         Args:
             description: User's project description.
             system_prompt: System prompt to guide LLM behavior.
 
         Returns:
-            Raw response text from the LLM.
+            Raw response text from the LLM (must be valid JSON).
 
         Raises:
             LLMRequestError: If the API request fails.
+            LLMResponseError: If provider rejects output due to schema violation.
         """
         pass
 
@@ -259,12 +271,18 @@ class BaseLLMClient(ABC):
             prompt = DEFAULT_SYSTEM_PROMPT
 
         # Log request metadata (not the description itself, which may be sensitive)
+        # Include system prompt hash for debugging without exposing content
+        import hashlib
+        prompt_hash = hashlib.sha256(prompt.encode('utf-8')).hexdigest()[:16]
+        
         logger.info(
             "Generating specs via LLM",
             extra={
                 "model": self.model,
                 "description_length": len(description),
                 "using_default_prompt": system_prompt is None,
+                "system_prompt_hash": prompt_hash,
+                "system_prompt_length": len(prompt),
             },
         )
 

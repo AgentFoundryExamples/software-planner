@@ -663,3 +663,117 @@ class TestOpenAIClientEdgeCases:
 
         # Verify API was called only once
         assert mock_client.responses.create.call_count == 1
+
+
+class TestOpenAIJSONModeEnforcement:
+    """Tests for JSON mode enforcement with response_format."""
+
+    @patch("app.services.llm_openai.OpenAI")
+    def test_json_schema_enforcement_in_api_call(self, mock_openai_class):
+        """Test that API calls include response_format with json_schema."""
+        # Setup mock
+        mock_client = Mock()
+        mock_openai_class.return_value = mock_client
+
+        response_content = json.dumps(VALID_RESPONSE)
+        mock_client.responses.create.return_value = create_mock_openai_response(response_content)
+
+        # Create client and call API
+        client = OpenAIClient(api_key="sk-test", model="gpt-5.1")
+        client.generate_specs("Build a REST API")
+
+        # Verify response_format was included with proper schema
+        call_args = mock_client.responses.create.call_args
+        assert "response_format" in call_args[1]
+        assert call_args[1]["response_format"]["type"] == "json_schema"
+        assert "json_schema" in call_args[1]["response_format"]
+        assert call_args[1]["response_format"]["json_schema"]["strict"] is True
+        
+        # Verify schema structure
+        schema = call_args[1]["response_format"]["json_schema"]["schema"]
+        assert schema["type"] == "object"
+        assert "specs" in schema["properties"]
+        assert schema["required"] == ["specs"]
+
+    @patch("app.services.llm_openai.OpenAI")
+    def test_json_schema_enforcement_with_custom_prompt(self, mock_openai_class):
+        """Test that JSON schema enforcement works even with custom system prompts."""
+        # Setup mock
+        mock_client = Mock()
+        mock_openai_class.return_value = mock_client
+
+        response_content = json.dumps(VALID_RESPONSE)
+        mock_client.responses.create.return_value = create_mock_openai_response(response_content)
+
+        # Create client and call API with custom system prompt
+        client = OpenAIClient(api_key="sk-test", model="gpt-5.1")
+        custom_prompt = "You are a helpful assistant. Return plain text, not JSON."
+        result = client.generate_specs("Build a REST API", system_prompt=custom_prompt)
+
+        # Verify result is still valid JSON despite custom prompt
+        assert "specs" in result
+        
+        # Verify response_format was still enforced
+        call_args = mock_client.responses.create.call_args
+        assert "response_format" in call_args[1]
+        assert call_args[1]["response_format"]["type"] == "json_schema"
+        
+        # Verify custom prompt was passed
+        assert call_args[1]["instructions"] == custom_prompt
+
+    @patch("app.services.llm_openai.OpenAI")
+    def test_json_schema_violation_error(self, mock_openai_class):
+        """Test that JSON schema violations are properly detected and reported."""
+        # Setup mock
+        mock_client = Mock()
+        mock_openai_class.return_value = mock_client
+
+        # Simulate schema validation error from OpenAI
+        mock_client.responses.create.side_effect = openai.BadRequestError(
+            "JSON schema validation failed: response does not match schema",
+            response=Mock(status_code=400),
+            body=None
+        )
+
+        # Create client and call API
+        client = OpenAIClient(api_key="sk-test", model="gpt-5.1")
+
+        with pytest.raises(LLMResponseError) as exc_info:
+            client.generate_specs("Build a REST API")
+
+        # Verify error message mentions schema violation
+        assert "schema violation" in str(exc_info.value).lower()
+        assert "json" in str(exc_info.value).lower()
+        
+        # Verify it's not retried (schema errors are not transient)
+        assert mock_client.responses.create.call_count == 1
+
+    @patch("app.services.llm_openai.OpenAI")
+    def test_json_schema_includes_optional_fields(self, mock_openai_class):
+        """Test that JSON schema includes optional fields like open_questions and assumptions."""
+        # Setup mock
+        mock_client = Mock()
+        mock_openai_class.return_value = mock_client
+
+        response_content = json.dumps(VALID_RESPONSE)
+        mock_client.responses.create.return_value = create_mock_openai_response(response_content)
+
+        # Create client and call API
+        client = OpenAIClient(api_key="sk-test", model="gpt-5.1")
+        client.generate_specs("Build a REST API")
+
+        # Verify schema includes optional fields
+        call_args = mock_client.responses.create.call_args
+        schema = call_args[1]["response_format"]["json_schema"]["schema"]
+        item_properties = schema["properties"]["specs"]["items"]["properties"]
+        
+        # Required fields
+        assert "purpose" in item_properties
+        assert "vision" in item_properties
+        assert "must" in item_properties
+        assert "dont" in item_properties
+        assert "nice" in item_properties
+        
+        # Optional fields
+        assert "open_questions" in item_properties
+        assert "assumptions" in item_properties

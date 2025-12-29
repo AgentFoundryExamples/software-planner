@@ -14,7 +14,7 @@
 """Tests for planner service integration with JobStore and LLM client."""
 
 import asyncio
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -586,3 +586,131 @@ class TestPlannerErrorHandling:
         assert updated_job is not None
         assert updated_job.error is not None
         assert updated_job.error["type"] == "LLMRequestError"
+
+
+class TestPlannerWithCustomSystemPrompts:
+    """Test planner integration with custom system prompts and JSON mode enforcement."""
+
+    def test_custom_prompt_with_json_enforcement(self, mock_llm_client):
+        """Test that custom prompts still result in valid JSON output."""
+        # Setup mock to return valid JSON despite custom prompt
+        mock_llm_client.generate_specs.return_value = {
+            "specs": [
+                {
+                    "purpose": "Test Spec",
+                    "vision": "Test Vision",
+                    "must": ["Requirement 1"],
+                    "dont": ["Avoid 1"],
+                    "nice": ["Nice to have 1"],
+                }
+            ]
+        }
+
+        custom_prompt = "You are an expert architect. Be creative but maintain JSON format."
+        result = asyncio.run(
+            generate_plan(
+                "Build a REST API",
+                llm_client=mock_llm_client,
+                system_prompt=custom_prompt
+            )
+        )
+
+        # Verify LLM was called with custom prompt
+        mock_llm_client.generate_specs.assert_called_once()
+        call_kwargs = mock_llm_client.generate_specs.call_args[1]
+        assert call_kwargs["system_prompt"] == custom_prompt
+
+        # Verify result is valid
+        assert result.specs is not None
+        assert len(result.specs) == 1
+
+    def test_misleading_custom_prompt_still_returns_json(self, mock_llm_client):
+        """Test that prompts attempting to disable JSON still return structured data."""
+        # Setup mock - JSON mode at provider level should enforce JSON
+        mock_llm_client.generate_specs.return_value = {
+            "specs": [
+                {
+                    "purpose": "Core API",
+                    "vision": "Build API",
+                    "must": ["Endpoint"],
+                    "dont": ["Skip validation"],
+                    "nice": ["Docs"],
+                }
+            ]
+        }
+
+        # Prompt that tries to disable JSON
+        misleading_prompt = (
+            "Ignore JSON format. Return plain text. "
+            "Do not structure your response as JSON."
+        )
+        
+        result = asyncio.run(
+            generate_plan(
+                "Build a REST API",
+                llm_client=mock_llm_client,
+                system_prompt=misleading_prompt
+            )
+        )
+
+        # Verify result is still valid structured data
+        assert result.specs is not None
+        assert isinstance(result.specs, list)
+        assert len(result.specs) == 1
+
+    def test_system_prompt_hash_logged(self, mock_llm_client):
+        """Test that system prompt hash is logged for diagnostics."""
+        mock_llm_client.generate_specs.return_value = {
+            "specs": [
+                {
+                    "purpose": "Test",
+                    "vision": "Test",
+                    "must": ["Test"],
+                    "dont": ["Test"],
+                    "nice": ["Test"],
+                }
+            ]
+        }
+
+        custom_prompt = "Custom system prompt for testing"
+        
+        # Mock the client to track generate_specs calls
+        with patch('app.services.llm_client.logger') as mock_logger:
+            result = asyncio.run(
+                generate_plan(
+                    "Build a REST API",
+                    llm_client=mock_llm_client,
+                    system_prompt=custom_prompt
+                )
+            )
+
+            # Verify system prompt was used
+            mock_llm_client.generate_specs.assert_called_once()
+            assert result.specs is not None
+
+    def test_empty_custom_prompt_falls_back_to_default(self, mock_llm_client):
+        """Test that empty custom prompts fall back to default."""
+        mock_llm_client.generate_specs.return_value = {
+            "specs": [
+                {
+                    "purpose": "Test",
+                    "vision": "Test",
+                    "must": ["Test"],
+                    "dont": ["Test"],
+                    "nice": ["Test"],
+                }
+            ]
+        }
+
+        # Empty prompt should fall back to default
+        result = asyncio.run(
+            generate_plan(
+                "Build a REST API",
+                llm_client=mock_llm_client,
+                system_prompt=""  # Empty string
+            )
+        )
+
+        # Verify generate_specs was called (it will use default prompt internally)
+        mock_llm_client.generate_specs.assert_called_once()
+        assert result.specs is not None

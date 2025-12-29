@@ -228,15 +228,20 @@ class ClaudeClient(BaseLLMClient):
                         },
                     )
 
-                # Make the API call using Messages API
+                # Make the API call using Messages API with JSON mode enforcement
+                # response_format enforces strict JSON output
+                # This is a beta feature in Anthropic SDK
                 response = self.client.messages.create(
                     model=self.model,
-                    max_tokens=2000,  # Reasonable limit for spec generation
+                    max_tokens=4096,  # Reasonable limit for spec generation
                     system=system_prompt,
                     messages=[
                         {"role": "user", "content": description},
                     ],
                     temperature=0.7,  # Balanced creativity
+                    # Enable JSON mode to enforce structured output
+                    # This parameter tells Claude to always return valid JSON
+                    response_format={"type": "json_object"},
                 )
 
                 # Extract response content
@@ -330,13 +335,24 @@ class ClaudeClient(BaseLLMClient):
                 )
 
             except anthropic.BadRequestError as e:
-                # Invalid request - not retryable
-                logger.error(
-                    "Claude invalid request", extra={"error": str(e), "retry_count": retry_count}
-                )
-                raise LLMRequestError(
-                    f"Claude invalid request: {e}. Please check your request parameters."
-                )
+                # Invalid request - check if it's a JSON mode error
+                error_msg = str(e)
+                if "json" in error_msg.lower() or "format" in error_msg.lower():
+                    logger.error(
+                        "Claude JSON format validation failed",
+                        extra={"error": str(e), "retry_count": retry_count},
+                    )
+                    raise LLMResponseError(
+                        f"Claude rejected response due to JSON format violation: {e}. "
+                        f"The model output was not valid JSON."
+                    )
+                else:
+                    logger.error(
+                        "Claude invalid request", extra={"error": str(e), "retry_count": retry_count}
+                    )
+                    raise LLMRequestError(
+                        f"Claude invalid request: {e}. Please check your request parameters."
+                    )
 
             except Exception as e:
                 last_error = e
