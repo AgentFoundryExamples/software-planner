@@ -871,6 +871,7 @@
           "datetime.datetime",
           "datetime.timezone",
           "hashlib",
+          "json",
           "random",
           "time",
           "unittest.mock.Mock",

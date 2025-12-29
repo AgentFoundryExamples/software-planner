@@ -38,8 +38,8 @@ Total files: 64
 **Role:** router  
 **Role Justification:** filename contains routing term  
 **Summary:** Python routing configuration (role: router)  
-**Size:** 39.18 KB  
-**LOC:** 866  
+**Size:** 40.41 KB  
+**LOC:** 882  
 **TODOs/FIXMEs:** 0  
 
 ## app/core/__init__.py
@@ -533,8 +533,8 @@ Total files: 64
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 33.79 KB  
-**LOC:** 624  
+**Size:** 36.94 KB  
+**LOC:** 665  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_rate_limiter.py
