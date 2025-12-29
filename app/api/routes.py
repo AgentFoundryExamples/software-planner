@@ -385,15 +385,13 @@ def _format_job_response(job: Job, include_result: bool = True) -> dict:
 
     # Handle result field based on include_result parameter
     if include_result:
-        # Include result for succeeded jobs, otherwise null
-        if job.status == "SUCCEEDED" and job.result is not None:
-            response["result"] = job.result
-        else:
-            response["result"] = None
+        # For single-job endpoint, include the full result.
+        # job.result is None for non-succeeded jobs by design.
+        response["result"] = job.result
     else:
-        # For list endpoints: omit result payload, add has_result flag
+        # For list endpoint, omit result payload and add has_result flag.
         response["result"] = None
-        response["has_result"] = job.status == "SUCCEEDED" and job.result is not None
+        response["has_result"] = job.result is not None
 
     # Include error for failed jobs (omit for non-failed jobs)
     if job.status == "FAILED" and job.error is not None:

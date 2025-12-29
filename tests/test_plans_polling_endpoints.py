@@ -645,6 +645,12 @@ class TestPollingEndpointsEdgeCases:
         assert single_data["result"] is not None
         assert "specs" in single_data["result"]
 
+        # Common fields should match between both endpoints
+        assert job_from_list["job_id"] == single_data["job_id"]
+        assert job_from_list["status"] == single_data["status"]
+        assert job_from_list["created_at"] == single_data["created_at"]
+        assert job_from_list["updated_at"] == single_data["updated_at"]
+
     def test_get_job_with_invalid_uuid_format(self, client, override_job_store):
         """Test getting job with malformed UUID still returns 404."""
         response = client.get("/api/v1/plans/not-a-uuid")
