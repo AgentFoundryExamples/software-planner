@@ -47,10 +47,12 @@ BACKOFF_MULTIPLIER = 2.0
 
 # JSON schema for response format enforcement
 # This schema matches the expected output structure for software specifications
-# open_questions and assumptions are optional fields (not in required array)
+# With strict=True, ALL fields must be in required array
+# open_questions and assumptions will always be returned (may be empty arrays)
+# For Responses API, use the 'text' parameter with 'format' property
 RESPONSE_JSON_SCHEMA = {
-    "type": "json_schema",
-    "json_schema": {
+    "format": {
+        "type": "json_schema",
         "name": "software_specifications",
         "strict": True,
         "schema": {
@@ -90,6 +92,8 @@ RESPONSE_JSON_SCHEMA = {
                             "must",
                             "dont",
                             "nice",
+                            "open_questions",
+                            "assumptions",
                         ],
                         "additionalProperties": False,
                     },
@@ -98,7 +102,7 @@ RESPONSE_JSON_SCHEMA = {
             "required": ["specs"],
             "additionalProperties": False,
         },
-    },
+    }
 }
 
 
@@ -287,13 +291,13 @@ class OpenAIClient(BaseLLMClient):
                 # Note: GPT-5 models do not support the temperature parameter.
                 # Use reasoning_effort and verbosity for output control instead.
                 #
-                # response_format enforces strict JSON output according to the schema
+                # text.format enforces strict JSON output according to the schema
                 response = self.client.responses.create(
                     model=self.model,
                     instructions=system_prompt,
                     input=description,
                     max_output_tokens=15000,  # Reasonable limit for spec generation
-                    response_format=RESPONSE_JSON_SCHEMA,
+                    text=RESPONSE_JSON_SCHEMA,
                 )
 
                 # Extract response content from Responses API structure
