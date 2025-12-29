@@ -967,11 +967,26 @@ curl -X POST http://localhost:8000/api/v1/plan \
         "Include request/response logging",
         "Implement API versioning",
         "Add OpenAPI documentation"
+      ],
+      "assumptions": [
+        "Using a relational database for data persistence",
+        "RESTful API conventions will be followed",
+        "Application will be deployed in a containerized environment"
+      ],
+      "open_questions": [
+        "What authentication method should be used (OAuth2, JWT, API keys)?",
+        "Should the API support pagination from the start?",
+        "What rate limiting strategy is preferred?"
       ]
     }
   ]
 }
 ```
+
+**Note:** The `assumptions` and `open_questions` fields are optional. If the LLM does not include them in its response, they will default to empty arrays. These fields provide additional context about the specification:
+- `assumptions`: Lists any assumptions made about ambiguous or unclear aspects of the project description
+- `open_questions`: Lists clarifying questions that could help refine the requirements if answered
+
 
 **Error Responses:**
 - `400 Bad Request`: Empty, whitespace-only, or oversized description
@@ -1053,7 +1068,9 @@ The job progresses through these states:
         "vision": "Build a robust REST API",
         "must": ["Implement endpoints"],
         "dont": ["Skip validation"],
-        "nice": ["Add rate limiting"]
+        "nice": ["Add rate limiting"],
+        "assumptions": ["Using PostgreSQL database"],
+        "open_questions": ["What authentication method to use?"]
       }
     ]
   }
