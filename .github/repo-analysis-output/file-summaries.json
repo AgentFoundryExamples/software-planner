@@ -291,8 +291,8 @@
       "summary": "Python module for llm claude",
       "summary_text": "Python module for llm claude",
       "metrics": {
-        "size_bytes": 15925,
-        "loc": 315,
+        "size_bytes": 17682,
+        "loc": 340,
         "todo_count": 0
       }
     },
@@ -305,8 +305,8 @@
       "summary": "Python module for llm client",
       "summary_text": "Python module for llm client",
       "metrics": {
-        "size_bytes": 18909,
-        "loc": 365,
+        "size_bytes": 19836,
+        "loc": 379,
         "todo_count": 0
       }
     },
@@ -333,8 +333,8 @@
       "summary": "Python module for llm openai",
       "summary_text": "Python module for llm openai",
       "metrics": {
-        "size_bytes": 17469,
-        "loc": 333,
+        "size_bytes": 20427,
+        "loc": 398,
         "todo_count": 0
       }
     },
@@ -557,8 +557,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 11364,
-        "loc": 187,
+        "size_bytes": 11467,
+        "loc": 199,
         "todo_count": 0
       }
     },
@@ -627,8 +627,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 10570,
-        "loc": 191,
+        "size_bytes": 15196,
+        "loc": 255,
         "todo_count": 0
       }
     },
@@ -641,8 +641,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 21298,
-        "loc": 429,
+        "size_bytes": 22845,
+        "loc": 459,
         "todo_count": 0
       }
     },
@@ -669,8 +669,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 25052,
-        "loc": 444,
+        "size_bytes": 29968,
+        "loc": 514,
         "todo_count": 0
       }
     },
@@ -795,8 +795,8 @@
       "summary": "Python test file (role: test)",
       "summary_text": "Python test file (role: test)",
       "metrics": {
-        "size_bytes": 20885,
-        "loc": 477,
+        "size_bytes": 25372,
+        "loc": 569,
         "todo_count": 0
       }
     },

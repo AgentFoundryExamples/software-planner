@@ -307,6 +307,7 @@
         "stdlib": [
           "abc.ABC",
           "abc.abstractmethod",
+          "hashlib",
           "json",
           "logging",
           "os",
@@ -833,7 +834,8 @@
       "external_dependencies": {
         "stdlib": [
           "asyncio",
-          "unittest.mock.Mock"
+          "unittest.mock.Mock",
+          "unittest.mock.patch"
         ],
         "third-party": [
           "pytest"

@@ -191,8 +191,8 @@ Total files: 64
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm claude  
-**Size:** 15.55 KB  
-**LOC:** 315  
+**Size:** 17.27 KB  
+**LOC:** 340  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/llm_client.py
@@ -200,8 +200,8 @@ Total files: 64
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm client  
-**Size:** 18.47 KB  
-**LOC:** 365  
+**Size:** 19.37 KB  
+**LOC:** 379  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/llm_gemini.py
@@ -218,8 +218,8 @@ Total files: 64
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** Python module for llm openai  
-**Size:** 17.06 KB  
-**LOC:** 333  
+**Size:** 19.95 KB  
+**LOC:** 398  
 **TODOs/FIXMEs:** 0  
 
 ## app/services/metrics.py
@@ -362,8 +362,8 @@ Total files: 64
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 11.10 KB  
-**LOC:** 187  
+**Size:** 11.20 KB  
+**LOC:** 199  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_health_endpoint.py
@@ -407,8 +407,8 @@ Total files: 64
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 10.32 KB  
-**LOC:** 191  
+**Size:** 14.84 KB  
+**LOC:** 255  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_llm_client.py
@@ -416,8 +416,8 @@ Total files: 64
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 20.80 KB  
-**LOC:** 429  
+**Size:** 22.31 KB  
+**LOC:** 459  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_llm_gemini.py
@@ -434,8 +434,8 @@ Total files: 64
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 24.46 KB  
-**LOC:** 444  
+**Size:** 29.27 KB  
+**LOC:** 514  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_logging_helpers.py
@@ -515,8 +515,8 @@ Total files: 64
 **Role:** test  
 **Role Justification:** filename starts with 'test_'  
 **Summary:** Python test file (role: test)  
-**Size:** 20.40 KB  
-**LOC:** 477  
+**Size:** 24.78 KB  
+**LOC:** 569  
 **TODOs/FIXMEs:** 0  
 
 ## tests/test_plans_async_endpoint.py
